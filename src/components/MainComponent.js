@@ -1,8 +1,16 @@
-import React from "react";
-import Auth from "./Auth";
+import React, { useState } from "react";
+import Navbar from "./Navbar";
+import MainPage from "./MainPage";
 
 const MainComponent = () => {
-    return <Auth />;
+    const [currentPage, setCurrentPage] = useState("Home");
+
+    return (
+        <div>
+            <Navbar setCurrentPage={setCurrentPage} currentPage={currentPage} />
+            <MainPage currentPage={currentPage} />
+        </div>
+    );
 };
 
 export default MainComponent;

@@ -1,8 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
+import Auth from "./components/Auth";
 import MainComponent from "./components/MainComponent";
 
 function App() {
-  return <MainComponent />;
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  return isAuthenticated ? (
+    <MainComponent />
+  ) : (
+    <Auth onLoginSuccess={() => setIsAuthenticated(true)} />
+  );
 }
 
 export default App;

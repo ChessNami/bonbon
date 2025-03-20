@@ -4,7 +4,7 @@ import logo from "../img/Logo/bonbon-logo.png";
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser } from "react-icons/fa";
 import Swal from "sweetalert2";
 
-const Auth = () => {
+const Auth = ({ onLoginSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -42,6 +42,7 @@ const Auth = () => {
                 showConfirmButton: false,
             });
             console.log("User logged in:", user);
+            onLoginSuccess();
         }
     };
 
@@ -177,8 +178,8 @@ const Auth = () => {
                         onSubmit={isResetPassword ? handleResetPassword : isLogin ? handleLogin : handleRegister}
                     >
                         {!isLogin && !isResetPassword && (
-                            <>
-                                <div className="relative">
+                            <div className="flex space-x-4">
+                                <div className="relative w-1/2">
                                     <FaUser className="absolute left-3 top-3 text-gray-400" />
                                     <input
                                         type="text"
@@ -189,7 +190,7 @@ const Auth = () => {
                                         required
                                     />
                                 </div>
-                                <div className="relative">
+                                <div className="relative w-1/2">
                                     <FaUser className="absolute left-3 top-3 text-gray-400" />
                                     <input
                                         type="text"
@@ -200,7 +201,7 @@ const Auth = () => {
                                         required
                                     />
                                 </div>
-                            </>
+                            </div>
                         )}
                         <div className="relative">
                             <FaEnvelope className="absolute left-3 top-3 text-gray-400" />

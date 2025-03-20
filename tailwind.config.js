@@ -8,8 +8,10 @@ module.exports = {
       fontFamily: {
         sans: ['Poppins', 'sans-serif'], // Set Poppins as the default sans-serif font
       },
+      screens: {
+        'lg': '1160px', // Adjust the breakpoint for lg to 1160px
+      },
     },
   },
   plugins: [],
 }
-
