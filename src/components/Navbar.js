@@ -28,8 +28,8 @@ const Navbar = ({ setCurrentPage, currentPage }) => {
     }, []);
 
     return (
-        <nav className="bg-white shadow-md relative">
-            <div className="mx-4 px-4 py-2 flex justify-between items-center">
+        <nav className="bg-white shadow-md sticky top-0 z-50">
+            <div className="container mx-auto px-4 py-2 flex justify-between items-center">
                 <div className="flex items-center">
                     <button onClick={() => handleNavClick('Home')} className="mr-4">
                         <img src={logo} alt="Bonbon Logo" className="w-20 h-auto" />

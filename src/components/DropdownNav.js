@@ -41,7 +41,7 @@ const DropdownNav = ({ isOpen, toggleMenu, handleNavClick, currentPage }) => {
                 <FaBars className="w-8 h-auto transition-all duration-200" />
             </button>
             <ul
-                className={`absolute text-xl bg-white w-full left-0 right-0 top-full mt-2 mx-auto backdrop-blur-md bg-opacity-50 py-4 transition-all duration-200 ease-in-out ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"
+                className={`absolute text-xl bg-white w-full left-0 right-0 top-full mx-auto backdrop-blur-md bg-opacity-50 py-4 transition-all duration-200 ease-in-out ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"
                     }`}
             >
                 {navItems.map((item) => (

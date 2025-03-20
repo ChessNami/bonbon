@@ -18,10 +18,21 @@ const Auth = ({ onLoginSuccess }) => {
     const handleLogin = async (e) => {
         e.preventDefault();
 
+        Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we log you in.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         const { user, error } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
+
+        Swal.close();
 
         if (error) {
             Swal.fire({
@@ -61,6 +72,15 @@ const Auth = ({ onLoginSuccess }) => {
             return;
         }
 
+        Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we register your account.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -70,6 +90,8 @@ const Auth = ({ onLoginSuccess }) => {
                 },
             },
         });
+
+        Swal.close();
 
         if (error) {
             Swal.fire({
@@ -112,7 +134,18 @@ const Auth = ({ onLoginSuccess }) => {
     const handleResetPassword = async (e) => {
         e.preventDefault();
 
+        Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we reset your password.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         const { error } = await supabase.auth.api.resetPasswordForEmail(email);
+
+        Swal.close();
 
         if (error) {
             Swal.fire({
