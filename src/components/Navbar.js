@@ -28,11 +28,18 @@ const Navbar = ({ setCurrentPage, currentPage }) => {
     }, []);
 
     return (
-        <nav className="bg-white shadow-md sticky top-0 z-50">
+        <nav className="bg-white shadow-md sticky top-0 z-10 select-none">
             <div className="container mx-auto px-4 py-2 flex justify-between items-center">
                 <div className="flex items-center">
-                    <button onClick={() => handleNavClick('Home')} className="mr-4">
-                        <img src={logo} alt="Bonbon Logo" className="w-20 h-auto" />
+                    <DropdownNav isOpen={isOpen} toggleMenu={toggleMenu} handleNavClick={handleNavClick} currentPage={currentPage} />
+                    <button onClick={() => handleNavClick('Home')} className="ml-4">
+                        <img
+                            src={logo}
+                            alt="Bonbon Logo"
+                            className="w-20 h-auto select-none"
+                            draggable="false"
+                        />
+
                     </button>
                     <div className="ml-2">
                         <div className="uppercase text-xl text-gray-700 font-bold">Barangay Bonbon</div>
@@ -40,7 +47,6 @@ const Navbar = ({ setCurrentPage, currentPage }) => {
                     </div>
                 </div>
                 <div className="flex-1 flex justify-end">
-                    <DropdownNav isOpen={isOpen} toggleMenu={toggleMenu} handleNavClick={handleNavClick} currentPage={currentPage} />
                     <FullNav handleNavClick={handleNavClick} currentPage={currentPage} />
                 </div>
             </div>

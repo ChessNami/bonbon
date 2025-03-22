@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import logo from "../img/Logo/bonbon-logo.png";
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser } from "react-icons/fa";
 import Swal from "sweetalert2";
+import { useUser } from "./contexts/UserContext";
 
 const Auth = ({ onLoginSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -14,6 +15,7 @@ const Auth = ({ onLoginSuccess }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isResetPassword, setIsResetPassword] = useState(false);
+    const { setDisplayName } = useUser();
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -27,7 +29,7 @@ const Auth = ({ onLoginSuccess }) => {
             }
         });
 
-        const { user, error } = await supabase.auth.signInWithPassword({
+        const { data: { user }, error } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
@@ -44,16 +46,33 @@ const Auth = ({ onLoginSuccess }) => {
                 showConfirmButton: false,
             });
         } else {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: 'User logged in successfully',
-                timer: 1500,
-                timerProgressBar: true,
-                showConfirmButton: false,
-            });
-            console.log("User logged in:", user);
-            onLoginSuccess();
+            const { data: userRoleData, error: roleError } = await supabase
+                .from('user_roles')
+                .select('role_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (roleError) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: roleError.message,
+                    timer: 1500,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                });
+            } else {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: 'User logged in successfully',
+                    timer: 1500,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                });
+                setDisplayName(user.user_metadata.display_name);
+                onLoginSuccess(userRoleData.role_id, user.user_metadata.display_name);
+            }
         }
     };
 
@@ -126,7 +145,7 @@ const Auth = ({ onLoginSuccess }) => {
                     timerProgressBar: true,
                     showConfirmButton: false,
                 });
-                console.log("User registered and role assigned:", data.user);
+                switchToLogin();
             }
         }
     };
@@ -143,7 +162,7 @@ const Auth = ({ onLoginSuccess }) => {
             }
         });
 
-        const { error } = await supabase.auth.api.resetPasswordForEmail(email);
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
 
         Swal.close();
 
@@ -165,6 +184,7 @@ const Auth = ({ onLoginSuccess }) => {
                 timerProgressBar: true,
                 showConfirmButton: false,
             });
+            switchToLogin();
         }
     };
 

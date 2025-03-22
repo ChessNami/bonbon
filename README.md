@@ -40,6 +40,7 @@ Make sure you have the following installed on your machine:
    ```sh
    npm install @supabase/supabase-js
    npm install react-icons
+   npm install react-spinners
    ```
 
 ### Usage
