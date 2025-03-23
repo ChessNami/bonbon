@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import Header from "./Header";
 import Navbar from "./Navbar";
-import MainPage from "./MainPage";
-import Footer from "./Footer";
+import UserMainPage from "./UserMainPage";
+import Footer from "../Footer";
 
 const UserMainComponent = ({ onLogout }) => {
     const [currentPage, setCurrentPage] = useState("Home");
@@ -12,7 +12,7 @@ const UserMainComponent = ({ onLogout }) => {
             <Header onLogout={onLogout} />
             <Navbar setCurrentPage={setCurrentPage} currentPage={currentPage} />
             <main className="flex-grow">
-                <MainPage currentPage={currentPage} />
+                <UserMainPage currentPage={currentPage} />
             </main>
             <Footer />
         </div>

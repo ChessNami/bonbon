@@ -5,7 +5,7 @@ import Demographics from "./Demographics";
 import ProjectManagement from "./ProjectManagement";
 import StrategicRoad from "./StrategicRoad";
 
-const MainPage = ({ currentPage }) => {
+const UserMainPage = ({ currentPage }) => {
     const renderPage = () => {
         switch (currentPage) {
             case "Home":
@@ -30,4 +30,4 @@ const MainPage = ({ currentPage }) => {
     );
 };
 
-export default MainPage;
+export default UserMainPage;

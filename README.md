@@ -41,6 +41,8 @@ Make sure you have the following installed on your machine:
    npm install @supabase/supabase-js
    npm install react-icons
    npm install react-spinners
+   npm install react-router-dom
+   npm install react-slick slick-carousel
    ```
 
 ### Usage

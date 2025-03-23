@@ -1,23 +1,17 @@
-import React, { useState, useEffect } from "react";
-import logo from "../img/Logo/bonbon-logo.png";
+import React, { useEffect } from "react";
+import logo from "../../img/Logo/bonbon-logo.png";
 import DropdownNav from "./DropdownNav";
 import FullNav from "./FullNav";
 
 const Navbar = ({ setCurrentPage, currentPage }) => {
-    const [isOpen, setIsOpen] = useState(false);
 
     const handleNavClick = (page) => {
         setCurrentPage(page);
     };
 
-    const toggleMenu = () => {
-        setIsOpen(!isOpen);
-    };
-
     useEffect(() => {
         const handleResize = () => {
             if (window.innerWidth >= 1160) {
-                setIsOpen(false);
             }
         };
 
@@ -27,11 +21,12 @@ const Navbar = ({ setCurrentPage, currentPage }) => {
         };
     }, []);
 
+
     return (
         <nav className="bg-white shadow-md sticky top-0 z-10 select-none">
             <div className="container mx-auto px-4 py-2 flex justify-between items-center">
                 <div className="flex items-center">
-                    <DropdownNav isOpen={isOpen} toggleMenu={toggleMenu} handleNavClick={handleNavClick} currentPage={currentPage} />
+                    <DropdownNav handleNavClick={handleNavClick} currentPage={currentPage} />
                     <button onClick={() => handleNavClick('Home')} className="ml-4">
                         <img
                             src={logo}
@@ -39,7 +34,6 @@ const Navbar = ({ setCurrentPage, currentPage }) => {
                             className="w-20 h-auto select-none"
                             draggable="false"
                         />
-
                     </button>
                     <div className="ml-2">
                         <div className="uppercase text-xl text-gray-700 font-bold">Barangay Bonbon</div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import Auth from "./components/Auth";
-import UserMainComponent from "../src/components/UserMainComponent";
-import AdminMainComponent from "../src/components/AdminMainComponent";
+import UserMainComponent from "./components/User/UserMainComponent";
+import AdminMainComponent from "./components/Admin/AdminMainComponent";
 import { useUser } from "./components/contexts/UserContext";
 import Loader from "./components/Loader";
 import Swal from "sweetalert2";
