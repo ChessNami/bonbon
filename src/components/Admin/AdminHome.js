@@ -10,7 +10,7 @@ const AdminHome = () => {
             {/* Draggable Card Container */}
             <motion.div
                 ref={containerRef}
-                className="flex gap-4 overflow-x-auto cursor-grab pb-4 no-scrollbar"
+                className="flex gap-4 overflow-x-auto cursor-grab pb-4 no-scrollbar bg-green-200 items-center"
                 drag="x"
                 dragConstraints={containerRef}
                 style={{ paddingLeft: 0, marginLeft: 0 }} // Ensures it starts from the left

@@ -22,12 +22,12 @@ const Menu = () => {
     return (
         <div className="flex min-h-screen p-4">
             {/* Sidebar Navigation */}
-            <nav className="w-1/4 bg-[#172554] text-white p-4 space-y-4">
+            <nav className="w-1/4 bg-[#172554] text-white p-4 space-y-4 rounded-tl-md rounded-bl-md">
                 {["Profile", "Users", "About"].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`block w-full text-left px-4 py-2 rounded-md hover:bg-blue-700 transition ${activeTab === tab ? "bg-blue-800" : ""
+                        className={`block w-full text-left px-4 py-2 rounded hover:bg-blue-700 transition ${activeTab === tab ? "bg-blue-800" : ""
                             }`}
                     >
                         {tab}
@@ -36,7 +36,7 @@ const Menu = () => {
             </nav>
 
             {/* Main Content */}
-            <main className="w-full p-6 bg-gray-100">
+            <main className="w-full p-4 bg-gray-300 rounded-tr-md rounded-br-md">
                 {renderContent()}
             </main>
         </div>
