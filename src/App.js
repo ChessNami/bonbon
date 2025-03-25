@@ -6,6 +6,8 @@ import AdminMainComponent from "./components/Admin/AdminMainComponent";
 import { useUser } from "./components/contexts/UserContext";
 import Loader from "./components/Loader";
 import Swal from "sweetalert2";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import MainProfileComponent from "./components/User/Profile/MainProfileComponent";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -59,7 +61,6 @@ function App() {
     });
   };
 
-
   if (loading) {
     return <Loader />;
   }
@@ -68,8 +69,14 @@ function App() {
     return <Auth onLoginSuccess={handleLoginSuccess} />;
   }
 
-  return userRole === 1 ? <AdminMainComponent onLogout={handleLogout} /> : <UserMainComponent onLogout={handleLogout} />;
-
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={userRole === 1 ? <AdminMainComponent onLogout={handleLogout} /> : <UserMainComponent onLogout={handleLogout} />} />
+        <Route path="/profile" element={<MainProfileComponent />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;

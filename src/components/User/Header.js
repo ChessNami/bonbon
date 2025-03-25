@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../contexts/UserContext";
-import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon } from "react-icons/fa";
+import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
+import { useNavigate } from "react-router-dom";
 
 const Header = ({ onLogout }) => {
     const { displayName } = useUser();
@@ -10,6 +11,7 @@ const Header = ({ onLogout }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -75,13 +77,14 @@ const Header = ({ onLogout }) => {
     };
 
     const dropdownItems = [
+        { icon: <FaUser className="mr-2 text-gray-700" />, label: "Profile", action: () => navigate("/profile") },
         { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => console.log("Settings Clicked") },
         { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => console.log("Feedback Clicked") },
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" }
     ];
 
     return (
-        <header className="bg-primary text-white py-4 hidden lg:flex select-none shadow-md">
+        <header className="bg-[#172554] text-white py-4 hidden lg:flex select-none shadow-md">
             <div className="container mx-auto px-6 flex justify-between items-center">
                 {/* Date Display */}
                 <div className="text-lg flex-1 text-left flex items-center">
@@ -115,7 +118,7 @@ const Header = ({ onLogout }) => {
 
                     {/* Dropdown Menu */}
                     {dropdownOpen && (
-                        <div ref={dropdownRef} className="absolute right-0 mt-3 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20" style={{ top: '100%' }}>
+                        <div ref={dropdownRef} className="absolute right-0 mt-4 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20" style={{ top: '100%' }}>
                             <ul className="p-4 space-y-2">
                                 {dropdownItems.map((item, index) => (
                                     <li key={index}
