@@ -43,6 +43,15 @@ Make sure you have the following installed on your machine:
    npm install react-spinners
    npm install react-router-dom
    npm install react-slick slick-carousel
+   npm install aivangogh/ph-address
+   npm install framer-motion
+   npm install compressorjs
+   npm install react-easy-crop
+   npm install swiper
+   npm install react-leaflet
+   npm install leaflet
+   npm install recharts
+   npm install lucide-react
    ```
 
 ### Usage

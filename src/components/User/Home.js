@@ -1,64 +1,74 @@
-import React from "react";
+import React, { useState } from "react";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi"; // Icons for navigation
 
-const Home = () => {
+const images = [
+    { id: 1, name: "Sample 1", description: "Description for Sample 1", image: "https://www.yudiz.com/codepen/expandable-animated-card-slider/dota-2.jpg" },
+    { id: 2, name: "Sample 2", description: "Description for Sample 2", image: "https://www.yudiz.com/codepen/expandable-animated-card-slider/winter-3.jpg" },
+    { id: 3, name: "Sample 3", description: "Description for Sample 3", image: "https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg" },
+    { id: 4, name: "Sample 4", description: "Description for Sample 4", image: "https://www.yudiz.com/codepen/expandable-animated-card-slider/dota-2.jpg" },
+    { id: 5, name: "Sample 5", description: "Description for Sample 5", image: "https://www.yudiz.com/codepen/expandable-animated-card-slider/winter-3.jpg" },
+    { id: 6, name: "Sample 6", description: "Description for Sample 6", image: "https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg" },
+];
+
+const itemsPerView = 3; // Number of visible cards
+const cardWidth = 320; // Each card width including padding
+
+const CardCarousel = () => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    const prevSlide = () => {
+        setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+    };
+
+    const nextSlide = () => {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+    };
+
+    // Generate the dynamic list of images based on currentIndex
+    const visibleImages = Array.from({ length: itemsPerView }, (_, i) =>
+        images[(currentIndex + i) % images.length]
+    );
+
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-4xl font-bold text-center mb-8">Home Page</h1>
-            <p className="text-lg text-gray-700 mb-4">
-                Welcome to the Home page of Barangay Bonbon. We are committed to providing our community with the best services and information.
-            </p>
-            <section className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">About Us</h2>
-                <p className="text-lg text-gray-700 mb-4">
-                    Barangay Bonbon is a vibrant community located in Cagayan de Oro City. Our mission is to foster a safe, inclusive, and prosperous environment for all residents. We offer a variety of services and programs to support our community members.
-                </p>
-                <p className="text-lg text-gray-700 mb-4">
-                    Our barangay is known for its rich history, cultural heritage, and strong sense of community. We are proud of our achievements and continue to strive for excellence in all that we do.
-                </p>
-            </section>
-            <section className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">Services</h2>
-                <ul className="list-disc list-inside text-lg text-gray-700 mb-4">
-                    <li>Health and Wellness Programs</li>
-                    <li>Educational Support and Scholarships</li>
-                    <li>Community Development Projects</li>
-                    <li>Environmental Conservation Initiatives</li>
-                    <li>Public Safety and Emergency Services</li>
-                </ul>
-                <p className="text-lg text-gray-700 mb-4">
-                    We are dedicated to providing high-quality services to meet the needs of our residents. Our team works tirelessly to ensure that our community remains a great place to live, work, and play.
-                </p>
-            </section>
-            <section className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">Upcoming Events</h2>
-                <p className="text-lg text-gray-700 mb-4">
-                    Stay tuned for our upcoming events and activities. We have a variety of events planned throughout the year to bring our community together and celebrate our shared values and traditions.
-                </p>
-                <ul className="list-disc list-inside text-lg text-gray-700 mb-4">
-                    <li>Community Clean-Up Drive - April 15, 2025</li>
-                    <li>Annual Barangay Fiesta - May 20, 2025</li>
-                    <li>Health and Wellness Fair - June 10, 2025</li>
-                    <li>Educational Workshop Series - July 5, 2025</li>
-                    <li>Environmental Awareness Campaign - August 25, 2025</li>
-                </ul>
-            </section>
-            <section className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">Contact Us</h2>
-                <p className="text-lg text-gray-700 mb-4">
-                    If you have any questions or need assistance, please do not hesitate to contact us. Our team is here to help you.
-                </p>
-                <p className="text-lg text-gray-700 mb-4">
-                    <strong>Address:</strong> Barangay Hall, Bonbon, Cagayan de Oro City
-                </p>
-                <p className="text-lg text-gray-700 mb-4">
-                    <strong>Phone:</strong> (088) 123-4567
-                </p>
-                <p className="text-lg text-gray-700 mb-4">
-                    <strong>Email:</strong> info@barangaybonbon.com
-                </p>
-            </section>
+        <div className="relative w-full max-w-[960px] mx-auto overflow-hidden">
+            {/* Wrapper */}
+            <div className="overflow-hidden">
+                {/* Track */}
+                <div className="flex transition-transform duration-500 ease-in-out">
+                    {visibleImages.map((item) => (
+                        <div key={item.id} style={{ width: cardWidth }} className="flex-none p-2">
+                            <div className="h-80 w-full rounded-lg overflow-hidden shadow-lg bg-white flex flex-col">
+                                {/* Image */}
+                                <div className="h-48 w-full">
+                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                </div>
+                                {/* Text Content */}
+                                <div className="p-4">
+                                    <h2 className="text-lg font-bold">{item.name}</h2>
+                                    <p className="text-sm text-gray-600">{item.description}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <button
+                onClick={prevSlide}
+                className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition"
+            >
+                <FiChevronLeft size={24} />
+            </button>
+
+            <button
+                onClick={nextSlide}
+                className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition"
+            >
+                <FiChevronRight size={24} />
+            </button>
         </div>
     );
 };
 
-export default Home;
+export default CardCarousel;
