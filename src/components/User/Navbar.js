@@ -39,7 +39,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
     return (
-        <nav className="bg-white shadow-md sticky top-0 z-50 select-none">
+        <nav className="bg-white shadow-md sticky top-0 z-10 select-none">
             <div className="container mx-auto px-4 py-2 flex justify-between items-center">
                 {/* Left Side - Logo and Navigation */}
                 <div className="flex items-center">
