@@ -9,7 +9,8 @@ const UserMainComponent = ({ onLogout }) => {
 
     return (
         <div className="flex flex-col min-h-screen">
-            <Header onLogout={onLogout} />
+            {/* Pass setCurrentPage to Header */}
+            <Header setCurrentPage={setCurrentPage} onLogout={onLogout} />
             <Navbar setCurrentPage={setCurrentPage} currentPage={currentPage} />
             <main className="flex-grow">
                 <UserMainPage currentPage={currentPage} />

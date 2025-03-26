@@ -1,17 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../contexts/UserContext";
+import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
-import { useNavigate } from "react-router-dom";
 
-const Header = ({ onLogout }) => {
+const Header = ({ onLogout, setCurrentPage }) => {
     const { displayName } = useUser();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isSmallScreen, setIsSmallScreen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [profilePic, setProfilePic] = useState(placeholderImg);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -47,6 +47,23 @@ const Header = ({ onLogout }) => {
         };
     }, []);
 
+    useEffect(() => {
+        const fetchUserProfilePic = async () => {
+            const { data, error } = await supabase.auth.getUser();
+
+            if (error || !data?.user) {
+                return;
+            }
+
+            const userProfilePic = data.user.user_metadata?.profilePic;
+            if (userProfilePic) {
+                setProfilePic(userProfilePic);
+            }
+        };
+
+        fetchUserProfilePic();
+    }, []);
+
     const formatDate = (date) => {
         return isSmallScreen
             ? date.toLocaleDateString("en-US")
@@ -69,6 +86,11 @@ const Header = ({ onLogout }) => {
         setDropdownOpen((prevState) => !prevState);
     };
 
+    const handleDropdownClick = (action) => {
+        action();
+        setDropdownOpen(false);
+    };
+
     const getTimeIcon = () => {
         const hours = currentTime.getHours();
         return hours >= 6 && hours < 18
@@ -77,28 +99,25 @@ const Header = ({ onLogout }) => {
     };
 
     const dropdownItems = [
-        { icon: <FaUser className="mr-2 text-gray-700" />, label: "Profile", action: () => navigate("/profile") },
+        { icon: <FaUser className="mr-2 text-gray-700" />, label: "Profile", action: () => setCurrentPage("Profile") },
         { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => console.log("Settings Clicked") },
         { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => console.log("Feedback Clicked") },
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" }
     ];
 
     return (
-        <header className="bg-[#172554] text-white py-4 hidden lg:flex select-none shadow-md">
-            <div className="container mx-auto px-6 flex justify-between items-center">
-                {/* Date Display */}
+        <header className="bg-[#172554] text-white py-3 hidden lg:flex select-none shadow-md">
+            <div className="container mx-auto px-4 flex justify-between items-center">
                 <div className="text-lg flex-1 text-left flex items-center">
                     <FaCalendarAlt className="mr-2 text-highlight" />
                     {formatDate(currentTime)}
                 </div>
 
-                {/* Time Display */}
                 <div className="text-lg flex-1 text-center flex items-center justify-center">
                     {getTimeIcon()}
                     {formatTime(currentTime)}
                 </div>
 
-                {/* Profile Section */}
                 <div className="text-lg flex-1 text-right flex items-center justify-end relative">
                     <div
                         className="flex items-center p-2 cursor-pointer rounded-md hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
@@ -109,21 +128,21 @@ const Header = ({ onLogout }) => {
                     >
                         <span className="mr-2">{displayName}</span>
                         <img
-                            src={placeholderImg}
+                            src={profilePic}
                             alt="User Profile"
-                            className="w-10 h-10 rounded-full select-none"
+                            className="w-10 h-10 rounded-full object-cover select-none"
                             draggable="false"
                         />
+
                     </div>
 
-                    {/* Dropdown Menu */}
                     {dropdownOpen && (
-                        <div ref={dropdownRef} className="absolute right-0 mt-4 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20" style={{ top: '100%' }}>
+                        <div ref={dropdownRef} className="absolute right-0 mt-4 w-64 bg-white text-gray-900 rounded-md shadow-lg z-30" style={{ top: '100%' }}>
                             <ul className="p-4 space-y-2">
                                 {dropdownItems.map((item, index) => (
                                     <li key={index}
                                         className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""}`}
-                                        onClick={item.action}
+                                        onClick={() => handleDropdownClick(item.action)}
                                         tabIndex={0}
                                     >
                                         {item.icon} {item.label}

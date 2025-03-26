@@ -10,9 +10,9 @@ const ResidentProfiling = () => {
 
     return (
 
-        <div className="flex flex-col lg:flex-row bg-white shadow-lg rounded-lg overflow-hidden">
-            <div className="w-full p-4">
-                <h2 className="text-2xl font-bold">Resident Profiling</h2>
+        <div className="flex flex-col lg:flex-row overflow-hidden">
+            <div className="w-full">
+                <h2 className="text-3xl font-bold">Resident Profiling</h2>
 
                 <div className="border-b bg-gray-100 flex mt-2">
                     {[

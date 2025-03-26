@@ -4,6 +4,7 @@ import Transparency from "./Transparency";
 import Demographics from "./Demographics";
 import ProjectManagement from "./ProjectManagement";
 import StrategicRoad from "./StrategicRoad";
+import MainProfileComponent from "../User/Profile/MainProfileComponent";
 
 const UserMainPage = ({ currentPage }) => {
     const renderPage = () => {
@@ -18,6 +19,8 @@ const UserMainPage = ({ currentPage }) => {
                 return <ProjectManagement />;
             case "Strategic Road":
                 return <StrategicRoad />;
+            case "Profile":
+                return <MainProfileComponent />;
             default:
                 return <Home />;
         }

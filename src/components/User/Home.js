@@ -56,14 +56,14 @@ const CardCarousel = () => {
             {/* Navigation Buttons */}
             <button
                 onClick={prevSlide}
-                className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition"
+                className="absolute top-1/2 left-5 transform -translate-y-1/2 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition"
             >
                 <FiChevronLeft size={24} />
             </button>
 
             <button
                 onClick={nextSlide}
-                className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition"
+                className="absolute top-1/2 right-5 transform -translate-y-1/2 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition"
             >
                 <FiChevronRight size={24} />
             </button>

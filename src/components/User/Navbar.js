@@ -5,6 +5,7 @@ import FullNav from "./FullNav";
 import { useUser } from "../contexts/UserContext";
 import { FaSignOutAlt, FaCog, FaCommentDots } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
+import { supabase } from "../../supabaseClient"; // Ensure Supabase is imported
 
 const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     const { displayName } = useUser();
@@ -12,6 +13,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
+    const [profilePic, setProfilePic] = useState(placeholderImg);
 
     useEffect(() => {
         const handleResize = () => {
@@ -36,10 +38,25 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data, error } = await supabase.auth.getUser();
+
+            if (error || !data?.user) {
+                return;
+            }
+
+            const userData = data.user;
+            setProfilePic(userData.user_metadata?.profilePic || placeholderImg);
+        };
+
+        fetchUser();
+    }, []);
+
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
     return (
-        <nav className="bg-white shadow-md sticky top-0 z-10 select-none">
+        <nav className="bg-white shadow-md sticky top-0 z-20 select-none">
             <div className="container mx-auto px-4 py-2 flex justify-between items-center">
                 {/* Left Side - Logo and Navigation */}
                 <div className="flex items-center">
@@ -60,18 +77,15 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                         <div className="relative">
                             <div
                                 className="flex items-center p-1 cursor-pointer rounded-full active:bg-blue-400 hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
-                                onClick={() => {
-                                    toggleDropdown();
-                                    console.log("Profile clicked");
-                                }}
+                                onClick={toggleDropdown}
                                 ref={profileRef}
                                 aria-label="User Profile"
                                 tabIndex={0}
                             >
                                 <img
-                                    src={placeholderImg}
+                                    src={profilePic}
                                     alt="User Profile"
-                                    className="w-16 h-auto rounded-full select-none"
+                                    className="w-16 h-16 rounded-full object-cover select-none"
                                     draggable="false"
                                 />
                             </div>
@@ -81,9 +95,9 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                     <ul className="p-4 space-y-2">
                                         <li
                                             className="px-4 py-2 flex items-center cursor-pointer active:bg-blue-200 hover:bg-blue-100 rounded-md transition"
-                                            onClick={() => console.log(`User: ${displayName} clicked`)}
+                                            onClick={() => setCurrentPage('Profile')} // Redirect to Profile
                                         >
-                                            <img src={placeholderImg} className="w-14 h-auto rounded-full mr-2" alt="User Profile" />
+                                            <img src={profilePic} className="w-14 h-14 rounded-full object-cover mr-2" alt="User Profile" />
                                             <span className="text-xl font-semibold">{displayName}</span>
                                         </li>
                                         <li className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition">
@@ -94,10 +108,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                         </li>
                                         <li
                                             className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition text-red-600"
-                                            onClick={() => {
-                                                onLogout();
-                                                console.log("User logged out");
-                                            }}
+                                            onClick={onLogout}
                                         >
                                             <FaSignOutAlt className="mr-2 text-red-600" /> Logout
                                         </li>
@@ -110,7 +121,6 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                         <FullNav handleNavClick={setCurrentPage} currentPage={currentPage} />
                     )}
                 </div>
-
             </div>
         </nav>
     );
