@@ -27,13 +27,8 @@ const StrategicRoad = () => {
             </p>
 
             {/* Map Section */}
-            <div className="relative w-full h-96 mt-4">
-                <MapContainer
-                    center={bonbonCoords}
-                    zoom={14}
-                    style={{ height: "100%", width: "100%" }}
-                    className="relative z-0"
-                >
+            <div className="w-full h-96">
+                <MapContainer center={bonbonCoords} zoom={14} style={{ height: "100%", width: "100%" }}>
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -55,6 +50,23 @@ const StrategicRoad = () => {
                         </Popup>
                     </Marker>
                 </MapContainer>
+            </div>
+            <div className="mt-8 flex justify-center gap-6">
+                <div className="w-64 bg-white shadow-lg rounded-lg overflow-hidden">
+                    <img src="https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg" alt="Facebook" className="w-full h-40 object-cover" />
+                    <div className="p-4">
+                        <h3 className="text-lg font-bold">Facebook</h3>
+                        <p className="text-sm text-gray-600">Follow us on Facebook for updates.</p>
+                    </div>
+                </div>
+
+                <div className="w-64 bg-white shadow-lg rounded-lg overflow-hidden">
+                    <img src="https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg" alt="Service" className="w-full h-40 object-cover" />
+                    <div className="p-4">
+                        <h3 className="text-lg font-bold">Service</h3>
+                        <p className="text-sm text-gray-600">Check out our latest services available.</p>
+                    </div>
+                </div>
             </div>
         </div>
     );
