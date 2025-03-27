@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaBars, FaHome, FaUsers, FaCog, FaList } from "react-icons/fa";
+import { FaBars, FaHome, FaUsers, FaCog } from "react-icons/fa";
 import logo from "../../img/Logo/bonbon-logo.png";
 
 const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPage }) => {
@@ -15,7 +15,6 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
     const sidebarOpen = isSidebarOpen && !isCollapsed;
 
     const navItems = [
-        { label: "Menu", icon: FaList },
         { label: "Home", icon: FaHome },
         { label: "Users", icon: FaUsers },
         { label: "Settings", icon: FaCog }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminHeader from "./AdminHeader";
 import AdminSidebar from "./AdminSidebar";
 import AdminMainPage from "./AdminMainPage";
@@ -8,9 +8,17 @@ const AdminMainComponent = ({ onLogout }) => {
     const [currentPage, setCurrentPage] = useState("Home");
     const [isSidebarOpen, setSidebarOpen] = useState(true);
 
+    useEffect(() => {
+        // Reset scroll position when changing pages
+        const mainContent = document.getElementById("main-content");
+        if (mainContent) {
+            mainContent.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    }, [currentPage]);
+
     return (
         <div className="flex min-h-screen bg-gray-100">
-            {/* Sidebar taking the entire left side */}
+            {/* Sidebar */}
             <AdminSidebar
                 isSidebarOpen={isSidebarOpen}
                 toggleSidebar={() => setSidebarOpen(!isSidebarOpen)}
@@ -24,7 +32,7 @@ const AdminMainComponent = ({ onLogout }) => {
                 <AdminHeader onLogout={onLogout} />
 
                 {/* Scrollable Main Content */}
-                <main className="flex-grow overflow-y-auto h-96">
+                <main id="main-content" className="flex-grow overflow-y-auto h-96">
                     <AdminMainPage currentPage={currentPage} />
                     {/* Footer - Fixed */}
                     <Footer />

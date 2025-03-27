@@ -52,6 +52,7 @@ Make sure you have the following installed on your machine:
    npm install leaflet
    npm install recharts
    npm install lucide-react
+   npm install react-calendar
    ```
 
 ### Usage

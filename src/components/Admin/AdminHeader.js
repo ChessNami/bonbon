@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../contexts/UserContext";
-import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon } from "react-icons/fa";
+import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 
 const AdminHeader = ({ onLogout }) => {
     const { displayName } = useUser();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [isCompact, setIsCompact] = useState(window.innerWidth < 1160);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [isCompact, setIsCompact] = useState(window.innerWidth < 1272);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
+    const notifRef = useRef(null);
 
-    // Update time smoothly
     useEffect(() => {
         let animationFrame;
         const updateClock = () => {
@@ -22,19 +23,14 @@ const AdminHeader = ({ onLogout }) => {
         return () => cancelAnimationFrame(animationFrame);
     }, []);
 
-    // Handle screen resizing efficiently
     useEffect(() => {
         const handleResize = () => {
-            setIsCompact((prev) => {
-                const newState = window.innerWidth < 1160;
-                return prev !== newState ? newState : prev;
-            });
+            setIsCompact(window.innerWidth < 1272);
         };
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
@@ -43,12 +39,16 @@ const AdminHeader = ({ onLogout }) => {
             ) {
                 setDropdownOpen(false);
             }
+            if (
+                notifRef.current && !notifRef.current.contains(event.target)
+            ) {
+                setNotifOpen(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Format Date & Time
     const formatDate = (date) =>
         window.innerWidth < 1135
             ? date.toLocaleDateString("en-PH")
@@ -68,6 +68,7 @@ const AdminHeader = ({ onLogout }) => {
     };
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+    const toggleNotif = () => setNotifOpen((prev) => !prev);
 
     const dropdownItems = [
         { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => console.log("Settings Clicked") },
@@ -75,23 +76,24 @@ const AdminHeader = ({ onLogout }) => {
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" }
     ];
 
+    const notifications = [
+        "New order received",
+        "System update available",
+        "Reminder: Inventory check due",
+    ];
+
     return (
         <header className="bg-primary text-white py-3 flex select-none shadow-md">
             <div className="mx-4 flex justify-between items-center w-full">
-                {/* Date Display */}
                 <div className="text-lg flex-1 text-left flex items-center">
                     <FaCalendarAlt className="mr-2 text-highlight" />
                     {formatDate(currentTime)}
                 </div>
-
-                {/* Time Display */}
                 <div className="text-lg flex-1 text-center flex items-center justify-center">
                     {getTimeIcon()}
                     {formatTime(currentTime)}
                 </div>
-
-                {/* Profile Section */}
-                <div className="text-lg flex-1 text-right flex items-center justify-end relative">
+                <div className="text-lg flex-1 text-right flex items-center justify-end relative space-x-4">
                     <div
                         className="flex items-center p-2 cursor-pointer rounded-md hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
                         onClick={toggleDropdown}
@@ -107,8 +109,6 @@ const AdminHeader = ({ onLogout }) => {
                             draggable="false"
                         />
                     </div>
-
-                    {/* Dropdown Menu */}
                     {dropdownOpen && (
                         <div
                             ref={dropdownRef}
@@ -123,12 +123,32 @@ const AdminHeader = ({ onLogout }) => {
                                     </li>
                                 )}
                                 {dropdownItems.map((item, index) => (
-                                    <li key={index}
-                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""}`}
-                                        onClick={item.action}
-                                        tabIndex={0}
-                                    >
+                                    <li key={index} className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""}`} onClick={item.action} tabIndex={0}>
                                         {item.icon} {item.label}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    <div
+                        className="p-2 cursor-pointer rounded-md hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
+                        onClick={toggleNotif}
+                        ref={notifRef}
+                        aria-label="Notifications"
+                        tabIndex={0}
+                    >
+                        <FaBell className="text-white" size={25} />
+                    </div>
+                    {notifOpen && (
+                        <div
+                            ref={notifRef}
+                            className="absolute right-0 mt-3 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
+                            style={{ top: '100%' }}
+                        >
+                            <ul className="p-2 space-y-2">
+                                {notifications.map((notif, index) => (
+                                    <li key={index} className="px-4 py-2 hover:bg-gray-100 cursor-pointer rounded-md transition">
+                                        {notif}
                                     </li>
                                 ))}
                             </ul>
