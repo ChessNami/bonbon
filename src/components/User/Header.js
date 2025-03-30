@@ -125,7 +125,7 @@ const Header = ({ onLogout, setCurrentPage }) => {
     ];
 
     return (
-        <header className="bg-[#172554] text-white py-3 hidden lg:flex select-none shadow-md">
+        <header className="bg-[#172554] text-white py-3 hidden lg:flex select-none shadow-md z-30">
             <div className="container mx-auto px-4 flex justify-between items-center">
                 <div className="text-lg flex-1 text-left flex items-center">
                     <FaCalendarAlt className="mr-2 text-highlight" />

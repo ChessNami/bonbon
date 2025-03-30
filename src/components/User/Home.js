@@ -39,14 +39,17 @@ const Home = () => {
     return (
         <div className="relative w-full max-w-[1800px] mx-auto overflow-hidden p-6">
             <div className="overflow-hidden relative flex items-center justify-center">
-                <button onClick={prevSlide} className="absolute left-0 z-20 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition">
+                <button
+                    onClick={prevSlide}
+                    className="absolute left-0 z-10 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition"
+                >
                     <ChevronLeft size={24} />
                 </button>
 
                 <div className="flex transition-transform duration-500 ease-in-out mx-12">
                     {visibleImages.map((item) => (
                         <div key={item.id} style={{ width: cardWidth }} className="flex-none p-3">
-                            <div 
+                            <div
                                 className="h-80 w-full rounded-lg overflow-hidden shadow-lg bg-white flex flex-col cursor-pointer"
                                 onClick={() => setSelectedImage(item)}
                             >
@@ -62,7 +65,10 @@ const Home = () => {
                     ))}
                 </div>
 
-                <button onClick={nextSlide} className="absolute right-0 z-20 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition">
+                <button
+                    onClick={nextSlide}
+                    className="absolute right-0 z-10 bg-gray-800 text-white p-3 rounded-full hover:bg-gray-900 transition"
+                >
                     <ChevronRight size={24} />
                 </button>
             </div>
@@ -72,14 +78,20 @@ const Home = () => {
                 {["Facebook", "Service"].map((title, index) => (
                     <div
                         key={index}
-                        className="w-64 bg-white shadow-lg rounded-lg overflow-hidden cursor-pointer"
-                        onClick={() => setSelectedImage({
-                            name: title,
-                            image: "https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg",
-                            description: `Learn more about our ${title.toLowerCase()}.`
-                        })}
+                        className="w-64 bg-white shadow-lg rounded-lg overflow-hidden cursor-pointer z-0"
+                        onClick={() =>
+                            setSelectedImage({
+                                name: title,
+                                image: "https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg",
+                                description: `Learn more about our ${title.toLowerCase()}.`,
+                            })
+                        }
                     >
-                        <img src="https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg" alt={title} className="w-full h-40 object-cover" />
+                        <img
+                            src="https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg"
+                            alt={title}
+                            className="w-full h-40 object-cover"
+                        />
                         <div className="p-4">
                             <h3 className="text-lg font-bold">{title}</h3>
                             <p className="text-sm text-gray-600">Click to view more details.</p>
@@ -92,7 +104,10 @@ const Home = () => {
             {selectedImage && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
                     <div className="relative bg-white p-6 rounded-lg max-w-2xl w-full">
-                        <button onClick={() => setSelectedImage(null)} className="absolute top-3 right-3 bg-gray-800 text-white p-2 rounded-full">
+                        <button
+                            onClick={() => setSelectedImage(null)}
+                            className="absolute top-3 right-3 bg-gray-800 text-white p-2 rounded-full"
+                        >
                             <X size={20} />
                         </button>
                         <img src={selectedImage.image} alt={selectedImage.name} className="w-full h-auto rounded-lg" />
