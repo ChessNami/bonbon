@@ -34,8 +34,10 @@ const Header = ({ onLogout, setCurrentPage }) => {
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
-                dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-                profileRef.current && !profileRef.current.contains(event.target)
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target) &&
+                profileRef.current &&
+                !profileRef.current.contains(event.target)
             ) {
                 setDropdownOpen(false);
             }
@@ -52,12 +54,27 @@ const Header = ({ onLogout, setCurrentPage }) => {
             const { data, error } = await supabase.auth.getUser();
 
             if (error || !data?.user) {
+                console.error("Error fetching user:", error?.message || "No user found");
                 return;
             }
 
-            const userProfilePic = data.user.user_metadata?.profilePic;
-            if (userProfilePic) {
-                setProfilePic(userProfilePic);
+            const userProfilePicPath = data.user.user_metadata?.profilePic; // File path from metadata
+            if (userProfilePicPath) {
+                try {
+                    // Generate a signed URL for the profile picture
+                    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                        .from("user-assets")
+                        .createSignedUrl(userProfilePicPath, 3600); // 3600 seconds = 1 hour
+
+                    if (signedUrlError) {
+                        console.error("Error generating signed URL for profile picture:", signedUrlError.message);
+                        return;
+                    }
+
+                    setProfilePic(signedUrlData.signedUrl); // Update state with the signed URL
+                } catch (err) {
+                    console.error("Error generating signed URL:", err.message);
+                }
             }
         };
 
@@ -93,16 +110,18 @@ const Header = ({ onLogout, setCurrentPage }) => {
 
     const getTimeIcon = () => {
         const hours = currentTime.getHours();
-        return hours >= 6 && hours < 18
-            ? <FaSun className="mr-2 text-yellow-400" aria-label="Daytime" />
-            : <FaMoon className="mr-2 text-blue-400" aria-label="Nighttime" />;
+        return hours >= 6 && hours < 18 ? (
+            <FaSun className="mr-2 text-yellow-400" aria-label="Daytime" />
+        ) : (
+            <FaMoon className="mr-2 text-blue-400" aria-label="Nighttime" />
+        );
     };
 
     const dropdownItems = [
         { icon: <FaUser className="mr-2 text-gray-700" />, label: "Profile", action: () => setCurrentPage("Profile") },
         { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => console.log("Settings Clicked") },
         { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => console.log("Feedback Clicked") },
-        { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" }
+        { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
     ];
 
     return (
@@ -133,15 +152,20 @@ const Header = ({ onLogout, setCurrentPage }) => {
                             className="w-10 h-10 rounded-full object-cover select-none"
                             draggable="false"
                         />
-
                     </div>
 
                     {dropdownOpen && (
-                        <div ref={dropdownRef} className="absolute right-0 mt-4 w-64 bg-white text-gray-900 rounded-md shadow-lg z-30" style={{ top: '100%' }}>
+                        <div
+                            ref={dropdownRef}
+                            className="absolute right-0 mt-4 w-64 bg-white text-gray-900 rounded-md shadow-lg z-30"
+                            style={{ top: "100%" }}
+                        >
                             <ul className="p-4 space-y-2">
                                 {dropdownItems.map((item, index) => (
-                                    <li key={index}
-                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""}`}
+                                    <li
+                                        key={index}
+                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""
+                                            }`}
                                         onClick={() => handleDropdownClick(item.action)}
                                         tabIndex={0}
                                     >

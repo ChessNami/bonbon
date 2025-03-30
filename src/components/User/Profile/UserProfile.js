@@ -4,12 +4,17 @@ import Swal from "sweetalert2";
 import placeholderImg from "../../../img/Placeholder/placeholder.png";
 import coverPhotoPlaceholder from "../../../img/Placeholder/coverphoto.png";
 import Compressor from "compressorjs";
-import { FaCamera, FaEye, FaEdit } from "react-icons/fa";
+import { FaCamera, FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { v4 as uuidv4 } from "uuid";
+import { motion } from "framer-motion";
+import Loader from "../../Loader"; // Assuming you have a Loader component
 
 const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const [user, setUser] = useState(null);
     const [profilePic, setProfilePic] = useState(placeholderImg);
     const [coverPhoto, setCoverPhoto] = useState(coverPhotoPlaceholder);
+    const [profilePicLoading, setProfilePicLoading] = useState(true); // Loader for profile picture
+    const [coverPhotoLoading, setCoverPhotoLoading] = useState(true); // Loader for cover photo
     const [showDropdown, setShowDropdown] = useState(false);
     const [showCoverDropdown, setShowCoverDropdown] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -31,14 +36,46 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
             const userData = data.user;
             setUser(userData);
-            setProfilePic(userData.user_metadata?.profilePic || placeholderImg);
-            setCoverPhoto(userData.user_metadata?.coverPhoto || coverPhotoPlaceholder);
 
-            onLoadingComplete(true); // Notify parent that loading is complete
+            // Generate signed URLs for profile and cover photos
+            const profilePicPath = userData.user_metadata?.profilePic?.split("/").slice(-2).join("/");
+            const coverPhotoPath = userData.user_metadata?.coverPhoto?.split("/").slice(-2).join("/");
+
+            try {
+                if (profilePicPath) {
+                    const { data: signedProfilePic, error: profilePicError } = await supabase.storage
+                        .from("user-assets")
+                        .createSignedUrl(profilePicPath, 3600); // 3600 seconds = 1 hour
+
+                    if (profilePicError) {
+                        console.error("Error generating signed URL for profile picture:", profilePicError.message);
+                    } else {
+                        setProfilePic(signedProfilePic.signedUrl);
+                    }
+                }
+
+                if (coverPhotoPath) {
+                    const { data: signedCoverPhoto, error: coverPhotoError } = await supabase.storage
+                        .from("user-assets")
+                        .createSignedUrl(coverPhotoPath, 3600); // 3600 seconds = 1 hour
+
+                    if (coverPhotoError) {
+                        console.error("Error generating signed URL for cover photo:", coverPhotoError.message);
+                    } else {
+                        setCoverPhoto(signedCoverPhoto.signedUrl);
+                    }
+                }
+            } catch (err) {
+                console.error("Error generating signed URLs:", err.message);
+            } finally {
+                setProfilePicLoading(false); // Stop loader for profile picture
+                setCoverPhotoLoading(false); // Stop loader for cover photo
+                onLoadingComplete(true); // Notify parent that loading is complete
+            }
         };
 
         fetchUser();
-    }, [onLoadingComplete]);
+    }, [onLoadingComplete]); // Add onLoadingComplete to the dependency array
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -62,19 +99,96 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
     const handleFileUpload = async (e, type) => {
         const file = e.target.files[0];
-        if (!file || !user) return;
+
+        // Check if the user is authenticated
+        const { data: userData, error: authError } = await supabase.auth.getUser();
+        if (authError || !userData?.user) {
+            Swal.fire({
+                icon: "error",
+                title: "Authentication Error",
+                text: "You must be logged in to upload a photo.",
+                timer: 2000,
+                showConfirmButton: false,
+            });
+            return;
+        }
+
+        if (!file) {
+            Swal.fire({
+                icon: "error",
+                title: "No File Selected",
+                text: "Please select a file to upload.",
+                timer: 2000,
+                showConfirmButton: false,
+            });
+            return;
+        }
+
+        // Show loading indicator
+        Swal.fire({
+            title: "Uploading...",
+            text: "Please wait while your photo is being uploaded.",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
+
+        // Set loader for the specific type
+        if (type === "profilePic") setProfilePicLoading(true);
+        if (type === "coverPhoto") setCoverPhotoLoading(true);
 
         new Compressor(file, {
             quality: 0.8,
             success: async (compressedFile) => {
-                const fileExt = compressedFile.name.split(".").pop();
-                const filePath = `${user.id}/${type}.${fileExt}`;
+                const fileExt = compressedFile.name.split(".").pop(); // Get file extension
+                const uniqueFileName = `${userData.user.id}/${type}-${uuidv4()}.${fileExt}`; // Generate unique file name
 
-                const { error } = await supabase.storage
-                    .from("user-assets")
-                    .upload(filePath, compressedFile, { upsert: true });
+                try {
+                    // Upload file to Supabase
+                    const { error: uploadError } = await supabase.storage
+                        .from("user-assets")
+                        .upload(uniqueFileName, compressedFile, { upsert: true });
 
-                if (error) {
+                    if (uploadError) {
+                        throw uploadError;
+                    }
+
+                    // Generate a signed URL for the uploaded file
+                    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                        .from("user-assets")
+                        .createSignedUrl(uniqueFileName, 3600); // 3600 seconds = 1 hour
+
+                    if (signedUrlError) {
+                        throw signedUrlError;
+                    }
+
+                    const signedUrl = signedUrlData.signedUrl;
+
+                    // Update the user's metadata with the new file path
+                    const { error: updateError } = await supabase.auth.updateUser({
+                        data: { [type]: uniqueFileName },
+                    });
+
+                    if (updateError) {
+                        throw updateError;
+                    }
+
+                    // Update the state to reflect the new image
+                    if (type === "profilePic") {
+                        setProfilePic(signedUrl); // Use the signed URL to display the new photo immediately
+                    } else {
+                        setCoverPhoto(signedUrl); // Use the signed URL to display the new photo immediately
+                    }
+
+                    Swal.fire({
+                        icon: "success",
+                        title: "Upload Successful",
+                        text: "Your photo has been uploaded successfully.",
+                        timer: 1500,
+                        showConfirmButton: false,
+                    });
+                } catch (error) {
                     Swal.fire({
                         icon: "error",
                         title: "Upload Failed",
@@ -82,44 +196,11 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         timer: 2000,
                         showConfirmButton: false,
                     });
-                    return;
+                } finally {
+                    // Stop loader for the specific type
+                    if (type === "profilePic") setProfilePicLoading(false);
+                    if (type === "coverPhoto") setCoverPhotoLoading(false);
                 }
-
-                const { data: publicUrlData } = supabase.storage
-                    .from("user-assets")
-                    .getPublicUrl(filePath);
-
-                if (publicUrlData) {
-                    const url = publicUrlData.publicUrl;
-
-                    const { error: updateError } = await supabase.auth.updateUser({
-                        data: { [type]: url },
-                    });
-
-                    if (updateError) {
-                        Swal.fire({
-                            icon: "error",
-                            title: "Update Failed",
-                            text: updateError.message,
-                            timer: 2000,
-                            showConfirmButton: false,
-                        });
-                        return;
-                    }
-
-                    if (type === "profilePic") setProfilePic(url);
-                    else setCoverPhoto(url);
-
-                    Swal.fire({
-                        icon: "success",
-                        title: "Upload Successful",
-                        timer: 1500,
-                        showConfirmButton: false,
-                    });
-                }
-
-                setShowDropdown(false);
-                setShowCoverDropdown(false);
             },
             error(err) {
                 Swal.fire({
@@ -129,8 +210,78 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     timer: 2000,
                     showConfirmButton: false,
                 });
+                if (type === "profilePic") setProfilePicLoading(false);
+                if (type === "coverPhoto") setCoverPhotoLoading(false);
             },
         });
+    };
+
+    const handleDeletePhoto = async (type) => {
+        if (!user) {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "User is not authenticated.",
+                timer: 2000,
+                showConfirmButton: false,
+            });
+            return;
+        }
+
+        const currentPhotoUrl = type === "profilePic" ? profilePic : coverPhoto;
+
+        if (!currentPhotoUrl || currentPhotoUrl === placeholderImg || currentPhotoUrl === coverPhotoPlaceholder) {
+            Swal.fire({
+                icon: "info",
+                title: "No Photo to Delete",
+                text: `There is no ${type === "profilePic" ? "profile" : "cover"} photo to delete.`,
+                timer: 2000,
+                showConfirmButton: false,
+            });
+            return;
+        }
+
+        const filePath = currentPhotoUrl.split("/").slice(-2).join("/"); // Extract file path from URL
+
+        try {
+            // Delete the file from Supabase storage
+            const { error: deleteError } = await supabase.storage
+                .from("user-assets")
+                .remove([filePath]);
+
+            if (deleteError) {
+                throw deleteError;
+            }
+
+            // Update the user's metadata to remove the photo URL
+            const { error: updateError } = await supabase.auth.updateUser({
+                data: { [type]: null },
+            });
+
+            if (updateError) {
+                throw updateError;
+            }
+
+            // Update the state to reflect the deletion
+            if (type === "profilePic") setProfilePic(placeholderImg);
+            else setCoverPhoto(coverPhotoPlaceholder);
+
+            Swal.fire({
+                icon: "success",
+                title: "Photo Deleted",
+                text: `${type === "profilePic" ? "Profile" : "Cover"} photo has been deleted.`,
+                timer: 1500,
+                showConfirmButton: false,
+            });
+        } catch (error) {
+            Swal.fire({
+                icon: "error",
+                title: "Delete Failed",
+                text: error.message,
+                timer: 2000,
+                showConfirmButton: false,
+            });
+        }
     };
 
     const handleViewImage = (image, type) => {
@@ -139,16 +290,54 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         setModalType(type);
     };
 
+    const handleTabClick = async (tabKey) => {
+        if (tabKey === "residentProfiling") {
+            const result = await Swal.fire({
+                title: "Are you sure?",
+                text: "Do you want to proceed to Resident Profiling?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Yes, proceed",
+                cancelButtonText: "No, cancel",
+            });
+
+            if (result.isConfirmed) {
+                // User confirmed, proceed to Resident Profiling tab
+                setActiveTab(tabKey);
+            } else {
+                // User canceled, go back to My Account tab
+                setActiveTab("myAccount");
+            }
+        } else {
+            // For other tabs, simply switch to the selected tab
+            setActiveTab(tabKey);
+        }
+    };
+
+
+    const tabs = [
+        { key: "myAccount", label: "My Account" },
+        { key: "accountSettings", label: "Account Settings" },
+        { key: "residentProfiling", label: "Resident Profiling" },
+        { key: "help", label: "Help" },
+    ];
+
     return (
         <div className="select-none">
             {/* Cover Photo Section */}
             <div className="relative h-48 sm:h-72 bg-gray-300">
-                {coverPhoto && (
+                {coverPhotoLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-300">
+                        <Loader />
+                    </div>
+                )}
+                {!coverPhotoLoading && (
                     <img
                         src={coverPhoto}
                         alt="Cover"
                         className="w-full h-full object-cover cursor-pointer"
-                        onClick={() => handleViewImage(coverPhoto)}
                     />
                 )}
                 <div className="absolute bottom-4 right-4">
@@ -182,6 +371,15 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             >
                                 <FaEye className="mr-2" /> View Cover Photo
                             </button>
+                            <button
+                                className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100 text-red-500"
+                                onClick={() => {
+                                    handleDeletePhoto("coverPhoto");
+                                    setShowCoverDropdown(false);
+                                }}
+                            >
+                                <FaTrash className="mr-2" /> Delete Cover Photo
+                            </button>
                         </div>
                     )}
                     <input
@@ -196,12 +394,18 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             {/* Profile Picture and User Info */}
             <div className="flex flex-col sm:flex-row items-center p-4 relative">
                 <div className="relative w-24 h-24 sm:w-36 sm:h-36" ref={dropdownRef}>
-                    <img
-                        src={profilePic}
-                        alt="Profile"
-                        className="w-full h-full rounded-full object-cover cursor-pointer border-4 border-gray-200 shadow-lg"
-                        onClick={() => setShowDropdown(!showDropdown)}
-                    />
+                    {profilePicLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 rounded-full">
+                            <Loader />
+                        </div>
+                    )}
+                    {!profilePicLoading && (
+                        <img
+                            src={profilePic}
+                            alt="Profile"
+                            className="w-full h-full rounded-full object-cover cursor-pointer border-4 border-gray-200 shadow-lg"
+                        />
+                    )}
                     {showDropdown && (
                         <div className="absolute left-0 mt-2 w-72 bg-white border rounded shadow-lg z-20">
                             <button
@@ -221,6 +425,15 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                 }}
                             >
                                 <FaEye className="mr-2" /> View Profile Picture
+                            </button>
+                            <button
+                                className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100 text-red-500"
+                                onClick={() => {
+                                    handleDeletePhoto("profilePic");
+                                    setShowDropdown(false);
+                                }}
+                            >
+                                <FaTrash className="mr-2" /> Delete Profile Picture
                             </button>
                         </div>
                     )}
@@ -248,8 +461,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             src={modalImage}
                             alt="Full View"
                             className={`object-cover mx-auto ${modalType === "profile"
-                                    ? "w-64 h-64 rounded-full"
-                                    : "w-full h-auto max-h-[500px]"
+                                ? "w-64 h-64 rounded-full"
+                                : "w-full h-auto max-h-[500px]"
                                 }`}
                         />
                         <button
@@ -263,22 +476,26 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             )}
 
             {/* Tabs */}
-            <div className="border-b bg-gray-100 flex flex-wrap justify-center sm:justify-start">
-                {[
-                    { key: "myAccount", label: "My Account" },
-                    { key: "accountSettings", label: "Account Settings" },
-                    { key: "residentProfiling", label: "Resident Profiling" },
-                    { key: "help", label: "Help" },
-                ].map((tab) => (
+            <div className="border-b bg-gray-100 flex flex-wrap justify-center sm:justify-start relative overflow-hidden">
+                {tabs.map((tab) => (
                     <div
                         key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
-                        className={`cursor-pointer px-4 py-3 text-sm font-medium transition-all ${activeTab === tab.key
-                                ? "border-b-2 border-blue-700 text-blue-700"
-                                : "text-gray-600 hover:text-blue-700"
+                        onClick={() => handleTabClick(tab.key)}
+                        className={`cursor-pointer px-4 py-3 text-sm font-medium transition-all relative ${activeTab === tab.key
+                            ? "text-blue-700"
+                            : "text-gray-600 hover:text-blue-700"
                             }`}
                     >
                         {tab.label}
+                        {/* Add the motion.div for the active tab indicator */}
+                        {activeTab === tab.key && (
+                            <motion.div
+                                layoutId="tab-indicator"
+                                className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-700"
+                                initial={false}
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            />
+                        )}
                     </div>
                 ))}
             </div>

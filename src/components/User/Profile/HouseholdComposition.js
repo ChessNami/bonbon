@@ -84,16 +84,37 @@ const HouseholdForm = () => {
                     <legend className="font-semibold">Household Composition</legend>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="childrenCount" className="block text-sm font-medium text-gray-700">Number of Children</label>
-                            <input type="number" name="childrenCount" id="childrenCount" className="input-style"
-                                value={childrenCount} onChange={(e) => setChildrenCount(e.target.value)} />
+                            <label htmlFor="childrenCount" className="block text-sm font-medium text-gray-700">
+                                Number of Children
+                            </label>
+                            <input
+                                type="number"
+                                name="childrenCount"
+                                id="childrenCount"
+                                className="input-style"
+                                value={childrenCount}
+                                onChange={(e) => {
+                                    const value = Math.max(0, parseInt(e.target.value, 10) || 0); // Ensure non-negative values
+                                    setChildrenCount(value);
+                                }}
+                            />
+
                         </div>
                         <div>
                             <label htmlFor="numberOfhouseholdMembers" className="block text-sm font-medium text-gray-700">
                                 Number of Household Members (excluding Head & Spouse)
                             </label>
-                            <input type="number" name="numberOfhouseholdMembers" id="numberOfhouseholdMembers" className="input-style"
-                                value={numberOfhouseholdMembers} onChange={handleHouseholdChange} />
+                            <input
+                                type="number"
+                                name="numberOfhouseholdMembers"
+                                id="numberOfhouseholdMembers"
+                                className="input-style"
+                                value={numberOfhouseholdMembers}
+                                onChange={(e) => {
+                                    const value = Math.max(0, parseInt(e.target.value, 10) || 0); // Prevent negative values
+                                    handleHouseholdChange({ target: { value } }); // Call the existing handler with the updated value
+                                }}
+                            />
                         </div>
                     </div>
                 </fieldset>
@@ -126,9 +147,31 @@ const HouseholdForm = () => {
 
                             {/* Relation */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Relation to Household Head</label>
-                                <input type="text" name="relation" className="input-style" value={member.relation}
-                                    onChange={(e) => handleMemberChange(index, e)} />
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Relation to Household Head
+                                </label>
+                                <select name="relation" className="input-style" value={member.relation}
+                                    onChange={(e) => handleMemberChange(index, e)}>
+                                    <option value="" disabled>Select Relation</option>
+                                    <option value="Head">Head (Puno sa Panimalay)</option>
+                                    <option value="Spouse">Spouse (Asawa o Bana)</option>
+                                    <option value="Son">Son (Anak nga Lalaki)</option>
+                                    <option value="Daughter">Daughter (Anak nga Babaye)</option>
+                                    <option value="Father">Father (Amahan)</option>
+                                    <option value="Mother">Mother (Inahan)</option>
+                                    <option value="Brother">Brother (Igsoon nga Lalaki)</option>
+                                    <option value="Sister">Sister (Igsoon nga Babaye)</option>
+                                    <option value="Grandfather">Grandfather (Lolo)</option>
+                                    <option value="Grandmother">Grandmother (Lola)</option>
+                                    <option value="Grandson">Grandson (Apo nga Lalaki)</option>
+                                    <option value="Granddaughter">Granddaughter (Apo nga Babaye)</option>
+                                    <option value="Uncle">Uncle (Tiyo)</option>
+                                    <option value="Aunt">Aunt (Tiya)</option>
+                                    <option value="Nephew">Nephew (Pag-umangkon nga Lalaki)</option>
+                                    <option value="Niece">Niece (Pag-umangkon nga Babaye)</option>
+                                    <option value="Cousin">Cousin (Ig-agaw)</option>
+                                    <option value="Other">Other (Uban pa)</option>
+                                </select>
                             </div>
 
                             {/* Gender Selection */}
@@ -160,16 +203,33 @@ const HouseholdForm = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Age</label>
-                                <input type="number" name="age" className="input-style" value={member.age}
-                                    onChange={(e) => handleMemberChange(index, e)} />
+                                <input
+                                    type="number"
+                                    name="age"
+                                    className="input-style"
+                                    value={member.age}
+                                    onChange={(e) => {
+                                        const value = Math.max(0, parseInt(e.target.value, 10) || 0); // Prevent negative values
+                                        handleMemberChange(index, { target: { name: "age", value } });
+                                    }}
+                                />
+
                             </div>
 
-                            {/* Education & Occupation */}
+                            {/* Educational Attainment */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Education</label>
-                                <input type="text" name="education" className="input-style" value={member.education}
-                                    onChange={(e) => handleMemberChange(index, e)} />
+                                <label className="block text-sm font-medium text-gray-700">Educational Attainment</label>
+                                <select name="education" className="input-style" value={member.education}
+                                    onChange={(e) => handleMemberChange(index, e)}>
+                                    <option value="" disabled >Select Education Level</option>
+                                    <option value="Elementary">Elementary</option>
+                                    <option value="High School">High School</option>
+                                    <option value="College">College</option>
+                                    <option value="Vocational">Vocational</option>
+                                </select>
                             </div>
+
+                            {/* Occupation */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Occupation</label>
                                 <input type="text" name="occupation" className="input-style" value={member.occupation}

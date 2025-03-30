@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const BarangayCouncilTable = () => {
     const [activeTab, setActiveTab] = useState("Barangay Officials");
@@ -110,19 +111,21 @@ const BarangayCouncilTable = () => {
             {/* Pagination (Sticks to Bottom) */}
             <div className="flex justify-between items-center bg-gray-100 p-2 border-t border-gray-300">
                 <button
-                    className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
+                    className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50 flex items-center gap-1"
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
                 >
-                    Previous
+                    <FaChevronLeft />
+                    Prev
                 </button>
                 <span className="text-sm">Page {currentPage} of {totalPages}</span>
                 <button
-                    className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
+                    className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50 flex items-center gap-1"
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
                 >
                     Next
+                    <FaChevronRight />
                 </button>
             </div>
         </div>

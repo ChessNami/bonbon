@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react"; // Import useCallback
+import { motion } from "framer-motion";
 import UserProfile from "./UserProfile";
 import MyAccount from "./MyAccount";
 import AccountSettings from "./AccountSettings";
@@ -10,23 +11,48 @@ const MainProfileComponent = () => {
     const [activeTab, setActiveTab] = useState("myAccount");
     const [loading, setLoading] = useState(true);
 
-    const handleLoadingComplete = (isLoaded) => {
+    // Wrap handleLoadingComplete in useCallback to ensure a stable reference
+    const handleLoadingComplete = useCallback((isLoaded) => {
         setLoading(!isLoaded); // Set loading to false when UserProfile finishes loading
-    };
+    }, []);
 
     const renderContent = () => {
+        const variants = {
+            hidden: { opacity: 0, y: -50 },
+            visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+            exit: { opacity: 0, y: -50, transition: { duration: 0.2 } }
+        };
+
+        let Component;
         switch (activeTab) {
             case "myAccount":
-                return <MyAccount />;
+                Component = MyAccount;
+                break;
             case "accountSettings":
-                return <AccountSettings />;
+                Component = AccountSettings;
+                break;
             case "residentProfiling":
-                return <ResidentProfiling />;
+                Component = ResidentProfiling;
+                break;
             case "help":
-                return <Help />;
+                Component = Help;
+                break;
             default:
-                return <MyAccount />;
+                Component = MyAccount;
         }
+
+        return (
+            <motion.div
+                key={activeTab}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={variants}
+                className="w-full bg-white p-4 rounded-md shadow-md"
+            >
+                <Component />
+            </motion.div>
+        );
     };
 
     return (
@@ -43,7 +69,7 @@ const MainProfileComponent = () => {
                 <UserProfile
                     activeTab={activeTab}
                     setActiveTab={setActiveTab}
-                    onLoadingComplete={handleLoadingComplete}
+                    onLoadingComplete={handleLoadingComplete} // Pass the stable function
                 />
             </div>
 
@@ -51,9 +77,7 @@ const MainProfileComponent = () => {
             <div className="hidden lg:block w-px bg-gray-300"></div>
 
             {/* Content Section on the Right */}
-            <div className="w-full bg-white p-4 rounded-md shadow-md">
-                {renderContent()}
-            </div>
+            {renderContent()}
         </div>
     );
 };

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../../supabaseClient";
 import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBarangaysByMunicipality } from "@aivangogh/ph-address";
 
 const SpouseForm = () => {
@@ -38,19 +37,9 @@ const SpouseForm = () => {
 
     const [gender, setGender] = useState("");
     const [customGender, setCustomGender] = useState("");
+    const [employmentType, setEmploymentType] = useState("");
 
     useEffect(() => {
-        const fetchUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setFormData((prevData) => ({
-                    ...prevData,
-                    email: user.email
-                }));
-            }
-        };
-
-        fetchUser();
         setRegions(getAllRegions());
     }, []);
 
@@ -91,13 +80,18 @@ const SpouseForm = () => {
         console.log(formData);
     };
 
+    const handleEmploymentChange = (e) => {
+        setEmploymentType(e.target.value);
+        handleChange(e); // Pass the change to the parent
+    };
+
     return (
         <div className="p-4 shadow-lg rounded-lg">
             <form className="space-y-6" onSubmit={handleSubmit}>
                 {/* Household Head */}
                 <fieldset className="border p-4 rounded-lg">
                     <legend className="font-semibold">Name of Spouse</legend>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         <div>
                             <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name</label>
                             <input type="text" name="firstName" id="firstName" className="input-style" onChange={handleChange} />
@@ -111,12 +105,12 @@ const SpouseForm = () => {
                             <input type="text" name="middleName" id="middleName" className="input-style" onChange={handleChange} />
                         </div>
                         <div>
-                            <label htmlFor="middleInitial" className="block text-sm font-medium text-gray-700">Middle Initial (M.I.)</label>
+                            <label htmlFor="middleInitial" className="block text-sm font-medium text-gray-700">Middle Initial</label>
                             <input
                                 type="text"
                                 name="middleInitial"
                                 id="middleInitial"
-                                className="input-style w-16"
+                                className="input-style"
                                 value={formData.middleInitial}
                                 readOnly
                             />
@@ -140,10 +134,10 @@ const SpouseForm = () => {
                 {/* Address */}
                 <fieldset className="border p-4 rounded-lg">
                     <legend className="font-semibold">Address</legend>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="col-span-2">
-                            <label htmlFor="address" className="block text-sm font-medium text-gray-700">Address (House #/Block/Street/Subsdivision/Building)</label>
-                            <input type="text" name="address" id="address" className="input-style" onChange={handleChange} />
+                            <label htmlFor="address" className="block text-sm font-medium text-gray-700">Address</label>
+                            <input type="text" name="address" id="address" className="input-style" onChange={handleChange} placeholder="House #/Block/Street/Subsdivision/Building" />
                         </div>
                         <div>
                             <label htmlFor="region" className="block text-sm font-medium text-gray-700">Region</label>
@@ -220,7 +214,15 @@ const SpouseForm = () => {
                         {/* Age */}
                         <div>
                             <label htmlFor="age" className="block text-sm font-medium text-gray-700">Age</label>
-                            <input type="number" name="age" id="age" className="input-style" />
+                            <input
+                                type="number"
+                                name="age"
+                                id="age"
+                                className="input-style"
+                                min="0"
+                                onInput={(e) => e.target.value = Math.max(0, e.target.value)}
+                            />
+
                         </div>
 
                         {/* Gender Selection */}
@@ -298,8 +300,8 @@ const SpouseForm = () => {
                             <input type="text" name="idNo" id="idNo" className="input-style" onChange={handleChange} />
                         </div>
                         <div>
-                            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">Personal Phone Number</label>
-                            <input type="tel" name="phoneNumber" id="phoneNumber" className="input-style" onChange={handleChange} placeholder="Ex. 09xxxxxxxxx" />
+                            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="text" name="phoneNumber" id="phoneNumber" className="input-style" onChange={handleChange} placeholder="Ex. 09xxxxxxxxx" />
                         </div>
                     </div>
                 </fieldset>
@@ -307,20 +309,44 @@ const SpouseForm = () => {
                 {/* Employment */}
                 <fieldset className="border p-4 rounded-lg">
                     <legend className="font-semibold">Employment</legend>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div>
-                            <label htmlFor="occupation" className="block text-sm font-medium text-gray-700">Occupation</label>
-                            <input type="text" name="occupation" id="occupation" className="input-style" onChange={handleChange} />
-                        </div>
-                        <div>
-                            <label htmlFor="skills" className="block text-sm font-medium text-gray-700">Skills</label>
-                            <input type="text" name="skills" id="skills" className="input-style" onChange={handleChange} />
-                        </div>
-                        <div>
-                            <label htmlFor="companyAddress" className="block text-sm font-medium text-gray-700">Company Address</label>
-                            <input type="text" name="companyAddress" id="companyAddress" className="input-style" onChange={handleChange} />
-                        </div>
+
+                    {/* Employment Type Dropdown */}
+                    <div className="mb-4">
+                        <label htmlFor="employmentType" className="block text-sm font-medium text-gray-700">
+                            Employment Type
+                        </label>
+                        <select
+                            name="employmentType"
+                            id="employmentType"
+                            className="input-style"
+                            onChange={handleEmploymentChange}
+                        >
+                            <option value="" disabled>Select Employment Type</option>
+                            <option value="employed">Employed</option>
+                            <option value="self-employed">Self-Employed</option>
+                            <option value="student">Student</option>
+                            <option value="retired">Retired</option>
+                            <option value="unemployed">Unemployed</option>
+                        </select>
                     </div>
+
+                    {/* Show Fields Only If Employed */}
+                    {employmentType === "employed" && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                                <label htmlFor="occupation" className="block text-sm font-medium text-gray-700">Occupation</label>
+                                <input type="text" name="occupation" id="occupation" className="input-style" onChange={handleChange} />
+                            </div>
+                            <div>
+                                <label htmlFor="skills" className="block text-sm font-medium text-gray-700">Skills</label>
+                                <input type="text" name="skills" id="skills" className="input-style" onChange={handleChange} />
+                            </div>
+                            <div>
+                                <label htmlFor="companyAddress" className="block text-sm font-medium text-gray-700">Company Address</label>
+                                <input type="text" name="companyAddress" id="companyAddress" className="input-style" onChange={handleChange} />
+                            </div>
+                        </div>
+                    )}
                 </fieldset>
 
                 {/* Educational Attainment */}

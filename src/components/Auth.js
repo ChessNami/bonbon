@@ -220,7 +220,10 @@ const Auth = ({ onLoginSuccess }) => {
             <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-4xl bg-white rounded shadow-lg p-6">
                 <div className="flex flex-col items-center justify-center w-full md:w-1/2 mb-6 md:mb-0">
                     <img src={logo} alt="Bonbon Logo" className="w-72 h-auto" />
-                    <h2 className="text-xl font-bold mt-4">Welcome to Barangay Bonbon</h2>
+                    <h2 className="text-xl font-bold mt-4 text-center uppercase">
+                        Welcome To <br className="block sm:hidden" />
+                        Barangay Bonbon
+                    </h2>
                 </div>
                 <div className="flex flex-col items-center justify-center w-full md:w-1/2 transition-all duration-500 ease-in-out">
                     <h2 className="text-2xl font-bold mb-4 uppercase">

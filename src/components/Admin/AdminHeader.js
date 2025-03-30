@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../contexts/UserContext";
+import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 
@@ -9,6 +10,7 @@ const AdminHeader = ({ onLogout }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [isCompact, setIsCompact] = useState(window.innerWidth < 1272);
+    const [profilePic, setProfilePic] = useState(placeholderImg); // State for profile picture
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
     const notifRef = useRef(null);
@@ -34,14 +36,14 @@ const AdminHeader = ({ onLogout }) => {
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
-                dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-                profileRef.current && !profileRef.current.contains(event.target)
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target) &&
+                profileRef.current &&
+                !profileRef.current.contains(event.target)
             ) {
                 setDropdownOpen(false);
             }
-            if (
-                notifRef.current && !notifRef.current.contains(event.target)
-            ) {
+            if (notifRef.current && !notifRef.current.contains(event.target)) {
                 setNotifOpen(false);
             }
         };
@@ -49,22 +51,61 @@ const AdminHeader = ({ onLogout }) => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        const fetchUserProfilePic = async () => {
+            const { data, error } = await supabase.auth.getUser();
+
+            if (error || !data?.user) {
+                console.error("Error fetching user:", error?.message || "No user found");
+                return;
+            }
+
+            const userProfilePicPath = data.user.user_metadata?.profilePic; // File path from metadata
+            if (userProfilePicPath) {
+                try {
+                    // Generate a signed URL for the profile picture
+                    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                        .from("user-assets")
+                        .createSignedUrl(userProfilePicPath, 3600); // 3600 seconds = 1 hour
+
+                    if (signedUrlError) {
+                        console.error("Error generating signed URL for profile picture:", signedUrlError.message);
+                        return;
+                    }
+
+                    setProfilePic(signedUrlData.signedUrl); // Update state with the signed URL
+                } catch (err) {
+                    console.error("Error generating signed URL:", err.message);
+                }
+            }
+        };
+
+        fetchUserProfilePic();
+    }, []);
+
     const formatDate = (date) =>
         window.innerWidth < 1135
             ? date.toLocaleDateString("en-PH")
             : date.toLocaleDateString("en-PH", {
-                weekday: "long", year: "numeric", month: "long", day: "numeric"
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
             });
 
-    const formatTime = (date) => date.toLocaleTimeString("en-PH", {
-        hour: "2-digit", minute: "2-digit"
-    });
+    const formatTime = (date) =>
+        date.toLocaleTimeString("en-PH", {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
 
     const getTimeIcon = () => {
         const hours = currentTime.getHours();
-        return hours >= 6 && hours < 18
-            ? <FaSun className="mr-2 text-yellow-400" aria-label="Daytime" />
-            : <FaMoon className="mr-2 text-blue-400" aria-label="Nighttime" />;
+        return hours >= 6 && hours < 18 ? (
+            <FaSun className="mr-2 text-yellow-400" aria-label="Daytime" />
+        ) : (
+            <FaMoon className="mr-2 text-blue-400" aria-label="Nighttime" />
+        );
     };
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
@@ -73,7 +114,7 @@ const AdminHeader = ({ onLogout }) => {
     const dropdownItems = [
         { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => console.log("Settings Clicked") },
         { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => console.log("Feedback Clicked") },
-        { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" }
+        { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
     ];
 
     const notifications = [
@@ -103,9 +144,9 @@ const AdminHeader = ({ onLogout }) => {
                     >
                         {!isCompact && <span className="mr-2">{displayName}</span>}
                         <img
-                            src={placeholderImg}
+                            src={profilePic}
                             alt="User Profile"
-                            className="w-10 h-10 rounded-full select-none"
+                            className="w-10 h-10 rounded-full select-none object-cover"
                             draggable="false"
                         />
                     </div>
@@ -113,17 +154,23 @@ const AdminHeader = ({ onLogout }) => {
                         <div
                             ref={dropdownRef}
                             className="absolute right-0 mt-3 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
-                            style={{ top: '100%' }}
+                            style={{ top: "100%" }}
                         >
                             <ul className="p-2 space-y-2">
                                 {isCompact && (
                                     <li className="flex flex-col items-center pb-3 border-b">
-                                        <img src={placeholderImg} alt="Profile" className="w-16 h-16 rounded-full" />
+                                        <img src={profilePic} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
                                         <span className="mt-2 font-semibold">{displayName}</span>
                                     </li>
                                 )}
                                 {dropdownItems.map((item, index) => (
-                                    <li key={index} className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""}`} onClick={item.action} tabIndex={0}>
+                                    <li
+                                        key={index}
+                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""
+                                            }`}
+                                        onClick={item.action}
+                                        tabIndex={0}
+                                    >
                                         {item.icon} {item.label}
                                     </li>
                                 ))}
@@ -143,7 +190,7 @@ const AdminHeader = ({ onLogout }) => {
                         <div
                             ref={notifRef}
                             className="absolute right-0 mt-3 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
-                            style={{ top: '100%' }}
+                            style={{ top: "100%" }}
                         >
                             <ul className="p-2 space-y-2">
                                 {notifications.map((notif, index) => (
