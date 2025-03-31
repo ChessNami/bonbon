@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaBars, FaHome, FaUsers, FaCog, FaUserTie } from "react-icons/fa"; // Added FaUserTie for Barangay Officials
+import { FaBars, FaHome, FaUsers, FaCog, FaUserTie, FaClipboardList } from "react-icons/fa"; // Added FaClipboardList for Resident Management
 import logo from "../../img/Logo/bonbon-logo.png";
 
 const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPage }) => {
@@ -16,7 +16,8 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
 
     const navItems = [
         { label: "Home", icon: FaHome },
-        { label: "Barangay Officials", icon: FaUserTie }, // Added Barangay Officials
+        { label: "Barangay Officials", icon: FaUserTie },
+        { label: "Resident Management", icon: FaClipboardList }, // Added Resident Management
         { label: "Users", icon: FaUsers },
         { label: "Settings", icon: FaCog },
     ];

@@ -4,11 +4,11 @@ const Transparency = () => {
     const [hoveredIndex, setHoveredIndex] = useState(null);
 
     const cards = [
-        { title: "Barangay Council", image: "https://images.unsplash.com/photo-1557004396-66e4174d7bf6?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9" },
-        { title: "Sanguniang Kabataan (SK)", image: "https://images.unsplash.com/photo-1556680262-9990363a3e6d?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9" },
-        { title: "Bids and Projects", image: "https://images.unsplash.com/photo-1557187666-4fd70cf76254?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9" },
-        { title: "Budget & Financial Reports", image: "https://images.unsplash.com/photo-1557177324-56c542165309?ixlib=rb-1.2.1&" },
-        { title: "Implementation Reports", image: "https://images.unsplash.com/photo-1557004396-66e4174d7bf6?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9" },
+        { title: "Barangay Council", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
+        { title: "Sanguniang Kabataan (SK)", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
+        { title: "Bids and Projects", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
+        { title: "Budget & Financial Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
+        { title: "Implementation Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
     ];
 
     const handleCardClick = (title) => {

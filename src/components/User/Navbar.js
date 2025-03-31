@@ -39,18 +39,35 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     }, []);
 
     useEffect(() => {
-        const fetchUser = async () => {
+        const fetchUserProfilePic = async () => {
             const { data, error } = await supabase.auth.getUser();
 
             if (error || !data?.user) {
+                console.error("Error fetching user:", error?.message || "No user found");
                 return;
             }
 
             const userData = data.user;
-            setProfilePic(userData.user_metadata?.profilePic || placeholderImg);
+            const profilePicPath = userData.user_metadata?.profilePic?.split("/").slice(-2).join("/");
+
+            if (profilePicPath) {
+                try {
+                    const { data: signedProfilePic, error: profilePicError } = await supabase.storage
+                        .from("user-assets")
+                        .createSignedUrl(profilePicPath, 3600); // 3600 seconds = 1 hour
+
+                    if (profilePicError) {
+                        console.error("Error generating signed URL for profile picture:", profilePicError.message);
+                    } else {
+                        setProfilePic(signedProfilePic.signedUrl);
+                    }
+                } catch (err) {
+                    console.error("Error generating signed URL for profile picture:", err.message);
+                }
+            }
         };
 
-        fetchUser();
+        fetchUserProfilePic();
     }, []);
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);

@@ -1,5 +1,5 @@
 import React from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend, ResponsiveContainer } from "recharts";
 
 const populationData = [
     { year: 1990, population: 4500 },
@@ -34,76 +34,93 @@ const genderData = [
 
 const Demographics = () => {
     return (
-        <div className="container mx-auto px-4 py-4">
+        <div className="p-4">
             <h1 className="text-2xl font-bold text-center mb-3">DEMOGRAPHICS</h1>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="bg-blue-500 text-white p-2 rounded-md text-center text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div className="bg-blue-500 text-white p-4 rounded-md text-center text-xs">
                     <p className="font-semibold">Barangay Population</p>
                     <p className="text-lg font-bold">10,976</p>
                 </div>
-                <div className="bg-blue-500 text-white p-2 rounded-md text-center text-xs">
+                <div className="bg-blue-500 text-white p-4 rounded-md text-center text-xs">
                     <p className="font-semibold">Population of Male</p>
                     <p className="text-lg font-bold">5,488</p>
                 </div>
-                <div className="bg-blue-500 text-white p-2 rounded-md text-center text-xs">
+                <div className="bg-blue-500 text-white p-4 rounded-md text-center text-xs">
                     <p className="font-semibold">Out of School Youths</p>
                     <p className="text-lg font-bold">3,540</p>
                 </div>
-                <div className="bg-blue-500 text-white p-2 rounded-md text-center text-xs">
+                <div className="bg-blue-500 text-white p-4 rounded-md text-center text-xs">
                     <p className="font-semibold">Population of Female</p>
                     <p className="text-lg font-bold">5,488</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
                 <div className="bg-white p-4 shadow-lg rounded-lg">
                     <p className="font-semibold">Population Details</p>
-                    <LineChart width={400} height={250} data={populationData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="year" />
-                        <YAxis />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="population" stroke="#8884d8" strokeWidth={2} />
-                    </LineChart>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={populationData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="year" />
+                                <YAxis />
+                                <Tooltip />
+                                <Line type="monotone" dataKey="population" stroke="#8884d8" strokeWidth={2} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
                 <div className="bg-white p-4 shadow-lg rounded-lg">
                     <p className="font-semibold">Household Population</p>
-                    <LineChart width={400} height={250} data={householdData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="year" />
-                        <YAxis />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="households" stroke="#82ca9d" strokeWidth={2} />
-                    </LineChart>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={householdData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="year" />
+                                <YAxis />
+                                <Tooltip />
+                                <Line type="monotone" dataKey="households" stroke="#82ca9d" strokeWidth={2} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
                 <div className="bg-white p-4 shadow-lg rounded-lg">
                     <p className="font-semibold">Population by Age</p>
-                    <BarChart width={400} height={250} data={ageData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="ageGroup" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="count" fill="#ffc658" />
-                    </BarChart>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={ageData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="ageGroup" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#ffc658" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
                 <div className="bg-white p-4 shadow-lg rounded-lg">
                     <p className="font-semibold">Gender Population Details</p>
-                    <BarChart width={400} height={250} data={genderData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="category" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="male" fill="#8884d8" />
-                        <Bar dataKey="female" fill="#82ca9d" />
-                    </BarChart>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={genderData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="category" />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="male" fill="#8884d8" />
+                                <Bar dataKey="female" fill="#82ca9d" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
-            <div className="mt-8 flex justify-center gap-6">
-                <div className="w-64 bg-white shadow-lg rounded-lg overflow-hidden">
+
+            <div className="mt-8 flex flex-wrap justify-center gap-6">
+                <div className="w-full sm:w-64 bg-white shadow-lg rounded-lg overflow-hidden">
                     <img src="https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg" alt="Facebook" className="w-full h-40 object-cover" />
                     <div className="p-4">
                         <h3 className="text-lg font-bold">Facebook</h3>
@@ -111,7 +128,7 @@ const Demographics = () => {
                     </div>
                 </div>
 
-                <div className="w-64 bg-white shadow-lg rounded-lg overflow-hidden">
+                <div className="w-full sm:w-64 bg-white shadow-lg rounded-lg overflow-hidden">
                     <img src="https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg" alt="Service" className="w-full h-40 object-cover" />
                     <div className="p-4">
                         <h3 className="text-lg font-bold">Service</h3>

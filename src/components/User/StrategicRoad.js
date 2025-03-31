@@ -1,5 +1,5 @@
 import React from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polygon } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../../index.css";
@@ -16,6 +16,15 @@ const customIcon = L.divIcon({
     popupAnchor: [0, -38],
 });
 
+// Coordinates for the Barangay Bonbon area (example polygon)
+const plannedAreaCoords = [
+    [8.5105, 124.6480], // Point 1
+    [8.5110, 124.6500], // Point 2
+    [8.5090, 124.6510], // Point 3
+    [8.5080, 124.6490], // Point 4
+    [8.5105, 124.6480], // Closing the polygon
+];
+
 const StrategicRoad = () => {
     const bonbonCoords = [8.509057124770594, 124.6491339822436];
 
@@ -28,7 +37,7 @@ const StrategicRoad = () => {
 
             {/* Map Section */}
             <div className="w-full h-96">
-                <MapContainer center={bonbonCoords} zoom={14} style={{ height: "100%", width: "100%" }}>
+                <MapContainer center={bonbonCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -49,8 +58,25 @@ const StrategicRoad = () => {
                             </div>
                         </Popup>
                     </Marker>
+
+                    {/* Planned Area Overlay */}
+                    <Polygon
+                        positions={plannedAreaCoords}
+                        pathOptions={{
+                            fillColor: "rgba(0, 123, 255, 0.5)", // Semi-transparent blue
+                            color: "blue", // Border color
+                            weight: 2, // Border thickness
+                        }}
+                    >
+                        <Popup>
+                            <strong>Planned Area</strong>
+                            <br />
+                            This area is part of the strategic road project.
+                        </Popup>
+                    </Polygon>
                 </MapContainer>
             </div>
+
             <div className="mt-8 flex justify-center gap-6">
                 <div className="w-64 bg-white shadow-lg rounded-lg overflow-hidden">
                     <img src="https://www.yudiz.com/codepen/expandable-animated-card-slider/rdr-2.jpg" alt="Facebook" className="w-full h-40 object-cover" />
