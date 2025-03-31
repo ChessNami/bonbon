@@ -162,14 +162,22 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     const isSelected = selectedDates.includes(dateKey);
                     const selectionIndex = selectedDates.indexOf(dateKey) + 1;
 
+                    // Check if the date is today
+                    const today = new Date();
+                    const isToday =
+                        today.getFullYear() === selectedYear &&
+                        today.getMonth() + 1 === selectedMonth &&
+                        today.getDate() === day;
+
                     return (
                         <div
                             key={day}
                             className={`relative p-2 border rounded-lg h-12 sm:h-16 md:h-24 cursor-pointer text-xs sm:text-sm md:text-base 
-                        flex flex-col items-center justify-center 
-                        ${isSunday ? "text-red-500 bg-red-100" : ""}
-                        ${holiday ? "bg-green-100" : ""}
-                        ${isSelected ? "bg-blue-200 border-blue-500" : ""}`}
+            flex flex-col items-center justify-center 
+            ${isSunday ? "text-red-500 bg-red-100" : ""}
+            ${holiday ? "bg-green-100" : ""}
+            ${isSelected ? "bg-blue-200 border-blue-500" : ""}
+            ${isToday ? "bg-yellow-200 border-yellow-500" : ""}`} // Highlight today's date
                             onClick={() => handleDateClick(dateKey)}
                             onContextMenu={(e) => {
                                 e.preventDefault();
@@ -190,6 +198,29 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 {Array.from({ length: remainingSlots }, (_, i) => (
                     <div key={`empty-end-${i}`} className="p-2 border rounded-lg h-12 sm:h-16 md:h-24"></div>
                 ))}
+            </div>
+
+            {/* Legend Section */}
+            <div className="mt-4 border-t pt-4">
+                <h3 className="text-lg font-bold mb-2">Legend</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-yellow-200 border border-yellow-500 rounded"></div>
+                        <span>Today</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-red-100 border border-red-500 rounded"></div>
+                        <span>Sunday</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-100 border border-green-500 rounded"></div>
+                        <span>Holiday</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-blue-200 border border-blue-500 rounded"></div>
+                        <span>Selected Date</span>
+                    </div>
+                </div>
             </div>
 
             {/* Modal */}
