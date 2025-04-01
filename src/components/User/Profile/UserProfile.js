@@ -4,8 +4,7 @@ import Swal from "sweetalert2";
 import placeholderImg from "../../../img/Placeholder/placeholder.png";
 import coverPhotoPlaceholder from "../../../img/Placeholder/coverphoto.png";
 import Compressor from "compressorjs";
-import { FaCamera, FaEye, FaEdit, FaTrash } from "react-icons/fa";
-import { v4 as uuidv4 } from "uuid";
+import { FaCamera, FaEye, FaEdit, FaTrash, FaTimes } from "react-icons/fa";
 import { motion } from "framer-motion";
 import Loader from "../../Loader"; // Assuming you have a Loader component
 
@@ -104,22 +103,44 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         const { data: userData, error: authError } = await supabase.auth.getUser();
         if (authError || !userData?.user) {
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "error",
                 title: "Authentication Error",
                 text: "You must be logged in to upload a photo.",
-                timer: 2000,
+                timer: 1500,
                 showConfirmButton: false,
+                scrollbarPadding: false,
             });
             return;
         }
 
         if (!file) {
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "error",
                 title: "No File Selected",
                 text: "Please select a file to upload.",
-                timer: 2000,
+                timer: 1500,
                 showConfirmButton: false,
+                scrollbarPadding: false,
+            });
+            return;
+        }
+
+        // Validate file type
+        const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+        if (!allowedTypes.includes(file.type)) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Invalid File Type",
+                text: "Only JPEG, JPG, and PNG files are allowed.",
+                timer: 1500,
+                showConfirmButton: false,
+                scrollbarPadding: false,
             });
             return;
         }
@@ -129,6 +150,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             title: "Uploading...",
             text: "Please wait while your photo is being uploaded.",
             allowOutsideClick: false,
+            scrollbarPadding: false,
             didOpen: () => {
                 Swal.showLoading();
             },
@@ -141,14 +163,15 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         new Compressor(file, {
             quality: 0.8,
             success: async (compressedFile) => {
+                // Use a consistent filename based on the user's ID and type
                 const fileExt = compressedFile.name.split(".").pop(); // Get file extension
-                const uniqueFileName = `${userData.user.id}/${type}-${uuidv4()}.${fileExt}`; // Generate unique file name
+                const fileName = `${userData.user.id}/${type}.${fileExt}`; // Consistent filename
 
                 try {
-                    // Upload file to Supabase
+                    // Upload file to Supabase (overwrite if it already exists)
                     const { error: uploadError } = await supabase.storage
                         .from("user-assets")
-                        .upload(uniqueFileName, compressedFile, { upsert: true });
+                        .upload(fileName, compressedFile, { upsert: true });
 
                     if (uploadError) {
                         throw uploadError;
@@ -157,7 +180,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     // Generate a signed URL for the uploaded file
                     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                         .from("user-assets")
-                        .createSignedUrl(uniqueFileName, 3600); // 3600 seconds = 1 hour
+                        .createSignedUrl(fileName, 3600); // 3600 seconds = 1 hour
 
                     if (signedUrlError) {
                         throw signedUrlError;
@@ -167,7 +190,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
                     // Update the user's metadata with the new file path
                     const { error: updateError } = await supabase.auth.updateUser({
-                        data: { [type]: uniqueFileName },
+                        data: { [type]: fileName },
                     });
 
                     if (updateError) {
@@ -182,19 +205,25 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     }
 
                     Swal.fire({
+                        toast: true,
+                        position: "top-end",
                         icon: "success",
                         title: "Upload Successful",
                         text: "Your photo has been uploaded successfully.",
                         timer: 1500,
                         showConfirmButton: false,
+                        scrollbarPadding: false,
                     });
                 } catch (error) {
                     Swal.fire({
+                        toast: true,
+                        position: "top-end",
                         icon: "error",
                         title: "Upload Failed",
                         text: error.message,
-                        timer: 2000,
+                        timer: 1500,
                         showConfirmButton: false,
+                        scrollbarPadding: false,
                     });
                 } finally {
                     // Stop loader for the specific type
@@ -204,11 +233,14 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             },
             error(err) {
                 Swal.fire({
+                    toast: true,
+                    position: "top-end",
                     icon: "error",
                     title: "Compression Failed",
                     text: err.message,
-                    timer: 2000,
+                    timer: 1500,
                     showConfirmButton: false,
+                    scrollbarPadding: false,
                 });
                 if (type === "profilePic") setProfilePicLoading(false);
                 if (type === "coverPhoto") setCoverPhotoLoading(false);
@@ -393,7 +425,11 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
             {/* Profile Picture and User Info */}
             <div className="flex flex-col sm:flex-row items-center p-4 relative">
-                <div className="relative w-24 h-24 sm:w-36 sm:h-36" ref={dropdownRef}>
+                <div
+                    className="relative w-24 h-24 sm:w-36 sm:h-36"
+                    ref={dropdownRef}
+                    onClick={() => setShowDropdown(!showDropdown)} // Add this onClick handler
+                >
                     {profilePicLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-200 rounded-full">
                             <Loader />
@@ -455,28 +491,34 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
             {/* Modal for Viewing Images */}
             {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-30">
-                    <div className="bg-white p-6 rounded-lg shadow-lg">
-                        <img
-                            src={modalImage}
-                            alt="Full View"
-                            className={`object-cover mx-auto ${modalType === "profile"
-                                ? "w-64 h-64 rounded-full"
-                                : "w-full h-auto max-h-[500px]"
-                                }`}
-                        />
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-30">
+                    <div className="relative bg-white p-4 rounded-lg shadow-2xl max-w-3xl w-full mx-4">
+                        {/* Close Button */}
                         <button
-                            className="mt-4 px-4 py-2 bg-red-500 text-white rounded w-full"
+                            className="absolute top-3 right-3 text-white bg-red-500 hover:bg-red-600 transition p-2 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-red-300"
                             onClick={() => setShowModal(false)}
+                            aria-label="Close"
                         >
-                            Close
+                            <FaTimes className="h-6 w-6" />
                         </button>
+
+                        {/* Image */}
+                        <div className="flex justify-center items-center">
+                            <img
+                                src={modalImage}
+                                alt="Full View"
+                                className={`object-cover mx-auto ${modalType === "profile"
+                                    ? "w-64 h-64 rounded-full"
+                                    : "w-full h-auto max-h-[500px] rounded-lg"
+                                    }`}
+                            />
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Tabs */}
-            <div className="border-b bg-gray-100 flex flex-wrap justify-center sm:justify-start relative overflow-hidden">
+            <div className="border-b bg-gray-100 flex flex-wrap justify-center sm:justify-start relative overflow-hidden px-1">
                 {tabs.map((tab) => (
                     <div
                         key={tab.key}

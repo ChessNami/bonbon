@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import Loader from "../../Loader";
+import Swal from "sweetalert2";
 
 const MyAccount = () => {
     const [user, setUser] = useState(null);
@@ -9,6 +10,7 @@ const MyAccount = () => {
     const [formData, setFormData] = useState({
         displayName: "",
         email: "",
+        dateOfBirth: "",
     });
 
     useEffect(() => {
@@ -23,6 +25,7 @@ const MyAccount = () => {
                 setFormData({
                     displayName: user.user_metadata?.display_name || "",
                     email: user.email || "",
+                    dateOfBirth: user.user_metadata?.date_of_birth || "",
                 });
             }
             setLoading(false);
@@ -36,6 +39,61 @@ const MyAccount = () => {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSaveChanges = async () => {
+        setLoading(true);
+        try {
+            const updates = {
+                display_name: formData.displayName,
+                date_of_birth: formData.dateOfBirth,
+            };
+
+            const { error } = await supabase.auth.updateUser({
+                data: updates,
+            });
+
+            if (error) {
+                throw error;
+            }
+
+            setUser((prevUser) => ({
+                ...prevUser,
+                user_metadata: {
+                    ...prevUser.user_metadata,
+                    ...updates,
+                },
+            }));
+
+            setEditing(false);
+
+            // Success notification
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: "Changes saved successfully!",
+                timer: 1500,
+                showConfirmButton: false,
+                background: "#f0f9ff", // Optional: Light background for better visibility
+            });
+        } catch (error) {
+            console.error("Error saving changes:", error.message);
+
+            // Error notification
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Failed to save changes!",
+                text: error.message,
+                timer: 1500,
+                showConfirmButton: false,
+                background: "#ffe4e6", // Optional: Light background for better visibility
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (loading) return <Loader />;
@@ -75,6 +133,17 @@ const MyAccount = () => {
                     />
                 </div>
                 <div>
+                    <label className="block text-gray-600 font-semibold">Date of Birth</label>
+                    <input
+                        type="date"
+                        name="dateOfBirth"
+                        value={formData.dateOfBirth}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        className={`w-full p-2 border rounded-lg ${editing ? "border-blue-400" : "bg-gray-100 cursor-not-allowed"}`}
+                    />
+                </div>
+                <div>
                     <label className="block text-gray-600 font-semibold">Date Joined</label>
                     <input
                         type="text"
@@ -85,6 +154,7 @@ const MyAccount = () => {
                 </div>
                 {editing && (
                     <button
+                        onClick={handleSaveChanges}
                         className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
                     >
                         Save Changes

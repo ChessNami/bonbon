@@ -14,7 +14,7 @@ const AdminHome = () => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [events, setEvents] = useState({});
     const [newEvent, setNewEvent] = useState({ date: "", title: "" });
-    const [selectedDates, setSelectedDates] = useState([]); // Initialize selectedDates as an empty array
+    const [selectedDates, setSelectedDates] = useState([]);
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-100">
@@ -32,9 +32,9 @@ const AdminHome = () => {
                 <PendingProfile />
             </div>
 
-            {/* Calendar & Barangay Council */}
+            {/* Calendar, Event Form & Barangay Council */}
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 px-4">
-                <div className="xl:col-span-3">
+                <div className="xl:col-span-3 flex flex-col gap-4">
                     <Calendar
                         selectedMonth={selectedMonth}
                         selectedYear={selectedYear}
@@ -42,9 +42,20 @@ const AdminHome = () => {
                         setEvents={setEvents}
                         setSelectedYear={setSelectedYear}
                         setSelectedMonth={setSelectedMonth}
-                        selectedDates={selectedDates} // Pass selectedDates to Calendar
-                        setSelectedDates={setSelectedDates} // Pass setSelectedDates to Calendar
+                        selectedDates={selectedDates}
+                        setSelectedDates={setSelectedDates}
                     />
+                    {/* EventForm below Calendar on smaller screens */}
+                    <div className="xl:hidden">
+                        <EventForm
+                            newEvent={newEvent}
+                            setNewEvent={setNewEvent}
+                            events={events}
+                            setEvents={setEvents}
+                            selectedDates={selectedDates}
+                            setSelectedDates={setSelectedDates}
+                        />
+                    </div>
                 </div>
                 <div className="xl:col-span-2 xl:row-start-auto row-start-2 overflow-x-auto shadow rounded-lg">
                     <BarangayCouncilTable />
@@ -52,20 +63,18 @@ const AdminHome = () => {
             </div>
 
             {/* Event Form & Zone Population Table */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 p-4">
-                {/* Event Form */}
+            <div className="hidden xl:grid grid-cols-1 lg:grid-cols-4 gap-4 p-4">
+                {/* Event Form for larger screens */}
                 <div className="lg:col-span-2">
                     <EventForm
                         newEvent={newEvent}
                         setNewEvent={setNewEvent}
                         events={events}
                         setEvents={setEvents}
-                        selectedDates={selectedDates} // Pass selectedDates to EventForm
-                        setSelectedDates={setSelectedDates} // Pass setSelectedDates to EventForm
+                        selectedDates={selectedDates}
+                        setSelectedDates={setSelectedDates}
                     />
                 </div>
-
-                {/* Zone Population Table */}
                 <div className="lg:col-span-2 overflow-x-auto shadow rounded-lg">
                     <ZonePopulationTable />
                 </div>

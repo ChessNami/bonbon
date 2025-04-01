@@ -1,16 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 
-const HouseholdForm = () => {
-    const [householdMembers, setHouseholdMembers] = useState([]);
-    const [childrenCount, setChildrenCount] = useState("");
-    const [numberOfhouseholdMembers, setNumberOfhouseholdMembers] = useState("");
+const HouseholdComposition = ({ data, childrenCount, numberOfhouseholdMembers, onNext, onBack }) => {
+    const [householdMembers, setHouseholdMembers] = useState(data);
+    const [localChildrenCount, setLocalChildrenCount] = useState(childrenCount || "");
+    const [localNumberOfhouseholdMembers, setLocalNumberOfhouseholdMembers] = useState(numberOfhouseholdMembers || "");
 
-    // Update household member count dynamically
+    useEffect(() => {
+        if (localNumberOfhouseholdMembers) {
+            setHouseholdMembers((prev) => {
+                const newHousehold = [...prev];
+                while (newHousehold.length < localNumberOfhouseholdMembers) {
+                    newHousehold.push({
+                        firstName: "",
+                        lastName: "",
+                        middleName: "",
+                        middleInitial: "",
+                        relation: "",
+                        gender: "",
+                        customGender: "",
+                        age: "",
+                        dob: "",
+                        education: "",
+                        occupation: "",
+                    });
+                }
+                return newHousehold.slice(0, localNumberOfhouseholdMembers);
+            });
+        }
+    }, [localNumberOfhouseholdMembers]);
+
     const handleHouseholdChange = (e) => {
         const count = parseInt(e.target.value, 10) || 0;
-        setNumberOfhouseholdMembers(count);
+        setLocalNumberOfhouseholdMembers(count);
 
-        // Adjust the householdMembers array size
         setHouseholdMembers((prev) => {
             const newHousehold = [...prev];
             while (newHousehold.length < count) {
@@ -32,7 +55,6 @@ const HouseholdForm = () => {
         });
     };
 
-    // Handle changes in individual household member fields
     const handleMemberChange = (index, e) => {
         const { name, value } = e.target;
 
@@ -43,7 +65,6 @@ const HouseholdForm = () => {
                 [name]: value,
             };
 
-            // Auto-generate middleInitial from middleName
             if (name === "middleName") {
                 updatedMembers[index].middleInitial = value ? value.charAt(0).toUpperCase() : "";
             }
@@ -52,7 +73,6 @@ const HouseholdForm = () => {
         });
     };
 
-    // Handle gender selection for a specific household member
     const handleGenderChange = (index, e) => {
         const value = e.target.value;
 
@@ -66,14 +86,27 @@ const HouseholdForm = () => {
         });
     };
 
-    // Submit form data
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        console.log({
-            childrenCount,
-            numberOfhouseholdMembers,
-            householdMembers,
-        });
+    const handleSubmit = () => {
+        // Validate required fields for each member
+        for (let member of householdMembers) {
+            const requiredFields = ["firstName", "lastName", "relation", "gender", "age", "dob"];
+            for (let field of requiredFields) {
+                if (!member[field]) {
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "error",
+                        title: `Please fill in the required field: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`,
+                        timer: 1500,
+                        showConfirmButton: false,
+                        scrollbarPadding: false,
+                    });
+                    return;
+                }
+            }
+        }
+
+        onNext(householdMembers, localChildrenCount, localNumberOfhouseholdMembers);
     };
 
     return (
@@ -85,35 +118,29 @@ const HouseholdForm = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="childrenCount" className="block text-sm font-medium text-gray-700">
-                                Number of Children
+                                Number of Children <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
                                 name="childrenCount"
                                 id="childrenCount"
                                 className="input-style"
-                                value={childrenCount}
-                                onChange={(e) => {
-                                    const value = Math.max(0, parseInt(e.target.value, 10) || 0); // Ensure non-negative values
-                                    setChildrenCount(value);
-                                }}
+                                value={localChildrenCount}
+                                onChange={(e) => setLocalChildrenCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
                             />
-
                         </div>
                         <div>
                             <label htmlFor="numberOfhouseholdMembers" className="block text-sm font-medium text-gray-700">
-                                Number of Household Members (excluding Head & Spouse)
+                                Number of Household Members (excluding Head & Spouse) <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
                                 name="numberOfhouseholdMembers"
                                 id="numberOfhouseholdMembers"
                                 className="input-style"
-                                value={numberOfhouseholdMembers}
-                                onChange={(e) => {
-                                    const value = Math.max(0, parseInt(e.target.value, 10) || 0); // Prevent negative values
-                                    handleHouseholdChange({ target: { value } }); // Call the existing handler with the updated value
-                                }}
+                                value={localNumberOfhouseholdMembers}
+                                onChange={handleHouseholdChange}
+                                min="0"
                             />
                         </div>
                     </div>
@@ -126,19 +153,16 @@ const HouseholdForm = () => {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {/* Name Fields */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">First Name</label>
-                                <input type="text" name="firstName" className="input-style" value={member.firstName}
-                                    onChange={(e) => handleMemberChange(index, e)} />
+                                <label className="block text-sm font-medium text-gray-700">First Name <span className="text-red-500">*</span></label>
+                                <input type="text" name="firstName" className="input-style" value={member.firstName} onChange={(e) => handleMemberChange(index, e)} required />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                                <input type="text" name="lastName" className="input-style" value={member.lastName}
-                                    onChange={(e) => handleMemberChange(index, e)} />
+                                <label className="block text-sm font-medium text-gray-700">Last Name <span className="text-red-500">*</span></label>
+                                <input type="text" name="lastName" className="input-style" value={member.lastName} onChange={(e) => handleMemberChange(index, e)} required />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Middle Name</label>
-                                <input type="text" name="middleName" className="input-style" value={member.middleName}
-                                    onChange={(e) => handleMemberChange(index, e)} />
+                                <input type="text" name="middleName" className="input-style" value={member.middleName} onChange={(e) => handleMemberChange(index, e)} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Middle Initial</label>
@@ -148,11 +172,10 @@ const HouseholdForm = () => {
                             {/* Relation */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
-                                    Relation to Household Head
+                                    Relation to Household Head <span className="text-red-500">*</span>
                                 </label>
-                                <select name="relation" className="input-style" value={member.relation}
-                                    onChange={(e) => handleMemberChange(index, e)}>
-                                    <option value="" disabled>Select Relation</option>
+                                <select name="relation" className="input-style" value={member.relation} onChange={(e) => handleMemberChange(index, e)} required>
+                                    <option value="">Select Relation</option>
                                     <option value="Head">Head (Puno sa Panimalay)</option>
                                     <option value="Spouse">Spouse (Asawa o Bana)</option>
                                     <option value="Son">Son (Anak nga Lalaki)</option>
@@ -176,10 +199,9 @@ const HouseholdForm = () => {
 
                             {/* Gender Selection */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Gender</label>
-                                <select name="gender" className="input-style" value={member.gender}
-                                    onChange={(e) => handleGenderChange(index, e)}>
-                                    <option value="" disabled>Select Gender</option>
+                                <label className="block text-sm font-medium text-gray-700">Gender <span className="text-red-500">*</span></label>
+                                <select name="gender" className="input-style" value={member.gender} onChange={(e) => handleGenderChange(index, e)} required>
+                                    <option value="">Select Gender</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
                                     <option value="Other">Other</option>
@@ -190,38 +212,36 @@ const HouseholdForm = () => {
                             {member.gender === "Other" && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Specify Gender</label>
-                                    <input type="text" name="customGender" className="input-style" value={member.customGender}
-                                        onChange={(e) => handleMemberChange(index, e)} placeholder="Enter gender" />
+                                    <input type="text" name="customGender" className="input-style" value={member.customGender} onChange={(e) => handleMemberChange(index, e)} placeholder="Enter gender" />
                                 </div>
                             )}
 
                             {/* Age & DOB */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-                                <input type="date" name="dob" className="input-style" value={member.dob}
-                                    onChange={(e) => handleMemberChange(index, e)} />
+                                <label className="block text-sm font-medium text-gray-700">Date of Birth <span className="text-red-500">*</span></label>
+                                <input type="date" name="dob" className="input-style" value={member.dob} onChange={(e) => handleMemberChange(index, e)} required />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Age</label>
+                                <label className="block text-sm font-medium text-gray-700">Age <span className="text-red-500">*</span></label>
                                 <input
                                     type="number"
                                     name="age"
                                     className="input-style"
                                     value={member.age}
                                     onChange={(e) => {
-                                        const value = Math.max(0, parseInt(e.target.value, 10) || 0); // Prevent negative values
+                                        const value = Math.max(0, parseInt(e.target.value, 10) || 0);
                                         handleMemberChange(index, { target: { name: "age", value } });
                                     }}
+                                    min="0"
+                                    required
                                 />
-
                             </div>
 
                             {/* Educational Attainment */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Educational Attainment</label>
-                                <select name="education" className="input-style" value={member.education}
-                                    onChange={(e) => handleMemberChange(index, e)}>
-                                    <option value="" disabled >Select Education Level</option>
+                                <label className="block text-sm font-medium text-gray-700">Educational Attainment <span className="text-red-500">*</span></label>
+                                <select name="education" className="input-style" value={member.education} onChange={(e) => handleMemberChange(index, e)} required>
+                                    <option value="">Select Education Level</option>
                                     <option value="Elementary">Elementary</option>
                                     <option value="High School">High School</option>
                                     <option value="College">College</option>
@@ -232,20 +252,30 @@ const HouseholdForm = () => {
                             {/* Occupation */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Occupation</label>
-                                <input type="text" name="occupation" className="input-style" value={member.occupation}
-                                    onChange={(e) => handleMemberChange(index, e)} />
+                                <input type="text" name="occupation" className="input-style" value={member.occupation} onChange={(e) => handleMemberChange(index, e)} required />
                             </div>
                         </div>
                     </fieldset>
                 ))}
 
-                {/* Submit Button */}
-                <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 w-full">
-                    Submit
-                </button>
+                <div className="flex justify-between mt-4">
+                    <button
+                        className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+                        onClick={onBack}
+                    >
+                        Back
+                    </button>
+                    <button
+                        type="button"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                        onClick={handleSubmit}
+                    >
+                        Next
+                    </button>
+                </div>
             </form>
         </div>
     );
 };
 
-export default HouseholdForm;
+export default HouseholdComposition;

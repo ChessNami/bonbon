@@ -1,16 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../contexts/UserContext";
-import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 
 const AdminHeader = ({ onLogout }) => {
-    const { displayName } = useUser();
+    const { displayName, profilePicture } = useUser(); // Use profilePicture from UserContext
     const [currentTime, setCurrentTime] = useState(new Date());
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [isCompact, setIsCompact] = useState(window.innerWidth < 1272);
-    const [profilePic, setProfilePic] = useState(placeholderImg); // State for profile picture
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
     const notifRef = useRef(null);
@@ -49,38 +47,6 @@ const AdminHeader = ({ onLogout }) => {
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    useEffect(() => {
-        const fetchUserProfilePic = async () => {
-            const { data, error } = await supabase.auth.getUser();
-
-            if (error || !data?.user) {
-                console.error("Error fetching user:", error?.message || "No user found");
-                return;
-            }
-
-            const userProfilePicPath = data.user.user_metadata?.profilePic; // File path from metadata
-            if (userProfilePicPath) {
-                try {
-                    // Generate a signed URL for the profile picture
-                    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-                        .from("user-assets")
-                        .createSignedUrl(userProfilePicPath, 3600); // 3600 seconds = 1 hour
-
-                    if (signedUrlError) {
-                        console.error("Error generating signed URL for profile picture:", signedUrlError.message);
-                        return;
-                    }
-
-                    setProfilePic(signedUrlData.signedUrl); // Update state with the signed URL
-                } catch (err) {
-                    console.error("Error generating signed URL:", err.message);
-                }
-            }
-        };
-
-        fetchUserProfilePic();
     }, []);
 
     const formatDate = (date) =>
@@ -144,7 +110,7 @@ const AdminHeader = ({ onLogout }) => {
                     >
                         {!isCompact && <span className="mr-2">{displayName}</span>}
                         <img
-                            src={profilePic}
+                            src={profilePicture || placeholderImg} // Use profilePicture from UserContext
                             alt="User Profile"
                             className="w-10 h-10 rounded-full select-none object-cover"
                             draggable="false"
@@ -153,21 +119,25 @@ const AdminHeader = ({ onLogout }) => {
                     {dropdownOpen && (
                         <div
                             ref={dropdownRef}
-                            className="absolute right-0 mt-3 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
+                            className="absolute right-0 mt-4 w-96 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
                             style={{ top: "100%" }}
                         >
                             <ul className="p-2 space-y-2">
-                                {isCompact && (
-                                    <li className="flex flex-col items-center pb-3 border-b">
-                                        <img src={profilePic} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
-                                        <span className="mt-2 font-semibold">{displayName}</span>
-                                    </li>
-                                )}
+                                <li
+                                    className="flex items-center p-2 cursor-pointer hover:bg-gray-100 active:bg-gray-200 rounded-md transition"
+                                    onClick={() => console.log("Profile clicked:", displayName)}
+                                    tabIndex={0}
+                                >
+                                    <img src={profilePicture || placeholderImg} alt="Profile" className="w-12 h-12 rounded-full object-cover mr-2" />
+                                    <span className="font-semibold text-left">{displayName}</span>
+                                </li>
+
+                                <hr className="border-t border-gray-300 my-2" />
+
                                 {dropdownItems.map((item, index) => (
                                     <li
                                         key={index}
-                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""
-                                            }`}
+                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 active:bg-blue-200 cursor-pointer rounded-md transition ${item.textColor || ""}`}
                                         onClick={item.action}
                                         tabIndex={0}
                                     >
