@@ -1,25 +1,28 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Transparency = () => {
     const [hoveredIndex, setHoveredIndex] = useState(null);
+    const navigate = useNavigate();
 
     const cards = [
-        { title: "Barangay Council", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
-        { title: "Sanguniang Kabataan (SK)", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
-        { title: "Bids and Projects", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
-        { title: "Budget & Financial Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
-        { title: "Implementation Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg" },
+        { title: "Barangay Council", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/barangaycouncil" },
+        { title: "Sanguniang Kabataan (SK)", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/sk" },
+        { title: "Bids and Projects", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/bids-projects" },
+        { title: "Budget & Financial Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/budget-reports" },
+        { title: "Implementation Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/implementation-reports" },
     ];
 
-    const handleCardClick = (title) => {
+    const handleCardClick = (title, route) => {
         console.log(`Clicked on: ${title}`);
+        navigate(route);
     };
 
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-4xl font-bold text-center mb-8">Transparency Page</h1>
             <p className="text-lg text-gray-700 mb-4 text-center">
-                Welcome to the Transparency page of Barangay Bonbon.
+                Welcome to Barangay Bonbon.
             </p>
 
             {/* Grid for first three items */}
@@ -31,7 +34,7 @@ const Transparency = () => {
                             ${hoveredIndex === index ? "scale-105 shadow-xl" : "scale-100"}`}
                         onMouseEnter={() => setHoveredIndex(index)}
                         onMouseLeave={() => setHoveredIndex(null)}
-                        onClick={() => handleCardClick(card.title)}
+                        onClick={() => handleCardClick(card.title, card.route)}
                     >
                         {/* Background Image */}
                         <div
@@ -63,7 +66,7 @@ const Transparency = () => {
                                 ${hoveredIndex === index + cards.length - 2 ? "scale-105 shadow-xl" : "scale-100"}`}
                             onMouseEnter={() => setHoveredIndex(index + cards.length - 2)}
                             onMouseLeave={() => setHoveredIndex(null)}
-                            onClick={() => handleCardClick(card.title)}
+                            onClick={() => handleCardClick(card.title, card.route)}
                         >
                             {/* Background Image */}
                             <div
