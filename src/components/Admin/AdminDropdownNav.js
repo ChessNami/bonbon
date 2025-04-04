@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FaBars } from "react-icons/fa";
 
-const DropdownNav = ({ handleNavClick, currentPage }) => {
+const AdminDropdownNav = ({ handleNavClick, currentPage }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
     const buttonRef = useRef(null);
@@ -61,4 +61,4 @@ const DropdownNav = ({ handleNavClick, currentPage }) => {
     );
 };
 
-export default DropdownNav;
+export default AdminDropdownNav;

@@ -1,6 +1,6 @@
 import React from "react";
 
-const FullNav = ({ handleNavClick, currentPage }) => {
+const AdminFullNav = ({ handleNavClick, currentPage }) => {
     const navItems = [
         { name: "Home" },
         { name: "Transparency" },
@@ -26,4 +26,4 @@ const FullNav = ({ handleNavClick, currentPage }) => {
     );
 };
 
-export default FullNav;
+export default AdminFullNav;

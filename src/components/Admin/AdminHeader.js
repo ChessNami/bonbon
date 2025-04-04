@@ -1,17 +1,55 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useUser } from "../contexts/UserContext";
-import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/fa";
+import { supabase } from "../../supabaseClient";
+import { FaCalendarAlt, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 
-const AdminHeader = ({ onLogout }) => {
-    const { displayName, profilePicture } = useUser(); // Use profilePicture from UserContext
+const AdminHeader = ({ onLogout, setCurrentPage }) => {
+    const [displayName, setDisplayName] = useState("Admin");
+    const [profilePicture, setProfilePicture] = useState(placeholderImg);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
-    const [isCompact, setIsCompact] = useState(window.innerWidth < 1272);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
     const notifRef = useRef(null);
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const { data: { user }, error } = await supabase.auth.getUser();
+
+            if (error || !user) {
+                console.error("Error fetching user:", error?.message || "No user found");
+                return;
+            }
+
+            // Set display name
+            setDisplayName(user.user_metadata?.display_name || "Admin");
+
+            // Fetch profile picture from Supabase Storage
+            const userProfilePicPath = user.user_metadata?.profilePic;
+            if (userProfilePicPath) {
+                try {
+                    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                        .from("user-assets")
+                        .createSignedUrl(userProfilePicPath, 3600); // 1-hour signed URL
+
+                    if (signedUrlError) {
+                        console.error("Error generating signed URL for profile picture:", signedUrlError.message);
+                        setProfilePicture(placeholderImg);
+                    } else {
+                        setProfilePicture(signedUrlData.signedUrl);
+                    }
+                } catch (err) {
+                    console.error("Error generating signed URL:", err.message);
+                    setProfilePicture(placeholderImg);
+                }
+            } else {
+                setProfilePicture(placeholderImg);
+            }
+        };
+
+        fetchUserData();
+    }, []);
 
     useEffect(() => {
         let animationFrame;
@@ -21,14 +59,6 @@ const AdminHeader = ({ onLogout }) => {
         };
         animationFrame = requestAnimationFrame(updateClock);
         return () => cancelAnimationFrame(animationFrame);
-    }, []);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsCompact(window.innerWidth < 1272);
-        };
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
     }, []);
 
     useEffect(() => {
@@ -50,14 +80,12 @@ const AdminHeader = ({ onLogout }) => {
     }, []);
 
     const formatDate = (date) =>
-        window.innerWidth < 1135
-            ? date.toLocaleDateString("en-PH")
-            : date.toLocaleDateString("en-PH", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-            });
+        date.toLocaleDateString("en-PH", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+        });
 
     const formatTime = (date) =>
         date.toLocaleTimeString("en-PH", {
@@ -77,9 +105,12 @@ const AdminHeader = ({ onLogout }) => {
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
     const toggleNotif = () => setNotifOpen((prev) => !prev);
 
+    const handleDropdownClick = (action) => {
+        action(); // Execute the action
+        setDropdownOpen(false); // Close the dropdown
+    };
+
     const dropdownItems = [
-        { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => console.log("Settings Clicked") },
-        { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => console.log("Feedback Clicked") },
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
     ];
 
@@ -108,9 +139,9 @@ const AdminHeader = ({ onLogout }) => {
                         aria-label="User Profile"
                         tabIndex={0}
                     >
-                        {!isCompact && <span className="mr-2">{displayName}</span>}
+                        <span className="mr-2">{displayName}</span>
                         <img
-                            src={profilePicture || placeholderImg} // Use profilePicture from UserContext
+                            src={profilePicture}
                             alt="User Profile"
                             className="w-10 h-10 rounded-full select-none object-cover"
                             draggable="false"
@@ -125,20 +156,18 @@ const AdminHeader = ({ onLogout }) => {
                             <ul className="p-2 space-y-2">
                                 <li
                                     className="flex items-center p-2 cursor-pointer hover:bg-gray-100 active:bg-gray-200 rounded-md transition"
-                                    onClick={() => console.log("Profile clicked:", displayName)}
+                                    onClick={() => handleDropdownClick(() => setCurrentPage("Profile"))}
                                     tabIndex={0}
                                 >
-                                    <img src={profilePicture || placeholderImg} alt="Profile" className="w-12 h-12 rounded-full object-cover mr-2" />
+                                    <img src={profilePicture} alt="Profile" className="w-12 h-12 rounded-full object-cover mr-2" />
                                     <span className="font-semibold text-left">{displayName}</span>
                                 </li>
-
                                 <hr className="border-t border-gray-300 my-2" />
-
                                 {dropdownItems.map((item, index) => (
                                     <li
                                         key={index}
                                         className={`px-4 py-2 flex items-center hover:bg-blue-100 active:bg-blue-200 cursor-pointer rounded-md transition ${item.textColor || ""}`}
-                                        onClick={item.action}
+                                        onClick={() => handleDropdownClick(item.action)}
                                         tabIndex={0}
                                     >
                                         {item.icon} {item.label}

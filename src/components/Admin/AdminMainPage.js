@@ -1,17 +1,20 @@
 import React from "react";
 import AdminHome from "./AdminHome";
 import BarangayOfficials from "./BarangayOfficials";
-import ResidentManagement from "./ResidentManagement"; // Import ResidentManagement
+import ResidentManagement from "./ResidentManagement";
+import AdminMainProfileComponent from "./AdminMainProfileComponent";
 
-const MainPage = ({ currentPage }) => {
+const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
         switch (currentPage) {
             case "Home":
                 return <AdminHome />;
             case "Barangay Officials":
                 return <BarangayOfficials />;
-            case "Resident Management": // Add case for Resident Management
+            case "Resident Management":
                 return <ResidentManagement />;
+            case "Profile": // New case for Profile
+                return <AdminMainProfileComponent />;
             default:
                 return <AdminHome />;
         }
@@ -24,4 +27,4 @@ const MainPage = ({ currentPage }) => {
     );
 };
 
-export default MainPage;
+export default AdminMainPage;

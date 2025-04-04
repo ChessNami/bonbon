@@ -6,14 +6,16 @@ import coverPhotoPlaceholder from "../../../img/Placeholder/coverphoto.png";
 import Compressor from "compressorjs";
 import { FaCamera, FaEye, FaEdit, FaTrash, FaTimes } from "react-icons/fa";
 import { motion } from "framer-motion";
-import Loader from "../../Loader"; // Assuming you have a Loader component
+import Loader from "../../Loader";
 
 const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const [user, setUser] = useState(null);
     const [profilePic, setProfilePic] = useState(placeholderImg);
     const [coverPhoto, setCoverPhoto] = useState(coverPhotoPlaceholder);
-    const [profilePicLoading, setProfilePicLoading] = useState(true); // Loader for profile picture
-    const [coverPhotoLoading, setCoverPhotoLoading] = useState(true); // Loader for cover photo
+    const [profilePicLoading, setProfilePicLoading] = useState(true);
+    const [coverPhotoLoading, setCoverPhotoLoading] = useState(true);
+    const [residentProfileStatus, setResidentProfileStatus] = useState(null);
+    const [userRoleId, setUserRoleId] = useState(null); // New state for user role
     const [showDropdown, setShowDropdown] = useState(false);
     const [showCoverDropdown, setShowCoverDropdown] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -24,19 +26,59 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const coverDropdownButtonRef = useRef(null);
 
     useEffect(() => {
-        const fetchUser = async () => {
-            const { data, error } = await supabase.auth.getUser();
+        const fetchUserAndStatus = async () => {
+            const { data: authData, error: authError } = await supabase.auth.getUser();
 
-            if (error || !data?.user) {
-                console.error("Error fetching user:", error?.message || "No user found");
-                onLoadingComplete(false); // Notify parent that loading failed
+            if (authError || !authData?.user) {
+                console.error("Error fetching user:", authError?.message || "No user found");
+                setProfilePicLoading(false);
+                setCoverPhotoLoading(false);
+                onLoadingComplete(false);
                 return;
             }
 
-            const userData = data.user;
+            const userData = authData.user;
             setUser(userData);
 
-            // Generate signed URLs for profile and cover photos
+            // Fetch user's role
+            const { data: roleData, error: roleError } = await supabase
+                .from("user_roles")
+                .select("role_id")
+                .eq("user_id", userData.id)
+                .single();
+
+            if (roleError || !roleData) {
+                console.error("Error fetching user role:", roleError?.message);
+                setUserRoleId(null); // Default to no role if error
+            } else {
+                setUserRoleId(roleData.role_id);
+            }
+
+            // Fetch Resident Profile Status
+            const { data: residentData, error: residentError } = await supabase
+                .from("residents")
+                .select("id")
+                .eq("user_id", userData.id)
+                .single();
+
+            if (residentError || !residentData) {
+                console.error("Error fetching resident data:", residentError?.message);
+                setResidentProfileStatus(null);
+            } else {
+                const { data: statusData, error: statusError } = await supabase
+                    .from("resident_profile_status")
+                    .select("status")
+                    .eq("resident_id", residentData.id)
+                    .single();
+
+                if (statusError || !statusData) {
+                    console.error("Error fetching resident profile status:", statusError?.message);
+                    setResidentProfileStatus(null);
+                } else {
+                    setResidentProfileStatus(statusData.status);
+                }
+            }
+
             const profilePicPath = userData.user_metadata?.profilePic?.split("/").slice(-2).join("/");
             const coverPhotoPath = userData.user_metadata?.coverPhoto?.split("/").slice(-2).join("/");
 
@@ -44,7 +86,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 if (profilePicPath) {
                     const { data: signedProfilePic, error: profilePicError } = await supabase.storage
                         .from("user-assets")
-                        .createSignedUrl(profilePicPath, 3600); // 3600 seconds = 1 hour
+                        .createSignedUrl(profilePicPath, 3600);
 
                     if (profilePicError) {
                         console.error("Error generating signed URL for profile picture:", profilePicError.message);
@@ -56,7 +98,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 if (coverPhotoPath) {
                     const { data: signedCoverPhoto, error: coverPhotoError } = await supabase.storage
                         .from("user-assets")
-                        .createSignedUrl(coverPhotoPath, 3600); // 3600 seconds = 1 hour
+                        .createSignedUrl(coverPhotoPath, 3600);
 
                     if (coverPhotoError) {
                         console.error("Error generating signed URL for cover photo:", coverPhotoError.message);
@@ -67,21 +109,20 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             } catch (err) {
                 console.error("Error generating signed URLs:", err.message);
             } finally {
-                setProfilePicLoading(false); // Stop loader for profile picture
-                setCoverPhotoLoading(false); // Stop loader for cover photo
-                onLoadingComplete(true); // Notify parent that loading is complete
+                setProfilePicLoading(false);
+                setCoverPhotoLoading(false);
+                onLoadingComplete(true);
             }
         };
 
-        fetchUser();
-    }, [onLoadingComplete]); // Add onLoadingComplete to the dependency array
+        fetchUserAndStatus();
+    }, [onLoadingComplete]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setShowDropdown(false);
             }
-
             if (
                 coverDropdownRef.current &&
                 !coverDropdownRef.current.contains(event.target) &&
@@ -98,8 +139,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
     const handleFileUpload = async (e, type) => {
         const file = e.target.files[0];
-
-        // Check if the user is authenticated
         const { data: userData, error: authError } = await supabase.auth.getUser();
         if (authError || !userData?.user) {
             Swal.fire({
@@ -129,7 +168,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             return;
         }
 
-        // Validate file type
         const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
         if (!allowedTypes.includes(file.type)) {
             Swal.fire({
@@ -145,7 +183,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             return;
         }
 
-        // Show loading indicator
         Swal.fire({
             title: "Uploading...",
             text: "Please wait while your photo is being uploaded.",
@@ -156,19 +193,16 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             },
         });
 
-        // Set loader for the specific type
         if (type === "profilePic") setProfilePicLoading(true);
         if (type === "coverPhoto") setCoverPhotoLoading(true);
 
         new Compressor(file, {
             quality: 0.8,
             success: async (compressedFile) => {
-                // Use a consistent filename based on the user's ID and type
-                const fileExt = compressedFile.name.split(".").pop(); // Get file extension
-                const fileName = `${userData.user.id}/${type}.${fileExt}`; // Consistent filename
+                const fileExt = compressedFile.name.split(".").pop();
+                const fileName = `${userData.user.id}/${type}.${fileExt}`;
 
                 try {
-                    // Upload file to Supabase (overwrite if it already exists)
                     const { error: uploadError } = await supabase.storage
                         .from("user-assets")
                         .upload(fileName, compressedFile, { upsert: true });
@@ -177,10 +211,9 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         throw uploadError;
                     }
 
-                    // Generate a signed URL for the uploaded file
                     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                         .from("user-assets")
-                        .createSignedUrl(fileName, 3600); // 3600 seconds = 1 hour
+                        .createSignedUrl(fileName, 3600);
 
                     if (signedUrlError) {
                         throw signedUrlError;
@@ -188,7 +221,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
                     const signedUrl = signedUrlData.signedUrl;
 
-                    // Update the user's metadata with the new file path
                     const { error: updateError } = await supabase.auth.updateUser({
                         data: { [type]: fileName },
                     });
@@ -197,11 +229,10 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         throw updateError;
                     }
 
-                    // Update the state to reflect the new image
                     if (type === "profilePic") {
-                        setProfilePic(signedUrl); // Use the signed URL to display the new photo immediately
+                        setProfilePic(signedUrl);
                     } else {
-                        setCoverPhoto(signedUrl); // Use the signed URL to display the new photo immediately
+                        setCoverPhoto(signedUrl);
                     }
 
                     Swal.fire({
@@ -226,7 +257,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         scrollbarPadding: false,
                     });
                 } finally {
-                    // Stop loader for the specific type
                     if (type === "profilePic") setProfilePicLoading(false);
                     if (type === "coverPhoto") setCoverPhotoLoading(false);
                 }
@@ -273,10 +303,9 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             return;
         }
 
-        const filePath = currentPhotoUrl.split("/").slice(-2).join("/"); // Extract file path from URL
+        const filePath = currentPhotoUrl.split("/").slice(-2).join("/");
 
         try {
-            // Delete the file from Supabase storage
             const { error: deleteError } = await supabase.storage
                 .from("user-assets")
                 .remove([filePath]);
@@ -285,7 +314,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 throw deleteError;
             }
 
-            // Update the user's metadata to remove the photo URL
             const { error: updateError } = await supabase.auth.updateUser({
                 data: { [type]: null },
             });
@@ -294,7 +322,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 throw updateError;
             }
 
-            // Update the state to reflect the deletion
             if (type === "profilePic") setProfilePic(placeholderImg);
             else setCoverPhoto(coverPhotoPlaceholder);
 
@@ -323,7 +350,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     };
 
     const handleTabClick = async (tabKey) => {
-        if (tabKey === "residentProfiling") {
+        if (tabKey === "residentProfiling" && userRoleId !== 1) { // Only show for non-admins
             const result = await Swal.fire({
                 title: "Are you sure?",
                 text: "Do you want to proceed to Resident Profiling?",
@@ -336,25 +363,45 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             });
 
             if (result.isConfirmed) {
-                // User confirmed, proceed to Resident Profiling tab
+                Swal.fire({
+                    title: "Redirecting...",
+                    text: "Please wait",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    },
+                });
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+                Swal.close();
                 setActiveTab(tabKey);
             } else {
-                // User canceled, go back to My Account tab
                 setActiveTab("myAccount");
             }
         } else {
-            // For other tabs, simply switch to the selected tab
             setActiveTab(tabKey);
         }
     };
 
-
     const tabs = [
         { key: "myAccount", label: "My Account" },
         { key: "accountSettings", label: "Account Settings" },
-        { key: "residentProfiling", label: "Resident Profiling" },
+        ...(userRoleId !== 1 ? [{ key: "residentProfiling", label: "Resident Profiling" }] : []), // Hide for admins
         { key: "help", label: "Help" },
     ];
+
+    const getStatusText = () => {
+        switch (residentProfileStatus) {
+            case 1:
+                return "Approved";
+            case 2:
+                return "Rejected";
+            case 3:
+                return "Pending";
+            default:
+                return "Not yet submitted";
+        }
+    };
 
     return (
         <div className="select-none">
@@ -428,7 +475,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 <div
                     className="relative w-24 h-24 sm:w-36 sm:h-36"
                     ref={dropdownRef}
-                    onClick={() => setShowDropdown(!showDropdown)} // Add this onClick handler
+                    onClick={() => setShowDropdown(!showDropdown)}
                 >
                     {profilePicLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-200 rounded-full">
@@ -493,7 +540,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             {showModal && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-30">
                     <div className="relative bg-white p-4 rounded-lg shadow-2xl max-w-3xl w-full mx-4">
-                        {/* Close Button */}
                         <button
                             className="absolute top-3 right-3 text-white bg-red-500 hover:bg-red-600 transition p-2 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-red-300"
                             onClick={() => setShowModal(false)}
@@ -501,8 +547,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         >
                             <FaTimes className="h-6 w-6" />
                         </button>
-
-                        {/* Image */}
                         <div className="flex justify-center items-center">
                             <img
                                 src={modalImage}
@@ -518,7 +562,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             )}
 
             {/* Tabs */}
-            <div className="border-b bg-gray-100 flex flex-wrap justify-center sm:justify-start relative overflow-hidden px-1">
+            <div className="border-b bg-gray-100 flex flex-wrap justify-center sm:justify-start relative overflow-hidden px-1 mb-4">
                 {tabs.map((tab) => (
                     <div
                         key={tab.key}
@@ -529,7 +573,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             }`}
                     >
                         {tab.label}
-                        {/* Add the motion.div for the active tab indicator */}
                         {activeTab === tab.key && (
                             <motion.div
                                 layoutId="tab-indicator"
@@ -541,6 +584,16 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     </div>
                 ))}
             </div>
+
+            {/* Resident Profile Status */}
+            {userRoleId !== 1 && ( // Hide status for admins
+                <div className="py-2 px-4 text-center bg-white sm:text-left shadow-lg rounded">
+                    <h3 className="text-lg font-bold">Resident Profile Status</h3>
+                    <p className={`mt-2 ${residentProfileStatus === 1 ? "text-green-600" : residentProfileStatus === 2 ? "text-red-600" : residentProfileStatus === 3 ? "text-yellow-600" : "text-gray-600"}`}>
+                        {getStatusText()}
+                    </p>
+                </div>
+            )}
         </div>
     );
 };

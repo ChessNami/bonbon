@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import AdminFullNav from "./AdminFullNav";
 
-const Navbar = ({ setCurrentPage, currentPage }) => {
+const AdminNavbar = ({ setCurrentPage, currentPage }) => {
 
     const handleNavClick = (page) => {
         setCurrentPage(page);
@@ -32,4 +32,4 @@ const Navbar = ({ setCurrentPage, currentPage }) => {
     );
 };
 
-export default Navbar;
+export default AdminNavbar;

@@ -1,15 +1,45 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
+import { supabase } from "../../../supabaseClient";
 
-const HouseholdComposition = ({ data, childrenCount, numberOfhouseholdMembers, onNext, onBack }) => {
-    const [householdMembers, setHouseholdMembers] = useState(data);
-    const [localChildrenCount, setLocalChildrenCount] = useState(childrenCount || "");
-    const [localNumberOfhouseholdMembers, setLocalNumberOfhouseholdMembers] = useState(numberOfhouseholdMembers || "");
+const HouseholdComposition = ({ data, childrenCount, numberOfhouseholdMembers, onNext, onBack, userId }) => {
+    const [householdMembers, setHouseholdMembers] = useState(Array.isArray(data) ? data : []);
+    const [localChildrenCount, setLocalChildrenCount] = useState(childrenCount || 0);
+    const [localNumberOfhouseholdMembers, setLocalNumberOfhouseholdMembers] = useState(numberOfhouseholdMembers || 0);
+
+    const fetchUserData = useCallback(async () => {
+        if (!userId) {
+            console.log("No userId provided, skipping fetch.");
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from("residents")
+            .select("household_composition, children_count, number_of_household_members")
+            .eq("user_id", userId)
+            .single();
+
+        if (data && !error) {
+            setHouseholdMembers(Array.isArray(data.household_composition) ? data.household_composition : []);
+            setLocalChildrenCount(data.children_count || 0);
+            setLocalNumberOfhouseholdMembers(data.number_of_household_members || 0);
+        } else if (error) {
+            console.error("Error fetching household composition:", error);
+            setHouseholdMembers([]);
+            setLocalChildrenCount(0);
+            setLocalNumberOfhouseholdMembers(0);
+        }
+    }, [userId]);
+
+    useEffect(() => {
+        fetchUserData();
+    }, [fetchUserData]);
 
     useEffect(() => {
         if (localNumberOfhouseholdMembers) {
             setHouseholdMembers((prev) => {
-                const newHousehold = [...prev];
+                const currentMembers = Array.isArray(prev) ? prev : [];
+                const newHousehold = [...currentMembers];
                 while (newHousehold.length < localNumberOfhouseholdMembers) {
                     newHousehold.push({
                         firstName: "",
@@ -22,237 +52,280 @@ const HouseholdComposition = ({ data, childrenCount, numberOfhouseholdMembers, o
                         age: "",
                         dob: "",
                         education: "",
-                        occupation: "",
+                        occupation: ""
                     });
                 }
                 return newHousehold.slice(0, localNumberOfhouseholdMembers);
             });
+        } else {
+            setHouseholdMembers([]);
         }
     }, [localNumberOfhouseholdMembers]);
 
     const handleHouseholdChange = (e) => {
-        const count = parseInt(e.target.value, 10) || 0;
+        const count = Math.max(0, parseInt(e.target.value, 10) || 0);
         setLocalNumberOfhouseholdMembers(count);
-
-        setHouseholdMembers((prev) => {
-            const newHousehold = [...prev];
-            while (newHousehold.length < count) {
-                newHousehold.push({
-                    firstName: "",
-                    lastName: "",
-                    middleName: "",
-                    middleInitial: "",
-                    relation: "",
-                    gender: "",
-                    customGender: "",
-                    age: "",
-                    dob: "",
-                    education: "",
-                    occupation: "",
-                });
-            }
-            return newHousehold.slice(0, count);
-        });
     };
 
     const handleMemberChange = (index, e) => {
         const { name, value } = e.target;
-
         setHouseholdMembers((prev) => {
-            const updatedMembers = [...prev];
-            updatedMembers[index] = {
-                ...updatedMembers[index],
-                [name]: value,
-            };
-
+            const updatedMembers = Array.isArray(prev) ? [...prev] : [];
+            updatedMembers[index] = { ...updatedMembers[index], [name]: value };
             if (name === "middleName") {
                 updatedMembers[index].middleInitial = value ? value.charAt(0).toUpperCase() : "";
             }
-
             return updatedMembers;
         });
     };
 
     const handleGenderChange = (index, e) => {
         const value = e.target.value;
-
         setHouseholdMembers((prev) => {
-            const updatedMembers = [...prev];
-            updatedMembers[index].gender = value;
-            if (value !== "Other") {
-                updatedMembers[index].customGender = "";
-            }
+            const updatedMembers = Array.isArray(prev) ? [...prev] : [];
+            updatedMembers[index] = { ...updatedMembers[index], gender: value };
+            if (value !== "Other") updatedMembers[index].customGender = "";
             return updatedMembers;
         });
     };
 
-    const handleSubmit = () => {
-        // Validate required fields for each member
-        for (let member of householdMembers) {
-            const requiredFields = ["firstName", "lastName", "relation", "gender", "age", "dob"];
-            for (let field of requiredFields) {
-                if (!member[field]) {
-                    Swal.fire({
-                        toast: true,
-                        position: "top-end",
-                        icon: "error",
-                        title: `Please fill in the required field: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`,
-                        timer: 1500,
-                        showConfirmButton: false,
-                        scrollbarPadding: false,
-                    });
-                    return;
+    const handleSubmit = async () => {
+        if (localNumberOfhouseholdMembers > 0) {
+            for (let member of householdMembers) {
+                const requiredFields = ["firstName", "lastName", "relation", "gender", "age", "dob", "education"];
+                for (let field of requiredFields) {
+                    if (!member[field]) {
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: "error",
+                            title: `Please fill in the required field: ${field.replace(/([A-Z])/g, " $1").toLowerCase()}`,
+                            timer: 1500,
+                            showConfirmButton: false,
+                        });
+                        return;
+                    }
                 }
             }
         }
 
-        onNext(householdMembers, localChildrenCount, localNumberOfhouseholdMembers);
+        const { error } = await supabase
+            .from("residents")
+            .update({
+                household_composition: householdMembers,
+                children_count: parseInt(localChildrenCount, 10) || 0,
+                number_of_household_members: parseInt(localNumberOfhouseholdMembers, 10) || 0
+            })
+            .eq("user_id", userId);
+
+        if (error) {
+            Swal.fire("Error", "Failed to save data", "error");
+            return;
+        }
+
+        onNext(householdMembers, "confirmation", localChildrenCount, localNumberOfhouseholdMembers);
     };
 
     return (
         <div className="p-4 shadow-lg rounded-lg">
-            <form className="space-y-6" onSubmit={handleSubmit}>
-                {/* Household Details */}
+            <form className="space-y-6">
                 <fieldset className="border p-4 rounded-lg">
                     <legend className="font-semibold">Household Composition</legend>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="childrenCount" className="block text-sm font-medium text-gray-700">
+                            <label>
                                 Number of Children <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
                                 name="childrenCount"
-                                id="childrenCount"
                                 className="input-style"
                                 value={localChildrenCount}
                                 onChange={(e) => setLocalChildrenCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                                required
                             />
                         </div>
                         <div>
-                            <label htmlFor="numberOfhouseholdMembers" className="block text-sm font-medium text-gray-700">
-                                Number of Household Members (excluding Head & Spouse) <span className="text-red-500">*</span>
+                            <label>
+                                Number of Household Members <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
                                 name="numberOfhouseholdMembers"
-                                id="numberOfhouseholdMembers"
                                 className="input-style"
                                 value={localNumberOfhouseholdMembers}
                                 onChange={handleHouseholdChange}
                                 min="0"
+                                required
                             />
                         </div>
                     </div>
                 </fieldset>
 
-                {/* Dynamically Generated Household Member Forms */}
-                {householdMembers.map((member, index) => (
+                {Array.isArray(householdMembers) && householdMembers.map((member, index) => (
                     <fieldset key={index} className="border p-4 rounded-lg">
                         <legend className="font-semibold">Household Member {index + 1}</legend>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {/* Name Fields */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">First Name <span className="text-red-500">*</span></label>
-                                <input type="text" name="firstName" className="input-style" value={member.firstName} onChange={(e) => handleMemberChange(index, e)} required />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Last Name <span className="text-red-500">*</span></label>
-                                <input type="text" name="lastName" className="input-style" value={member.lastName} onChange={(e) => handleMemberChange(index, e)} required />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Middle Name</label>
-                                <input type="text" name="middleName" className="input-style" value={member.middleName} onChange={(e) => handleMemberChange(index, e)} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Middle Initial</label>
-                                <input type="text" name="middleInitial" className="input-style" value={member.middleInitial} readOnly />
-                            </div>
-
-                            {/* Relation */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">
-                                    Relation to Household Head <span className="text-red-500">*</span>
+                                <label>
+                                    First Name <span className="text-red-500">*</span>
                                 </label>
-                                <select name="relation" className="input-style" value={member.relation} onChange={(e) => handleMemberChange(index, e)} required>
-                                    <option value="">Select Relation</option>
-                                    <option value="Head">Head (Puno sa Panimalay)</option>
-                                    <option value="Spouse">Spouse (Asawa o Bana)</option>
-                                    <option value="Son">Son (Anak nga Lalaki)</option>
-                                    <option value="Daughter">Daughter (Anak nga Babaye)</option>
-                                    <option value="Father">Father (Amahan)</option>
-                                    <option value="Mother">Mother (Inahan)</option>
-                                    <option value="Brother">Brother (Igsoon nga Lalaki)</option>
-                                    <option value="Sister">Sister (Igsoon nga Babaye)</option>
-                                    <option value="Grandfather">Grandfather (Lolo)</option>
-                                    <option value="Grandmother">Grandmother (Lola)</option>
-                                    <option value="Grandson">Grandson (Apo nga Lalaki)</option>
-                                    <option value="Granddaughter">Granddaughter (Apo nga Babaye)</option>
-                                    <option value="Uncle">Uncle (Tiyo)</option>
-                                    <option value="Aunt">Aunt (Tiya)</option>
-                                    <option value="Nephew">Nephew (Pag-umangkon nga Lalaki)</option>
-                                    <option value="Niece">Niece (Pag-umangkon nga Babaye)</option>
-                                    <option value="Cousin">Cousin (Ig-agaw)</option>
-                                    <option value="Other">Other (Uban pa)</option>
+                                <input
+                                    type="text"
+                                    name="firstName"
+                                    className="input-style"
+                                    value={member.firstName}
+                                    onChange={(e) => handleMemberChange(index, e)}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label>
+                                    Last Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="lastName"
+                                    className="input-style"
+                                    value={member.lastName}
+                                    onChange={(e) => handleMemberChange(index, e)}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label>Middle Name</label>
+                                <input
+                                    type="text"
+                                    name="middleName"
+                                    className="input-style"
+                                    value={member.middleName}
+                                    onChange={(e) => handleMemberChange(index, e)}
+                                />
+                            </div>
+                            <div>
+                                <label>Middle Initial</label>
+                                <input
+                                    type="text"
+                                    name="middleInitial"
+                                    className="input-style"
+                                    value={member.middleInitial}
+                                    readOnly
+                                />
+                            </div>
+                            <div>
+                                <label>
+                                    Relation <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    name="relation"
+                                    className="input-style"
+                                    value={member.relation}
+                                    onChange={(e) => handleMemberChange(index, e)}
+                                    required
+                                >
+                                    <option value="">Select</option>
+                                    <option value="Son">Son</option>
+                                    <option value="Daughter">Daughter</option>
+                                    <option value="Father">Father</option>
+                                    <option value="Mother">Mother</option>
+                                    <option value="Brother">Brother</option>
+                                    <option value="Sister">Sister</option>
+                                    <option value="Grandfather">Grandfather</option>
+                                    <option value="Grandmother">Grandmother</option>
+                                    <option value="Grandson">Grandson</option>
+                                    <option value="Granddaughter">Granddaughter</option>
+                                    <option value="Uncle">Uncle</option>
+                                    <option value="Aunt">Aunt</option>
+                                    <option value="Nephew">Nephew</option>
+                                    <option value="Niece">Niece</option>
+                                    <option value="Cousin">Cousin</option>
+                                    <option value="Other">Other</option>
                                 </select>
                             </div>
-
-                            {/* Gender Selection */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Gender <span className="text-red-500">*</span></label>
-                                <select name="gender" className="input-style" value={member.gender} onChange={(e) => handleGenderChange(index, e)} required>
-                                    <option value="">Select Gender</option>
+                                <label>
+                                    Gender <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    name="gender"
+                                    className="input-style"
+                                    value={member.gender}
+                                    onChange={(e) => handleGenderChange(index, e)}
+                                    required
+                                >
+                                    <option value="">Select</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
                                     <option value="Other">Other</option>
                                 </select>
                             </div>
-
-                            {/* Custom Gender Field (Appears when "Other" is selected) */}
                             {member.gender === "Other" && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Specify Gender</label>
-                                    <input type="text" name="customGender" className="input-style" value={member.customGender} onChange={(e) => handleMemberChange(index, e)} placeholder="Enter gender" />
+                                    <label>Specify Gender</label>
+                                    <input
+                                        type="text"
+                                        name="customGender"
+                                        className="input-style"
+                                        value={member.customGender}
+                                        onChange={(e) => handleMemberChange(index, e)}
+                                    />
                                 </div>
                             )}
-
-                            {/* Age & DOB */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Date of Birth <span className="text-red-500">*</span></label>
-                                <input type="date" name="dob" className="input-style" value={member.dob} onChange={(e) => handleMemberChange(index, e)} required />
+                                <label>
+                                    Date of Birth <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    name="dob"
+                                    className="input-style"
+                                    value={member.dob}
+                                    onChange={(e) => handleMemberChange(index, e)}
+                                    required
+                                />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Age <span className="text-red-500">*</span></label>
+                                <label>
+                                    Age <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="number"
                                     name="age"
                                     className="input-style"
                                     value={member.age}
-                                    onChange={(e) => {
-                                        const value = Math.max(0, parseInt(e.target.value, 10) || 0);
-                                        handleMemberChange(index, { target: { name: "age", value } });
-                                    }}
+                                    onChange={(e) => handleMemberChange(index, e)}
                                     min="0"
                                     required
                                 />
                             </div>
-
-                            {/* Educational Attainment */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Educational Attainment <span className="text-red-500">*</span></label>
-                                <select name="education" className="input-style" value={member.education} onChange={(e) => handleMemberChange(index, e)} required>
-                                    <option value="">Select Education Level</option>
+                                <label>
+                                    Education <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    name="education"
+                                    className="input-style"
+                                    value={member.education}
+                                    onChange={(e) => handleMemberChange(index, e)}
+                                    required
+                                >
+                                    <option value="" disabled>Select</option>
+                                    <option value="None">None</option>
                                     <option value="Elementary">Elementary</option>
                                     <option value="High School">High School</option>
                                     <option value="College">College</option>
                                     <option value="Vocational">Vocational</option>
                                 </select>
                             </div>
-
-                            {/* Occupation */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Occupation</label>
-                                <input type="text" name="occupation" className="input-style" value={member.occupation} onChange={(e) => handleMemberChange(index, e)} required />
+                                <label>Occupation</label>
+                                <input
+                                    type="text"
+                                    name="occupation"
+                                    className="input-style"
+                                    value={member.occupation}
+                                    onChange={(e) => handleMemberChange(index, e)}
+                                />
                             </div>
                         </div>
                     </fieldset>

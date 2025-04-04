@@ -3,8 +3,8 @@ import { FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
 
 const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYear, events, selectedDates, setSelectedDates }) => {
     const [holidays, setHolidays] = useState([]);
-    const [modalData, setModalData] = useState(null); // Data for the modal
-    const modalRef = useRef(null); // Reference for the modal
+    const [modalData, setModalData] = useState(null);
+    const modalRef = useRef(null);
 
     const currentYear = new Date().getFullYear();
 
@@ -13,7 +13,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
     const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-    // Fetch holidays from DateNager API
     useEffect(() => {
         const fetchHolidays = async () => {
             try {
@@ -21,7 +20,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     `https://date.nager.at/api/v3/PublicHolidays/${selectedYear}/PH`
                 );
                 const data = await response.json();
-                setHolidays(data); // Store holidays separately
+                setHolidays(data);
             } catch (error) {
                 console.error("Error fetching holidays:", error);
             }
@@ -49,10 +48,8 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
 
     const handleDateClick = (dateKey) => {
         if (selectedDates.includes(dateKey)) {
-            // Deselect the date
             setSelectedDates(selectedDates.filter((date) => date !== dateKey));
         } else if (selectedDates.length < 4) {
-            // Select the date (limit to 3)
             setSelectedDates([...selectedDates, dateKey]);
         }
     };
@@ -153,7 +150,18 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             {/* Calendar Grid */}
             <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: emptySlots }, (_, i) => (
-                    <div key={`empty-${i}`} className="p-2 border rounded-lg h-12 sm:h-16 md:h-24"></div>
+                    <div
+                        key={`empty-${i}`}
+                        className="p-2 border rounded-lg h-12 sm:h-16 md:h-24 relative overflow-hidden bg-gray-100"
+                    >
+                        {/* X Shape with Lines at Corners */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute top-1 left-1 w-2 h-px bg-gray-400 transform rotate-45"></div>
+                            <div className="absolute top-1 right-1 w-2 h-px bg-gray-400 transform -rotate-45"></div>
+                            <div className="absolute bottom-1 left-1 w-2 h-px bg-gray-400 transform -rotate-45"></div>
+                            <div className="absolute bottom-1 right-1 w-2 h-px bg-gray-400 transform rotate-45"></div>
+                        </div>
+                    </div>
                 ))}
                 {daysArray.map((day) => {
                     const dateKey = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -161,8 +169,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     const holiday = holidays.find((h) => h.date === dateKey);
                     const isSelected = selectedDates.includes(dateKey);
                     const selectionIndex = selectedDates.indexOf(dateKey) + 1;
-
-                    // Check if the date is today
                     const today = new Date();
                     const isToday =
                         today.getFullYear() === selectedYear &&
@@ -173,11 +179,11 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                         <div
                             key={day}
                             className={`relative p-2 border rounded-lg h-12 sm:h-16 md:h-24 cursor-pointer text-xs sm:text-sm md:text-base 
-            flex flex-col items-center justify-center 
-            ${isSunday ? "text-red-500 bg-red-100" : ""}
-            ${holiday ? "bg-green-100" : ""}
-            ${isSelected ? "bg-blue-200 border-blue-500" : ""}
-            ${isToday ? "bg-yellow-200 border-yellow-500" : ""}`} // Highlight today's date
+                            flex flex-col items-center justify-center 
+                            ${isSunday ? "text-red-500 bg-red-100" : ""}
+                            ${holiday ? "bg-green-100" : ""}
+                            ${isSelected ? "bg-blue-200 border-blue-500" : ""}
+                            ${isToday ? "bg-yellow-200 border-yellow-500" : ""}`}
                             onClick={() => handleDateClick(dateKey)}
                             onContextMenu={(e) => {
                                 e.preventDefault();
@@ -196,7 +202,18 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     );
                 })}
                 {Array.from({ length: remainingSlots }, (_, i) => (
-                    <div key={`empty-end-${i}`} className="p-2 border rounded-lg h-12 sm:h-16 md:h-24"></div>
+                    <div
+                        key={`empty-end-${i}`}
+                        className="p-2 border rounded-lg h-12 sm:h-16 md:h-24 relative overflow-hidden bg-gray-100"
+                    >
+                        {/* X Shape with Lines at Corners */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute top-1 left-1 w-2 h-px bg-gray-400 transform rotate-45"></div>
+                            <div className="absolute top-1 right-1 w-2 h-px bg-gray-400 transform -rotate-45"></div>
+                            <div className="absolute bottom-1 left-1 w-2 h-px bg-gray-400 transform -rotate-45"></div>
+                            <div className="absolute bottom-1 right-1 w-2 h-px bg-gray-400 transform rotate-45"></div>
+                        </div>
+                    </div>
                 ))}
             </div>
 
