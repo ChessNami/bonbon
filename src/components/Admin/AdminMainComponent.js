@@ -30,11 +30,19 @@ const AdminMainComponent = ({ onLogout }) => {
                 {/* Header - Fixed */}
                 <AdminHeader onLogout={onLogout} setCurrentPage={setCurrentPage} />
 
-                {/* Scrollable Main Content */}
-                <main id="main-content" className="flex-grow overflow-y-auto h-96">
-                    <AdminMainPage currentPage={currentPage} />
-                    <Footer />
-                </main>
+                {/* Scrollable Main Content and Footer Container */}
+                <div className="flex-1 flex flex-col">
+                    {/* Scrollable Main Content */}
+                    <main
+                        id="main-content"
+                        className="flex-grow overflow-y-auto"
+                    >
+                        <AdminMainPage currentPage={currentPage} />
+                    </main>
+
+                    {/* Footer - Always at Bottom */}
+                    <Footer className="mt-auto" />
+                </div>
             </div>
         </div>
     );

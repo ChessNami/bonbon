@@ -4,14 +4,26 @@ import { FaCalendarAlt, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 
 const AdminHeader = ({ onLogout, setCurrentPage }) => {
-    const [displayName, setDisplayName] = useState("Admin");
+    const [displayName, setDisplayName] = useState();
     const [profilePicture, setProfilePicture] = useState(placeholderImg);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
-    const notifRef = useRef(null);
+    const notifButtonRef = useRef(null); // Ref for the notification button
+    const notifDropdownRef = useRef(null); // Ref for the notification dropdown
+    const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsDisplayNameVisible(window.innerWidth > 1273);
+        };
+
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -22,16 +34,14 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                 return;
             }
 
-            // Set display name
             setDisplayName(user.user_metadata?.display_name || "Admin");
 
-            // Fetch profile picture from Supabase Storage
             const userProfilePicPath = user.user_metadata?.profilePic;
             if (userProfilePicPath) {
                 try {
                     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                         .from("user-assets")
-                        .createSignedUrl(userProfilePicPath, 3600); // 1-hour signed URL
+                        .createSignedUrl(userProfilePicPath, 3600);
 
                     if (signedUrlError) {
                         console.error("Error generating signed URL for profile picture:", signedUrlError.message);
@@ -63,6 +73,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
+            // Close profile dropdown if clicked outside
             if (
                 dropdownRef.current &&
                 !dropdownRef.current.contains(event.target) &&
@@ -71,7 +82,13 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
             ) {
                 setDropdownOpen(false);
             }
-            if (notifRef.current && !notifRef.current.contains(event.target)) {
+            // Close notification dropdown if clicked outside both button and dropdown
+            if (
+                notifDropdownRef.current &&
+                !notifDropdownRef.current.contains(event.target) &&
+                notifButtonRef.current &&
+                !notifButtonRef.current.contains(event.target)
+            ) {
                 setNotifOpen(false);
             }
         };
@@ -79,13 +96,15 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const formatDate = (date) =>
-        date.toLocaleDateString("en-PH", {
+    const formatDate = (date) => {
+        const isSmallScreen = window.innerWidth < 920;
+        return date.toLocaleDateString("en-PH", {
             weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
+            ...(isSmallScreen
+                ? { month: "2-digit", day: "2-digit", year: "numeric" }
+                : { year: "numeric", month: "long", day: "numeric" }),
         });
+    };
 
     const formatTime = (date) =>
         date.toLocaleTimeString("en-PH", {
@@ -103,11 +122,11 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     };
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
-    const toggleNotif = () => setNotifOpen((prev) => !prev);
+    const toggleNotif = () => setNotifOpen((prev) => !prev); // Toggle notification state
 
     const handleDropdownClick = (action) => {
-        action(); // Execute the action
-        setDropdownOpen(false); // Close the dropdown
+        action();
+        setDropdownOpen(false);
     };
 
     const dropdownItems = [
@@ -139,7 +158,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                         aria-label="User Profile"
                         tabIndex={0}
                     >
-                        <span className="mr-2">{displayName}</span>
+                        {isDisplayNameVisible && <span className="mr-2">{displayName}</span>}
                         <img
                             src={profilePicture}
                             alt="User Profile"
@@ -179,7 +198,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                     <div
                         className="p-2 cursor-pointer rounded-md hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
                         onClick={toggleNotif}
-                        ref={notifRef}
+                        ref={notifButtonRef} // Ref for the button
                         aria-label="Notifications"
                         tabIndex={0}
                     >
@@ -187,7 +206,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                     </div>
                     {notifOpen && (
                         <div
-                            ref={notifRef}
+                            ref={notifDropdownRef} // Ref for the dropdown
                             className="absolute right-0 mt-3 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
                             style={{ top: "100%" }}
                         >

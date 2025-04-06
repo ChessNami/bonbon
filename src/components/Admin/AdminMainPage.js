@@ -1,8 +1,10 @@
+// src\components\Admin\AdminMainPage.js
 import React from "react";
 import AdminHome from "./AdminHome";
 import BarangayOfficials from "./BarangayOfficials";
 import ResidentManagement from "./ResidentManagement";
 import AdminMainProfileComponent from "./AdminMainProfileComponent";
+import Settings from "./Settings"; // Import the new Settings component
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
@@ -13,8 +15,10 @@ const AdminMainPage = ({ currentPage }) => {
                 return <BarangayOfficials />;
             case "Resident Management":
                 return <ResidentManagement />;
-            case "Profile": // New case for Profile
+            case "Profile":
                 return <AdminMainProfileComponent />;
+            case "Settings": // New case for Settings
+                return <Settings />;
             default:
                 return <AdminHome />;
         }

@@ -54,6 +54,7 @@ Make sure you have the following installed on your machine:
    npm install lucide-react
    npm install react-calendar
    npm install uuid
+   npm install react-select
    ```
 
 ### Usage
