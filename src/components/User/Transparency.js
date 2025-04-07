@@ -54,12 +54,12 @@ const Transparency = () => {
     };
 
     return (
-        <div className="p-4 select-none">
+        <div className="p-4 min-h-screen bg-gray-100 select-none">
             <AnimatePresence mode="wait">
                 {selectedCard ? (
                     <motion.div
                         key="content"
-                        className="bg-white p-4 rounded-lg shadow-lg max-w-5xl mx-auto"
+                        className="bg-white p-4 rounded-lg shadow-lg max-w-5xl mx-auto w-full"
                         variants={centerVariants}
                         initial="initial"
                         animate="animate"
@@ -67,7 +67,7 @@ const Transparency = () => {
                     >
                         <button
                             onClick={handleBackClick}
-                            className="flex items-center gap-2 px-4 py-2 mb-4 bg-gray-500 text-white rounded hover:bg-gray-600"
+                            className="flex items-center gap-2 px-3 py-2 mb-4 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
                         >
                             <FaArrowLeft />
                             Back
@@ -81,61 +81,31 @@ const Transparency = () => {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        className="max-w-5xl mx-auto"
+                        className="max-w-6xl mx-auto w-full"
                     >
-                        {/* Grid for first three items */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            {cards.slice(0, 3).map((card, index) => (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {cards.map((card, index) => (
                                 <motion.div
                                     key={index}
-                                    className={`relative w-full h-64 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 cursor-pointer 
-                                        ${hoveredIndex === index ? "scale-105 shadow-xl" : "scale-100"}`}
+                                    className="relative aspect-square rounded-lg overflow-hidden shadow-md cursor-pointer"
                                     onMouseEnter={() => setHoveredIndex(index)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     onClick={() => handleCardClick(card)}
                                     whileHover={{ scale: 1.05 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
                                 >
                                     <div
-                                        className={`absolute inset-0 bg-cover bg-center transition-all duration-300 
-                                        ${hoveredIndex !== null && hoveredIndex !== index ? "blur-md opacity-70" : "opacity-100"}`}
+                                        className={`absolute inset-0 bg-cover bg-center transition-all duration-300 ${hoveredIndex !== index ? "blur-sm opacity-80" : "opacity-100"}`}
                                         style={{ backgroundImage: `url(${card.image})` }}
                                     ></div>
-                                    <div className={`absolute inset-0 transition-all ${hoveredIndex === index ? "bg-black bg-opacity-50" : "bg-black bg-opacity-40"}`}></div>
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 drop-shadow-md">
+                                    <div className={`absolute inset-0 bg-black transition-all duration-300 ${hoveredIndex === index ? "bg-opacity-50" : "bg-opacity-40"}`}></div>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
                                         <div className="mb-2">{card.icon}</div>
                                         <h2 className="text-lg font-bold">{card.title}</h2>
                                     </div>
                                 </motion.div>
                             ))}
                         </div>
-
-                        {/* Centered Last Row for 2 Cards */}
-                        {cards.length % 3 === 2 && (
-                            <div className="flex justify-center mt-6 gap-6">
-                                {cards.slice(-2).map((card, index) => (
-                                    <motion.div
-                                        key={index + cards.length - 2}
-                                        className={`relative w-full sm:w-[48%] md:w-[30%] h-64 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 cursor-pointer 
-                                            ${hoveredIndex === index + cards.length - 2 ? "scale-105 shadow-xl" : "scale-100"}`}
-                                        onMouseEnter={() => setHoveredIndex(index + cards.length - 2)}
-                                        onMouseLeave={() => setHoveredIndex(null)}
-                                        onClick={() => handleCardClick(card)}
-                                        whileHover={{ scale: 1.05 }}
-                                    >
-                                        <div
-                                            className={`absolute inset-0 bg-cover bg-center transition-all duration-300 
-                                            ${hoveredIndex !== null && hoveredIndex !== index + cards.length - 2 ? "blur-md opacity-70" : "opacity-100"}`}
-                                            style={{ backgroundImage: `url(${card.image})` }}
-                                        ></div>
-                                        <div className={`absolute inset-0 transition-all ${hoveredIndex === index + cards.length - 2 ? "bg-black bg-opacity-50" : "bg-black bg-opacity-40"}`}></div>
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 drop-shadow-md">
-                                            <div className="mb-2">{card.icon}</div>
-                                            <h2 className="text-lg font-bold">{card.title}</h2>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
