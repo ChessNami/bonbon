@@ -112,7 +112,10 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                     <ul className="p-4 space-y-2">
                                         <li
                                             className="px-4 py-2 flex items-center cursor-pointer active:bg-blue-200 hover:bg-blue-100 rounded-md transition"
-                                            onClick={() => setCurrentPage('Profile')} // Redirect to Profile
+                                            onClick={() => {
+                                                setCurrentPage('Profile');
+                                                setDropdownOpen(false);
+                                            }}
                                         >
                                             <img src={profilePic} className="w-14 h-14 rounded-full object-cover mr-2" alt="User Profile" />
                                             <span className="text-xl font-semibold">{displayName}</span>

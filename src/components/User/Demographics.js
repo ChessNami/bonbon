@@ -35,7 +35,6 @@ const genderData = [
 const Demographics = () => {
     return (
         <div className="p-4">
-            <h1 className="text-2xl font-bold text-center mb-3">DEMOGRAPHICS</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div className="bg-blue-500 text-white p-4 rounded-md text-center text-xs">
                     <p className="font-semibold">Barangay Population</p>

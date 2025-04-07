@@ -1,93 +1,144 @@
+// Transparency.js
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaArrowLeft, FaUsers, FaProjectDiagram, FaMoneyBillWave, FaChartBar, FaUserFriends } from "react-icons/fa";
+import BarangayCouncil from "./Transparency/BarangayCouncil";
+import SK from "./Transparency/SK";
+import BidsProjects from "./Transparency/BidsProjects";
+import BudgetReports from "./Transparency/BudgetReports";
+import ImplementationReports from "./Transparency/ImplementationReports";
+import sklogo from "../../img/Logo/sk.png"; // Adjust the path as necessary
+import barangaybonbon from "../../img/Logo/bonbon-logo.png";
 
 const Transparency = () => {
+    const [selectedCard, setSelectedCard] = useState(null);
     const [hoveredIndex, setHoveredIndex] = useState(null);
-    const navigate = useNavigate();
 
     const cards = [
-        { title: "Barangay Council", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/barangaycouncil" },
-        { title: "Sanguniang Kabataan (SK)", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/sk" },
-        { title: "Bids and Projects", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/bids-projects" },
-        { title: "Budget & Financial Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/budget-reports" },
-        { title: "Implementation Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", route: "/implementation-reports" },
+        { title: "Barangay Council", image: barangaybonbon, icon: <FaUsers size={20} /> },
+        { title: "Sanguniang Kabataan (SK)", image: sklogo, icon: <FaUserFriends size={20} /> },
+        { title: "Bids and Projects", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", icon: <FaProjectDiagram size={20} /> },
+        { title: "Budget & Financial Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", icon: <FaMoneyBillWave size={20} /> },
+        { title: "Implementation Reports", image: "https://i.ytimg.com/vi/gKK6iynG6os/maxresdefault.jpg", icon: <FaChartBar size={20} /> },
     ];
 
-    const handleCardClick = (title, route) => {
-        console.log(`Clicked on: ${title}`);
-        navigate(route);
+    const handleCardClick = (card) => {
+        setSelectedCard(card.title);
+    };
+
+    const handleBackClick = () => {
+        setSelectedCard(null);
+    };
+
+    const renderContent = () => {
+        switch (selectedCard) {
+            case "Barangay Council":
+                return <BarangayCouncil />;
+            case "Sanguniang Kabataan (SK)":
+                return <SK />;
+            case "Bids and Projects":
+                return <BidsProjects />;
+            case "Budget & Financial Reports":
+                return <BudgetReports />;
+            case "Implementation Reports":
+                return <ImplementationReports />;
+            default:
+                return null;
+        }
+    };
+
+    const centerVariants = {
+        initial: { opacity: 0, scale: 0.5 },
+        animate: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: "easeOut" } },
+        exit: { opacity: 0, scale: 0.5, transition: { duration: 0.5, ease: "easeIn" } },
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-4xl font-bold text-center mb-8">Transparency Page</h1>
-            <p className="text-lg text-gray-700 mb-4 text-center">
-                Welcome to Barangay Bonbon.
-            </p>
-
-            {/* Grid for first three items */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                {cards.slice(0, 3).map((card, index) => (
-                    <div
-                        key={index}
-                        className={`relative w-full h-64 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 cursor-pointer 
-                            ${hoveredIndex === index ? "scale-105 shadow-xl" : "scale-100"}`}
-                        onMouseEnter={() => setHoveredIndex(index)}
-                        onMouseLeave={() => setHoveredIndex(null)}
-                        onClick={() => handleCardClick(card.title, card.route)}
+        <div className="p-4 select-none">
+            <AnimatePresence mode="wait">
+                {selectedCard ? (
+                    <motion.div
+                        key="content"
+                        className="bg-white p-4 rounded-lg shadow-lg max-w-5xl mx-auto"
+                        variants={centerVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
                     >
-                        {/* Background Image */}
-                        <div
-                            className={`absolute inset-0 bg-cover bg-center transition-all duration-300 
-                            ${hoveredIndex !== null && hoveredIndex !== index ? "blur-md opacity-70" : "opacity-100"}`}
-                            style={{ backgroundImage: `url(${card.image})` }}
-                        ></div>
-
-                        {/* Black Overlay */}
-                        <div className={`absolute inset-0 transition-all ${hoveredIndex === index ? "bg-black bg-opacity-50" : "bg-black bg-opacity-40"}`}></div>
-
-                        {/* Title */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <h2 className="text-white text-lg font-bold text-center px-4 drop-shadow-md">
-                                {card.title}
-                            </h2>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Centered Last Row for 2 Cards */}
-            {cards.length % 3 === 2 && (
-                <div className="flex justify-center mt-6 gap-6">
-                    {cards.slice(-2).map((card, index) => (
-                        <div
-                            key={index + cards.length - 2} // Ensures unique index reference
-                            className={`relative w-full sm:w-[48%] md:w-[30%] h-64 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 cursor-pointer 
-                                ${hoveredIndex === index + cards.length - 2 ? "scale-105 shadow-xl" : "scale-100"}`}
-                            onMouseEnter={() => setHoveredIndex(index + cards.length - 2)}
-                            onMouseLeave={() => setHoveredIndex(null)}
-                            onClick={() => handleCardClick(card.title, card.route)}
+                        <button
+                            onClick={handleBackClick}
+                            className="flex items-center gap-2 px-4 py-2 mb-4 bg-gray-500 text-white rounded hover:bg-gray-600"
                         >
-                            {/* Background Image */}
-                            <div
-                                className={`absolute inset-0 bg-cover bg-center transition-all duration-300 
-                                ${hoveredIndex !== null && hoveredIndex !== index + cards.length - 2 ? "blur-md opacity-70" : "opacity-100"}`}
-                                style={{ backgroundImage: `url(${card.image})` }}
-                            ></div>
-
-                            {/* Black Overlay */}
-                            <div className={`absolute inset-0 transition-all ${hoveredIndex === index + cards.length - 2 ? "bg-black bg-opacity-50" : "bg-black bg-opacity-40"}`}></div>
-
-                            {/* Title */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <h2 className="text-white text-lg font-bold text-center px-4 drop-shadow-md">
-                                    {card.title}
-                                </h2>
-                            </div>
+                            <FaArrowLeft />
+                            Back
+                        </button>
+                        {renderContent()}
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="cards"
+                        variants={centerVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="max-w-5xl mx-auto"
+                    >
+                        {/* Grid for first three items */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            {cards.slice(0, 3).map((card, index) => (
+                                <motion.div
+                                    key={index}
+                                    className={`relative w-full h-64 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 cursor-pointer 
+                                        ${hoveredIndex === index ? "scale-105 shadow-xl" : "scale-100"}`}
+                                    onMouseEnter={() => setHoveredIndex(index)}
+                                    onMouseLeave={() => setHoveredIndex(null)}
+                                    onClick={() => handleCardClick(card)}
+                                    whileHover={{ scale: 1.05 }}
+                                >
+                                    <div
+                                        className={`absolute inset-0 bg-cover bg-center transition-all duration-300 
+                                        ${hoveredIndex !== null && hoveredIndex !== index ? "blur-md opacity-70" : "opacity-100"}`}
+                                        style={{ backgroundImage: `url(${card.image})` }}
+                                    ></div>
+                                    <div className={`absolute inset-0 transition-all ${hoveredIndex === index ? "bg-black bg-opacity-50" : "bg-black bg-opacity-40"}`}></div>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 drop-shadow-md">
+                                        <div className="mb-2">{card.icon}</div>
+                                        <h2 className="text-lg font-bold">{card.title}</h2>
+                                    </div>
+                                </motion.div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            )}
+
+                        {/* Centered Last Row for 2 Cards */}
+                        {cards.length % 3 === 2 && (
+                            <div className="flex justify-center mt-6 gap-6">
+                                {cards.slice(-2).map((card, index) => (
+                                    <motion.div
+                                        key={index + cards.length - 2}
+                                        className={`relative w-full sm:w-[48%] md:w-[30%] h-64 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 cursor-pointer 
+                                            ${hoveredIndex === index + cards.length - 2 ? "scale-105 shadow-xl" : "scale-100"}`}
+                                        onMouseEnter={() => setHoveredIndex(index + cards.length - 2)}
+                                        onMouseLeave={() => setHoveredIndex(null)}
+                                        onClick={() => handleCardClick(card)}
+                                        whileHover={{ scale: 1.05 }}
+                                    >
+                                        <div
+                                            className={`absolute inset-0 bg-cover bg-center transition-all duration-300 
+                                            ${hoveredIndex !== null && hoveredIndex !== index + cards.length - 2 ? "blur-md opacity-70" : "opacity-100"}`}
+                                            style={{ backgroundImage: `url(${card.image})` }}
+                                        ></div>
+                                        <div className={`absolute inset-0 transition-all ${hoveredIndex === index + cards.length - 2 ? "bg-black bg-opacity-50" : "bg-black bg-opacity-40"}`}></div>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 drop-shadow-md">
+                                            <div className="mb-2">{card.icon}</div>
+                                            <h2 className="text-lg font-bold">{card.title}</h2>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
