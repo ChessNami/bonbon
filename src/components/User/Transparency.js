@@ -65,18 +65,22 @@ const Transparency = () => {
                         animate="animate"
                         exit="exit"
                     >
-                        <div className="relative flex items-center mb-4">
-                            <button
-                                onClick={handleBackClick}
-                                className="flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
-                            >
-                                <FaArrowLeft />
-                                Back
-                            </button>
-                            <h1 className="absolute left-1/2 transform -translate-x-1/2 text-2xl font-bold text-gray-700">
+                        <div className="flex items-center mb-4 space-x-2">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleBackClick}
+                                    className="flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                                >
+                                    <FaArrowLeft />
+                                    Back
+                                </button>
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-700">
                                 {selectedCard}
                             </h1>
                         </div>
+                        {/* Add separator here */}
+                        <hr className="border-t border-gray-300 my-2" />
                         {renderContent()}
                     </motion.div>
                 ) : (
