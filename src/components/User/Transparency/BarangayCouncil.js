@@ -51,7 +51,6 @@ const BarangayCouncil = () => {
 
     return (
         <div className="container mx-auto p-4">
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-6">Barangay Officials</h2>
             {isLoading ? (
                 <div className="flex justify-center items-center">
                     <Loader />
