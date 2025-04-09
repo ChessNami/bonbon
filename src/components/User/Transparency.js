@@ -54,7 +54,7 @@ const Transparency = () => {
     };
 
     return (
-        <div className="p-4 min-h-screen bg-gray-100 select-none">
+        <div className="p-4 min-h-screen select-none">
             <AnimatePresence mode="wait">
                 {selectedCard ? (
                     <motion.div

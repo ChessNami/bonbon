@@ -12,7 +12,7 @@ const UserMainComponent = ({ onLogout }) => {
             {/* Pass setCurrentPage to Header */}
             <Header setCurrentPage={setCurrentPage} onLogout={onLogout} />
             <Navbar setCurrentPage={setCurrentPage} currentPage={currentPage} />
-            <main className="flex-grow">
+            <main className="flex-grow bg-[#dee5f8]">
                 <UserMainPage currentPage={currentPage} />
             </main>
             <Footer />
