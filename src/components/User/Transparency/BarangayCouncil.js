@@ -105,7 +105,6 @@ const BarangayCouncil = () => {
                                     member.position !== "Barangay Captain" &&
                                     member.position !== "Barangay Kapitan"
                                 )
-                                .slice(0, 6) // Limit to 6 members
                                 .map((member) => (
                                     <div
                                         key={member.id}

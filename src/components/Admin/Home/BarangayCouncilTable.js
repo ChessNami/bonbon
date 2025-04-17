@@ -51,7 +51,7 @@ const BarangayCouncilTable = () => {
     const currentRows = councilMembers.slice(indexOfFirstRow, indexOfLastRow);
 
     return (
-        <div className="bg-white p-4 rounded-lg min-h-full flex flex-col">
+        <div className="bg-white p-4 rounded-lg flex flex-col h-full">
             <h2 className="text-xl font-bold mb-4">Barangay Council</h2>
 
             {/* Tabs with Animation */}
@@ -60,8 +60,7 @@ const BarangayCouncilTable = () => {
                     {["Barangay Officials", "Sangguniang Kabataan", "Lupon Members"].map((tab) => (
                         <button
                             key={tab}
-                            className={`px-4 py-2 font-semibold relative transition-colors duration-300 ${activeTab === tab ? "text-blue-600 border-b-2 border-blue-500" : "text-gray-500"
-                                }`}
+                            className={`px-4 py-2 font-semibold relative transition-colors duration-300 ${activeTab === tab ? "text-blue-600 border-b-2 border-blue-500" : "text-gray-500"}`}
                             onClick={() => setActiveTab(tab)}
                         >
                             {tab}
@@ -78,7 +77,7 @@ const BarangayCouncilTable = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
-                    className="flex-grow h-96 overflow-y-auto mt-4"
+                    className="flex-1 overflow-y-auto mt-4"
                 >
                     <table className="w-full border-collapse border border-gray-300">
                         <tbody>

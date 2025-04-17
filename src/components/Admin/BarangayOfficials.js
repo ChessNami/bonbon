@@ -168,8 +168,18 @@ const BarangayOfficials = () => {
                         height: 600,
                     });
 
+                    // Create a new canvas with white background
+                    const whiteBgCanvas = document.createElement('canvas');
+                    whiteBgCanvas.width = 600;
+                    whiteBgCanvas.height = 600;
+                    const ctx = whiteBgCanvas.getContext('2d');
+
+                    ctx.fillStyle = "#ffffff"; // White background
+                    ctx.fillRect(0, 0, whiteBgCanvas.width, whiteBgCanvas.height);
+                    ctx.drawImage(croppedCanvas, 0, 0);
+
                     const compressedImage = await new Promise((resolve, reject) => {
-                        croppedCanvas.toBlob((blob) => {
+                        whiteBgCanvas.toBlob((blob) => {
                             if (blob) {
                                 new Compressor(blob, {
                                     quality: 0.8,
