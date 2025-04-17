@@ -79,9 +79,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         } catch (error) {
             console.error("Error fetching user events:", error);
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "error",
                 title: "Fetch Error",
                 text: "Failed to fetch user events: " + error.message,
+                showConfirmButton: false,
+                timer: 1500,
             });
         }
     };
@@ -208,9 +212,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             });
         } else {
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "error",
                 title: "Invalid File",
                 text: "Please upload a JPEG or PNG image.",
+                showConfirmButton: false,
+                timer: 1500,
             });
         }
     };
@@ -220,9 +228,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
 
         if (selectedDates.length === 0) {
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "warning",
                 title: "No Date Selected",
                 text: "Please select at least one date.",
+                showConfirmButton: false,
+                timer: 1500,
             });
             return;
         }
@@ -248,9 +260,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 if (!cropperRef.current || !cropperRef.current.cropper) {
                     Swal.close();
                     Swal.fire({
+                        toast: true,
+                        position: "top-end",
                         icon: "warning",
                         title: "Cropper Not Initialized",
                         text: "Please wait for the image cropper to load or re-upload the image.",
+                        showConfirmButton: false,
+                        timer: 1500,
                     });
                     return;
                 }
@@ -263,9 +279,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 if (!croppedCanvas) {
                     Swal.close();
                     Swal.fire({
+                        toast: true,
+                        position: "top-end",
                         icon: "error",
                         title: "Cropping Error",
                         text: "Failed to crop the image. Please adjust the crop area and try again.",
+                        showConfirmButton: false,
+                        timer: 1500,
                     });
                     return;
                 }
@@ -274,9 +294,9 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     croppedCanvas.toBlob((blob) => {
                         if (blob) {
                             new Compressor(blob, {
-                                quality: 0.6,
-                                maxWidth: 800,
-                                maxHeight: 450,
+                                quality: 0.8,
+                                maxWidth: 1280,
+                                maxHeight: 720,
                                 success: (compressedResult) => resolve(compressedResult),
                                 error: (err) => reject(new Error(`Image compression failed: ${err.message}`)),
                             });
@@ -386,9 +406,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             Swal.close();
             console.error("Error in handleCreateEvent:", error);
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "error",
                 title: "Operation Failed",
                 text: error.message || "An unexpected error occurred. Please try again.",
+                showConfirmButton: false,
+                timer: 1500,
             });
         }
     };
@@ -417,9 +441,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
 
         if (selectedDates.length === 0) {
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "warning",
                 title: "No Date Selected",
                 text: "Please select at least one date.",
+                showConfirmButton: false,
+                timer: 1500,
             });
             return;
         }
@@ -502,9 +530,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             Swal.close();
             console.error("Error in handleUpdateEvent:", error);
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "error",
                 title: "Operation Failed",
                 text: error.message || "An unexpected error occurred. Please try again.",
+                showConfirmButton: false,
+                timer: 1500,
             });
         }
     };
@@ -557,9 +589,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         } catch (error) {
             console.error("Error in handleDeleteEvent:", error);
             Swal.fire({
+                toast: true,
+                position: "top-end",
                 icon: "error",
                 title: "Delete Failed",
                 text: error.message || "An unexpected error occurred. Please try again.",
+                showConfirmButton: false,
+                timer: 1500,
             });
         }
     };
@@ -598,16 +634,31 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     >
                         <FaChevronRight size={20} />
                     </motion.button>
-                    {selectedDates.length > 0 && (
-                        <motion.button
-                            onClick={() => setIsEventModalOpen(true)}
-                            className="p-2 rounded bg-green-200 hover:bg-green-300 active:bg-green-400 transition"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                        >
-                            <FaPlus size={20} />
-                        </motion.button>
-                    )}
+                    <motion.button
+                        onClick={() => {
+                            if (selectedDates.length > 0) {
+                                setIsEventModalOpen(true);
+                            } else {
+                                Swal.fire({
+                                    toast: true,
+                                    position: "top-end",
+                                    icon: "warning",
+                                    title: "No Date Selected",
+                                    text: "Please select at least one date before creating an event.",
+                                    showConfirmButton: false,
+                                    timer: 1500,
+                                });
+                            }
+                        }}
+                        className={`p-2 rounded transition ${selectedDates.length > 0
+                            ? "bg-green-200 hover:bg-green-300 active:bg-green-400"
+                            : "bg-gray-300 cursor-not-allowed opacity-50"
+                            }`}
+                        whileHover={selectedDates.length > 0 ? { scale: 1.1 } : {}}
+                        whileTap={selectedDates.length > 0 ? { scale: 0.9 } : {}}
+                    >
+                        <FaPlus size={20} />
+                    </motion.button>
                 </div>
 
                 <motion.div

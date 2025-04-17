@@ -1,4 +1,3 @@
-// src/components/MiniCalendar.js
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
@@ -82,6 +81,19 @@ const MiniCalendar = ({ setIsModalOpen }) => {
     useEffect(() => {
         fetchHolidays();
         fetchUserEvents();
+
+        // Subscribe to real-time changes
+        const subscription = supabase
+            .channel('calendar-events-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+                fetchUserEvents(); // Refetch data when any change occurs
+            })
+            .subscribe();
+
+        // Cleanup subscription on unmount
+        return () => {
+            subscription.unsubscribe();
+        };
     }, [selectedYear, fetchHolidays]);
 
     const handlePrevMonth = () => {
@@ -312,15 +324,15 @@ const MiniCalendar = ({ setIsModalOpen }) => {
                     >
                         <motion.div
                             ref={modalRef}
-                            className="bg-white rounded-lg shadow-lg w-[95%] sm:w-11/12 max-w-md max-h-[80vh] overflow-y-auto pointer-events-auto"
+                            className="bg-white rounded-xl shadow-2xl w-[90%] sm:w-4/5 md:w-3/4 lg:w-2/3 xl:w-1/2 min-h-[60%] max-h-[95vh] overflow-y-auto pointer-events-auto"
                             variants={modalVariants}
                             initial="hidden"
                             animate="visible"
                             exit="exit"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="flex justify-between items-center sticky top-0 bg-white p-2 sm:p-4 border-b border-gray-200">
-                                <h2 className="text-base sm:text-lg font-bold text-gray-800">
+                            <div className="flex justify-between items-center sticky top-0 bg-white p-4 border-b border-gray-300">
+                                <h2 className="text-2xl font-bold text-gray-800">
                                     Events on {modalData.dateKey}
                                 </h2>
                                 <motion.button
@@ -329,16 +341,16 @@ const MiniCalendar = ({ setIsModalOpen }) => {
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
                                 >
-                                    <FaTimes size={14} className="sm:w-18 sm:h-18" />
+                                    <FaTimes size={20} className="sm:w-6 sm:h-6" />
                                 </motion.button>
                             </div>
-                            <div className="p-2 sm:p-4">
+                            <div className="p-4">
                                 {modalData.holiday && (
-                                    <div className="mb-2 sm:mb-4">
-                                        <span className="font-bold text-gray-700 text-sm sm:text-base">
+                                    <div className="mb-4">
+                                        <span className="font-bold text-xl text-gray-700">
                                             Holiday:
                                         </span>{" "}
-                                        <span className="text-gray-600 text-sm sm:text-base">
+                                        <span className="text-lg text-gray-600">
                                             {modalData.holiday.localName}
                                         </span>
                                     </div>
@@ -347,43 +359,42 @@ const MiniCalendar = ({ setIsModalOpen }) => {
                                     modalData.userEvents.map((event, idx) => (
                                         <motion.div
                                             key={idx}
-                                            className="bg-blue-100 p-2 sm:p-3 rounded mb-2 sm:mb-3"
+                                            className="bg-blue-100 p-4 rounded-lg mb-4 shadow-md"
                                             variants={itemVariants}
                                             initial="hidden"
                                             animate="visible"
                                         >
-                                            <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
+                                            <h3 className="text-2xl font-bold text-gray-800 mb-2 capitalize">
                                                 {event.title}
                                             </h3>
-                                            <p className="text-gray-600 text-xs sm:text-sm">
-                                                <span className="font-medium">Time:</span>{" "}
+                                            <p className="text-lg text-gray-600">
+                                                <span className="font-bold">Time: </span>
                                                 {event.whole_day
                                                     ? "Whole Day"
                                                     : `${event.start_time} - ${event.end_time}`}
                                             </p>
-                                            <p className="text-gray-600 text-xs sm:text-sm">
-                                                <span className="font-medium">Location:</span>{" "}
+                                            <p className="text-lg text-gray-600 mb-4 capitalize">
+                                            <span className="font-bold">Where: </span>
                                                 {event.location || "N/A"}
                                             </p>
-                                            <p className="text-gray-600 text-xs sm:text-sm">
-                                                <span className="font-medium">Description:</span>{" "}
+                                            <p className="text-lg text-gray-600">
                                                 {event.description || "N/A"}
                                             </p>
                                             {event.signedImageUrl && (
                                                 <img
                                                     src={event.signedImageUrl}
                                                     alt={event.title}
-                                                    className="mt-1 sm:mt-2 w-full h-auto object-cover rounded"
+                                                    className="mt-6 w-full h-auto max-h-96 object-cover rounded-lg"
                                                     onError={(e) =>
                                                     (e.target.src =
-                                                        "https://via.placeholder.com/400x200")
+                                                        "https://via.placeholder.com/600x400")
                                                     }
                                                 />
                                             )}
                                         </motion.div>
                                     ))
                                 ) : (
-                                    <div className="text-gray-600 text-sm sm:text-base">
+                                    <div className="text-lg text-gray-600">
                                         No events scheduled.
                                     </div>
                                 )}

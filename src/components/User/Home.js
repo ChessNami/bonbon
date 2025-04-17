@@ -1,4 +1,3 @@
-// src/components/User/Home.js
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "../../supabaseClient";
@@ -7,12 +6,24 @@ import Loader from "../Loader";
 import MiniCalendar from "./MiniCalendar";
 
 const Home = () => {
-    const [announcements, setAnnouncements] = useState([]);
+    const [allEvents, setAllEvents] = useState([]); // Store all events (including past)
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         fetchEvents();
+        // Subscribe to real-time changes
+        const subscription = supabase
+            .channel('events-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+                fetchEvents(); // Refetch data when any change occurs
+            })
+            .subscribe();
+
+        // Cleanup subscription on unmount
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     const fetchEvents = async () => {
@@ -21,7 +32,7 @@ const Home = () => {
             const { data, error } = await supabase
                 .from("events")
                 .select("*")
-                .order("created_at", { ascending: false });
+                .order("created_at", { ascending: false }); // Sort by updated_at descending (latest first)
 
             if (error) throw error;
 
@@ -40,7 +51,7 @@ const Home = () => {
                 })
             );
 
-            setAnnouncements(eventsWithImages);
+            setAllEvents(eventsWithImages); // Store all events for announcements
         } catch (error) {
             Swal.fire({
                 icon: "error",
@@ -142,11 +153,20 @@ const Home = () => {
         };
     }, [isModalOpen]);
 
+    // Filter only upcoming events for mini cards
+    const upcomingEvents = allEvents.filter(event => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of today
+        const eventDate = new Date(event.dates[0]); // Assuming dates is an array, take first date
+        eventDate.setHours(0, 0, 0, 0); // Normalize event date
+        return eventDate > today; // Only show events after today
+    });
+
     return (
         <div className="relative w-full mx-auto p-2 sm:p-4 md:p-6 lg:p-8 min-h-screen">
-            <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:space-x-4">
-                {/* Left: Announcements */}
-                <div className="w-full bg-white p-2 sm:p-4 rounded-md shadow-md">
+            <div className="flex flex-col lg:flex-row gap-4">
+                {/* Left: Announcements (all events, latest to oldest) */}
+                <div className="w-full lg:w-3/4 bg-white p-2 sm:p-4 rounded-md shadow-md">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 sm:mb-4">
                         Announcements and Events
                     </h1>
@@ -157,15 +177,15 @@ const Home = () => {
                         </div>
                     ) : (
                         <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 md:p-6">
-                            {announcements.map((item) => (
+                            {allEvents.map((item) => ( // Removed reverse() since we sort in the query
                                 <motion.div
                                     key={item.id}
-                                    className="bg-[#dee5f8] p-2 sm:p-4 rounded shadow-md border border-gray-200 flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4"
+                                    className="bg-[#dee5f8] p-2 sm:p-4 rounded shadow-md border border-gray-200 flex flex-col sm:flex-row gap-4"
                                     variants={cardVariants}
                                     initial="hidden"
                                     animate="visible"
                                 >
-                                    <div className="w-full sm:w-1/3 mb-2 sm:mb-0">
+                                    <div className="w-full sm:w-1/3">
                                         <div className="aspect-video w-full rounded overflow-hidden">
                                             <img
                                                 src={
@@ -178,10 +198,10 @@ const Home = () => {
                                         </div>
                                     </div>
                                     <div className="w-full sm:w-2/3">
-                                        <h2 className="text-gray-700 mb-1 sm:mb-2 text-lg sm:text-xl font-bold">
+                                        <h2 className="text-gray-700 mb-1 sm:mb-2 text-lg sm:text-xl font-bold capitalize">
                                             {item.title}
                                         </h2>
-                                        <p className="text-sm sm:text-lg text-gray-600">
+                                        <p className="text-sm sm:text-lg text-gray-600 capitalize">
                                             <span className="font-bold">Date:</span>{" "}
                                             {formatDates(item.dates)}
                                             <br />
@@ -193,7 +213,7 @@ const Home = () => {
                                             <span className="font-bold">Where:</span>{" "}
                                             {item.location}
                                         </p>
-                                        <p className="mt-1 sm:mt-2 text-gray-500 text-xs sm:text-sm">
+                                        <p className="mt-1 sm:mt-2 text-gray-500 text-sm sm:text-sm">
                                             {item.description}
                                         </p>
                                     </div>
@@ -203,37 +223,47 @@ const Home = () => {
                     )}
                 </div>
 
-                {/* Right: Mini Calendar and Mini Cards */}
-                <div className="w-full md:w-1/4 flex flex-col gap-4">
+                {/* Right: Mini Calendar and Upcoming Events */}
+                <div className="w-full lg:w-1/4 flex flex-col gap-4">
                     {/* Mini Calendar */}
                     <MiniCalendar setIsModalOpen={setIsModalOpen} />
-                    {/* Mini Cards */}
-                    <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-4">
-                        {announcements.map((item) => (
-                            <a
-                                key={item.id}
-                                href={`https://example.com/event/${item.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition"
-                            >
-                                <div className="overflow-hidden rounded-t-lg aspect-video w-full">
-                                    <img
-                                        src={
-                                            item.image ||
-                                            "https://via.placeholder.com/300x200"
-                                        }
-                                        alt={item.title}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <div className="p-1 sm:p-2 text-center">
-                                    <h3 className="text-xs sm:text-sm font-bold text-gray-700 line-clamp-2">
-                                        {item.title}
-                                    </h3>
-                                </div>
-                            </a>
-                        ))}
+
+                    {/* Upcoming Events (only future events) */}
+                    <div className="space-y-2 sm:space-y-4">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800">Upcoming Events</h2>
+                        <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-4">
+                            {upcomingEvents.slice(0, 4).map((item) => (
+                                <a
+                                    key={item.id}
+                                    href={`https://example.com/event/${item.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition-all duration-200"
+                                >
+                                    <div className="overflow-hidden rounded-t-lg aspect-video w-full">
+                                        <img
+                                            src={
+                                                item.image ||
+                                                "https://via.placeholder.com/300x200"
+                                            }
+                                            alt={item.title}
+                                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                                        />
+                                    </div>
+                                    <div className="p-2 text-center">
+                                        <h3 className="text-xs sm:text-sm font-bold text-gray-700 line-clamp-2 capitalize">
+                                            {item.title}
+                                        </h3>
+                                        <p className="text-[10px] sm:text-xs text-gray-500">
+                                            {new Date(item.dates[0]).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </a>
+                            ))}
+                            {upcomingEvents.length === 0 && !isLoading && (
+                                <p className="text-gray-500 text-sm text-center">No upcoming events</p>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
