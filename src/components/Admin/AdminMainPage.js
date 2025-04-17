@@ -4,6 +4,7 @@ import AdminHome from "./AdminHome";
 import BarangayOfficials from "./BarangayOfficials";
 import ResidentManagement from "./ResidentManagement";
 import AdminMainProfileComponent from "./AdminMainProfileComponent";
+import AdminSMP from "./AdminSMP";
 import Settings from "./Settings"; // Import the new Settings component
 
 const AdminMainPage = ({ currentPage }) => {
@@ -15,6 +16,8 @@ const AdminMainPage = ({ currentPage }) => {
                 return <BarangayOfficials />;
             case "Resident Management":
                 return <ResidentManagement />;
+            case "Strategic Road Map":
+                return <AdminSMP />;   
             case "Profile":
                 return <AdminMainProfileComponent />;
             case "Settings": // New case for Settings

@@ -17,7 +17,13 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
     const navItems = [
         { label: "Home", icon: FaHome },
         { label: "Barangay Officials", icon: FaUserTie },
+<<<<<<< HEAD
         { label: "Resident Management", icon: FaUsers }, // Added Resident Management
+=======
+        { label: "Resident Management", icon: FaUsers },
+        { label: "Strategic Road Map", icon: FaClipboardList }, // Added Resident Management
+        { label: "Users", icon: FaUsers },
+>>>>>>> 8fee4594f71921d31798b011c47db3b96ec240b8
         { label: "Settings", icon: FaCog },
     ];
 
