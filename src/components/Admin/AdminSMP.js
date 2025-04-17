@@ -39,6 +39,7 @@ const AdminSMP = () => {
     const [newTitle, setNewTitle] = useState("");
     const [newDescription, setNewDescription] = useState("");
     const [newColor, setNewColor] = useState("blue");
+    const [draggingVertexIndex, setDraggingVertexIndex] = useState(null); // Track which vertex is being dragged
 
     // Component to handle map clicks for adding new points
     const MapClickHandler = () => {
@@ -47,22 +48,61 @@ const AdminSMP = () => {
                 if (isAdding && !editingPolygonId) {
                     const newCoord = [e.latlng.lat, e.latlng.lng];
                     setNewPolygonCoords([...newPolygonCoords, newCoord]);
+                    console.log("Added new coordinate:", newCoord);
                 }
             },
         });
 
-        // Disable map dragging and zooming during editing mode
+        // Disable map dragging and zooming during editing or adding mode
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         useEffect(() => {
-            if (editingPolygonId) {
+            if (isAdding || editingPolygonId) {
                 map.dragging.disable();
                 map.scrollWheelZoom.disable();
                 map.touchZoom.disable();
+                console.log("Disabled map interactions");
             } else {
                 map.dragging.enable();
                 map.scrollWheelZoom.enable();
                 map.touchZoom.enable();
+                console.log("Enabled map interactions");
             }
-        }, [map]);
+        }, [map, isAdding, editingPolygonId]); // Dependencies needed for effect to re-run
+
+        // Handle mouse move and mouse up for right-click dragging
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        useEffect(() => {
+            const handleMouseMove = (e) => {
+                if (draggingVertexIndex !== null) {
+                    const latlng = map.mouseEventToLatLng(e);
+                    const updatedCoords = [...newPolygonCoords];
+                    updatedCoords[draggingVertexIndex] = [latlng.lat, latlng.lng];
+                    setNewPolygonCoords(updatedCoords);
+                    console.log(`Dragging vertex ${draggingVertexIndex} to:`, [latlng.lat, latlng.lng]);
+                }
+            };
+
+            const handleMouseUp = () => {
+                if (draggingVertexIndex !== null) {
+                    console.log(`Finished dragging vertex ${draggingVertexIndex}`);
+                    setDraggingVertexIndex(null); // Stop dragging
+                }
+            };
+
+            if (editingPolygonId) {
+                // Add event listeners to the map's container (Leaflet's DOM element)
+                const mapContainer = map.getContainer();
+                mapContainer.addEventListener("mousemove", handleMouseMove);
+                mapContainer.addEventListener("mouseup", handleMouseUp);
+                mapContainer.addEventListener("mouseleave", handleMouseUp); // Stop dragging if mouse leaves map
+
+                return () => {
+                    mapContainer.removeEventListener("mousemove", handleMouseMove);
+                    mapContainer.removeEventListener("mouseup", handleMouseUp);
+                    mapContainer.removeEventListener("mouseleave", handleMouseUp);
+                };
+            }
+        }, [map, draggingVertexIndex, editingPolygonId]); // Dependencies needed for effect to re-run
 
         return null;
     };
@@ -90,11 +130,13 @@ const AdminSMP = () => {
         setNewDescription("");
         setNewColor("blue");
         setIsAdding(false);
+        console.log("Added new polygon:", newPolygon);
     };
 
     // Delete a polygon
     const handleDeletePolygon = (id) => {
         setPolygons(polygons.filter((polygon) => polygon.id !== id));
+        console.log("Deleted polygon with id:", id);
     };
 
     // Start editing a polygon
@@ -106,6 +148,7 @@ const AdminSMP = () => {
         setNewDescription(polygonToEdit.description);
         setNewColor(polygonToEdit.color);
         setIsAdding(true);
+        console.log("Entered edit mode for polygon id:", id);
     };
 
     // Save edited polygon
@@ -136,6 +179,7 @@ const AdminSMP = () => {
         setNewColor("blue");
         setIsAdding(false);
         setEditingPolygonId(null);
+        console.log("Saved edited polygon with id:", editingPolygonId);
     };
 
     // Cancel adding/editing
@@ -146,13 +190,8 @@ const AdminSMP = () => {
         setNewColor("blue");
         setIsAdding(false);
         setEditingPolygonId(null);
-    };
-
-    // Handle dragging of a vertex
-    const handleVertexDrag = (index, e) => {
-        const updatedCoords = [...newPolygonCoords];
-        updatedCoords[index] = [e.latlng.lat, e.latlng.lng];
-        setNewPolygonCoords(updatedCoords);
+        setDraggingVertexIndex(null); // Reset dragging state
+        console.log("Canceled editing mode");
     };
 
     // Color mapping for polygons
@@ -243,7 +282,7 @@ const AdminSMP = () => {
                         />
                     )}
 
-                    {/* Render Draggable Circle Markers for New/Editing Polygon Vertices (only in editing mode) */}
+                    {/* Render Circle Markers for New/Editing Polygon Vertices (only in editing mode) */}
                     {editingPolygonId &&
                         newPolygonCoords.map((coord, index) => (
                             <CircleMarker
@@ -255,20 +294,17 @@ const AdminSMP = () => {
                                     fillColor: "orange",
                                     fillOpacity: 1,
                                 }}
-                                draggable={true} // Draggable in edit mode
+                                draggable={false} // Disable default left-click dragging
                                 eventHandlers={{
-                                    drag: (e) => handleVertexDrag(index, e),
-                                    dragstart: (e) => {
-                                        // Prevent map interactions from interfering
-                                        e.target._map.dragging.disable();
-                                    },
-                                    dragend: (e) => {
-                                        // Re-enable map interactions if needed
-                                        e.target._map.dragging.enable();
+                                    contextmenu: (e) => {
+                                        // Start right-click dragging
+                                        L.DomEvent.preventDefault(e); // Prevent default context menu
+                                        setDraggingVertexIndex(index);
+                                        console.log(`Started right-click dragging vertex ${index}`);
                                     },
                                     click: (e) => {
-                                        // Prevent click events from bubbling to the map
-                                        L.DomEvent.stopPropagation(e);
+                                        L.DomEvent.stopPropagation(e); // Prevent click events from bubbling
+                                        console.log(`Clicked vertex ${index}`);
                                     },
                                 }}
                             />
