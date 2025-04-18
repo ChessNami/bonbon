@@ -19,6 +19,7 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
         { label: "Barangay Officials", icon: FaUserTie },
         { label: "Resident Management", icon: FaUsers },
         { label: "Strategic Road Map", icon: FaClipboardList },
+        { label: "Project Management", icon: FaClipboardList },
         { label: "Settings", icon: FaCog },
     ];
 

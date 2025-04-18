@@ -16,23 +16,9 @@ const customIcon = L.divIcon({
     popupAnchor: [0, -38],
 });
 
-const AdminSMP = () => {
+const AdminProMgmt = () => {
     const bonbonCoords = [8.509057124770594, 124.6491339822436];
-    const [polygons, setPolygons] = useState([
-        {
-            id: 1,
-            title: "Initial Project",
-            description: "This area is part of the strategic road project.",
-            color: "blue",
-            coords: [
-                [8.5105, 124.6480],
-                [8.5110, 124.6500],
-                [8.5090, 124.6510],
-                [8.5080, 124.6490],
-                [8.5105, 124.6480],
-            ],
-        },
-    ]);
+    const [polygons, setPolygons] = useState([]);
     const [newPolygonCoords, setNewPolygonCoords] = useState([]);
     const [isAdding, setIsAdding] = useState(false);
     const [editingPolygonId, setEditingPolygonId] = useState(null);
@@ -390,4 +376,4 @@ const AdminSMP = () => {
     );
 };
 
-export default AdminSMP;
+export default AdminProMgmt;

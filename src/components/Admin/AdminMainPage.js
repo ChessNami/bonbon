@@ -6,6 +6,7 @@ import ResidentManagement from "./ResidentManagement";
 import AdminMainProfileComponent from "./AdminMainProfileComponent";
 import AdminSMP from "./AdminSMP";
 import Settings from "./Settings"; // Import the new Settings component
+import AdminProMgmt from "./AdminProMgmt";
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
@@ -17,7 +18,9 @@ const AdminMainPage = ({ currentPage }) => {
             case "Resident Management":
                 return <ResidentManagement />;
             case "Strategic Road Map":
-                return <AdminSMP />;   
+                return <AdminSMP />;
+            case "Project Management":
+                return <AdminProMgmt />;     
             case "Profile":
                 return <AdminMainProfileComponent />;
             case "Settings": // New case for Settings
