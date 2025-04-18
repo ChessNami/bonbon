@@ -437,7 +437,7 @@ const ResidentManagement = () => {
                 throw new Error('Failed to accept profile');
             }
 
-            await axios.post('https://bonbon-express.vercel.app/api/email/send-approval', {
+            await axios.post('http://localhost:5000/api/email/send-approval', {
                 userId: residentData.user_id,
             });
 
@@ -512,7 +512,7 @@ const ResidentManagement = () => {
                 throw new Error('Failed to reject profile');
             }
 
-            await axios.post('https://bonbon-express.vercel.app/api/email/send-rejection', {
+            await axios.post('http://localhost:5000/api/email/send-rejection', {
                 userId: residentData.user_id,
                 rejectionReason,
             });
