@@ -103,6 +103,9 @@ code {
   z-index: 10 !important;
 }
 
+.map-dragging {
+  cursor: grabbing !important;
+}
 
 
 @tailwind base;

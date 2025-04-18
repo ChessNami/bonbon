@@ -4,9 +4,9 @@ import BarangayOfficials from "./BarangayOfficials";
 import SKOfficials from "./SKOfficials";
 import ResidentManagement from "./ResidentManagement";
 import AdminMainProfileComponent from "./AdminMainProfileComponent";
-import AdminSMP from "./AdminSMP";
 import AdminProMgmt from "./AdminProMgmt";
 import Settings from "./Settings";
+import AdminStrategicRoadmap from "./AdminStrategicRoadmap";
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
@@ -20,7 +20,7 @@ const AdminMainPage = ({ currentPage }) => {
             case "Resident Management":
                 return <ResidentManagement />;
             case "Strategic Road Map":
-                return <AdminSMP />;
+                return <AdminStrategicRoadmap />;
             case "Project Management":
                 return <AdminProMgmt />;
             case "Profile":
