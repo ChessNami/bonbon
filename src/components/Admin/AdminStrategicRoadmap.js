@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../../index.css";
 import bonbonLogo from "../../img/Logo/bonbon-logo.png";
-import { FaUserTie, FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaAlignLeft, FaTag, FaMap } from "react-icons/fa";
+import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaAlignLeft, FaTag, FaMap } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 
@@ -377,7 +377,7 @@ const AdminStrategicRoadmap = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <h1 className="text-2xl font-bold bg-[#dee5f8] p-4 flex items-center gap-2">
-                <FaUserTie className="text-[#172554]" size={30} />
+                <FaMap className="text-[#172554]" size={30} />
                 Strategic Roadmap
             </h1>
             <div className="p-4 mx-auto">
