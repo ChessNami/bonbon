@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polygon, useMapEvents, CircleMarker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import * as turf from "@turf/turf";
+import kinks from "@turf/kinks";
 import "../../index.css";
 import bonbonLogo from "../../img/Logo/bonbon-logo.png";
 
@@ -24,8 +26,76 @@ const AdminProMgmt = () => {
     const [editingPolygonId, setEditingPolygonId] = useState(null);
     const [newTitle, setNewTitle] = useState("");
     const [newDescription, setNewDescription] = useState("");
+    const [newBudget, setNewBudget] = useState("");
+    const [newStartDate, setNewStartDate] = useState("");
+    const [newEndDate, setNewEndDate] = useState("");
     const [newColor, setNewColor] = useState("blue");
-    const [draggingVertexIndex, setDraggingVertexIndex] = useState(null); // Track which vertex is being dragged
+    const [newStatus, setNewStatus] = useState("Planned");
+    const [draggingVertexIndex, setDraggingVertexIndex] = useState(null);
+    const [history, setHistory] = useState([]);
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const [mapLayer, setMapLayer] = useState("street");
+
+    // Map layer options
+    const layers = {
+        street: {
+            url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        },
+        satellite: {
+            url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            attribution: "© Esri",
+        },
+    };
+
+    // Load polygons from local storage on mount
+    useEffect(() => {
+        const savedPolygons = localStorage.getItem("polygons");
+        if (savedPolygons) {
+            setPolygons(JSON.parse(savedPolygons));
+        }
+    }, []);
+
+    // Save polygons to local storage when updated
+    useEffect(() => {
+        localStorage.setItem("polygons", JSON.stringify(polygons));
+    }, [polygons]);
+
+    // Calculate polygon area
+    const calculateArea = (coords) => {
+        const polygon = turf.polygon([[...coords, coords[0]].map(([lat, lng]) => [lng, lat])]);
+        return turf.area(polygon).toFixed(2); // Area in square meters
+    };
+
+    // Validate polygon for self-intersections
+    const isPolygonValid = (coords) => {
+        const polygon = turf.polygon([[...coords, coords[0]].map(([lat, lng]) => [lng, lat])]);
+        const issues = kinks(polygon);
+        return issues.features.length === 0;
+    };
+
+    // Add coordinates to history for undo/redo
+    const addToHistory = (coords) => {
+        const newHistory = history.slice(0, historyIndex + 1);
+        setHistory([...newHistory, coords]);
+        setHistoryIndex(newHistory.length);
+    };
+
+    // Undo coordinate change
+    const undo = () => {
+        if (historyIndex > 0) {
+            setHistoryIndex(historyIndex - 1);
+            setNewPolygonCoords(history[historyIndex - 1]);
+        }
+    };
+
+    // Redo coordinate change
+    const redo = () => {
+        if (historyIndex < history.length - 1) {
+            setHistoryIndex(historyIndex + 1);
+            setNewPolygonCoords(history[historyIndex + 1]);
+        }
+    };
 
     // Component to handle map clicks for adding new points
     const MapClickHandler = () => {
@@ -33,14 +103,15 @@ const AdminProMgmt = () => {
             click(e) {
                 if (isAdding && !editingPolygonId) {
                     const newCoord = [e.latlng.lat, e.latlng.lng];
-                    setNewPolygonCoords([...newPolygonCoords, newCoord]);
+                    const updatedCoords = [...newPolygonCoords, newCoord];
+                    setNewPolygonCoords(updatedCoords);
+                    addToHistory(updatedCoords);
                     console.log("Added new coordinate:", newCoord);
                 }
             },
         });
 
         // Disable map dragging and zooming during editing or adding mode
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         useEffect(() => {
             if (isAdding || editingPolygonId) {
                 map.dragging.disable();
@@ -53,10 +124,10 @@ const AdminProMgmt = () => {
                 map.touchZoom.enable();
                 console.log("Enabled map interactions");
             }
-        }, [map, isAdding, editingPolygonId]); // Dependencies needed for effect to re-run
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [map, isAdding, editingPolygonId]);
 
         // Handle mouse move and mouse up for right-click dragging
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         useEffect(() => {
             const handleMouseMove = (e) => {
                 if (draggingVertexIndex !== null) {
@@ -64,6 +135,7 @@ const AdminProMgmt = () => {
                     const updatedCoords = [...newPolygonCoords];
                     updatedCoords[draggingVertexIndex] = [latlng.lat, latlng.lng];
                     setNewPolygonCoords(updatedCoords);
+                    addToHistory(updatedCoords);
                     console.log(`Dragging vertex ${draggingVertexIndex} to:`, [latlng.lat, latlng.lng]);
                 }
             };
@@ -71,16 +143,15 @@ const AdminProMgmt = () => {
             const handleMouseUp = () => {
                 if (draggingVertexIndex !== null) {
                     console.log(`Finished dragging vertex ${draggingVertexIndex}`);
-                    setDraggingVertexIndex(null); // Stop dragging
+                    setDraggingVertexIndex(null);
                 }
             };
 
             if (editingPolygonId) {
-                // Add event listeners to the map's container (Leaflet's DOM element)
                 const mapContainer = map.getContainer();
                 mapContainer.addEventListener("mousemove", handleMouseMove);
                 mapContainer.addEventListener("mouseup", handleMouseUp);
-                mapContainer.addEventListener("mouseleave", handleMouseUp); // Stop dragging if mouse leaves map
+                mapContainer.addEventListener("mouseleave", handleMouseUp);
 
                 return () => {
                     mapContainer.removeEventListener("mousemove", handleMouseMove);
@@ -88,7 +159,8 @@ const AdminProMgmt = () => {
                     mapContainer.removeEventListener("mouseleave", handleMouseUp);
                 };
             }
-        }, [map, draggingVertexIndex, editingPolygonId]); // Dependencies needed for effect to re-run
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [map, draggingVertexIndex, editingPolygonId]);
 
         return null;
     };
@@ -99,23 +171,38 @@ const AdminProMgmt = () => {
             alert("A polygon must have at least 3 points!");
             return;
         }
-        if (!newTitle || !newDescription) {
-            alert("Please provide a title and description for the planned area!");
+        if (!newTitle || !newDescription || !newBudget || !newStartDate || !newEndDate) {
+            alert("Please provide a title, description, budget, start date, and end date for the planned area!");
+            return;
+        }
+        if (!isPolygonValid(newPolygonCoords)) {
+            alert("Invalid polygon: The shape cannot have self-intersections!");
             return;
         }
         const newPolygon = {
             id: polygons.length + 1,
             title: newTitle,
             description: newDescription,
+            budget: newBudget,
+            startDate: newStartDate,
+            endDate: newEndDate,
+            status: newStatus,
             color: newColor,
-            coords: [...newPolygonCoords, newPolygonCoords[0]], // Close the polygon
+            area: calculateArea(newPolygonCoords),
+            coords: [...newPolygonCoords, newPolygonCoords[0]],
         };
         setPolygons([...polygons, newPolygon]);
         setNewPolygonCoords([]);
         setNewTitle("");
         setNewDescription("");
+        setNewBudget("");
+        setNewStartDate("");
+        setNewEndDate("");
+        setNewStatus("Planned");
         setNewColor("blue");
         setIsAdding(false);
+        setHistory([]);
+        setHistoryIndex(-1);
         console.log("Added new polygon:", newPolygon);
     };
 
@@ -129,11 +216,17 @@ const AdminProMgmt = () => {
     const handleEditPolygon = (id) => {
         setEditingPolygonId(id);
         const polygonToEdit = polygons.find((p) => p.id === id);
-        setNewPolygonCoords(polygonToEdit.coords.slice(0, -1)); // Exclude the closing point
+        setNewPolygonCoords(polygonToEdit.coords.slice(0, -1));
         setNewTitle(polygonToEdit.title);
         setNewDescription(polygonToEdit.description);
+        setNewBudget(polygonToEdit.budget);
+        setNewStartDate(polygonToEdit.startDate);
+        setNewEndDate(polygonToEdit.endDate);
+        setNewStatus(polygonToEdit.status);
         setNewColor(polygonToEdit.color);
         setIsAdding(true);
+        setHistory([polygonToEdit.coords.slice(0, -1)]);
+        setHistoryIndex(0);
         console.log("Entered edit mode for polygon id:", id);
     };
 
@@ -143,8 +236,12 @@ const AdminProMgmt = () => {
             alert("A polygon must have at least 3 points!");
             return;
         }
-        if (!newTitle || !newDescription) {
-            alert("Please provide a title and description for the planned area!");
+        if (!newTitle || !newDescription || !newBudget || !newStartDate || !newEndDate) {
+            alert("Please provide a title, description, budget, start date, and end date for the planned area!");
+            return;
+        }
+        if (!isPolygonValid(newPolygonCoords)) {
+            alert("Invalid polygon: The shape cannot have self-intersections!");
             return;
         }
         const updatedPolygons = polygons.map((polygon) =>
@@ -153,7 +250,12 @@ const AdminProMgmt = () => {
                       ...polygon,
                       title: newTitle,
                       description: newDescription,
+                      budget: newBudget,
+                      startDate: newStartDate,
+                      endDate: newEndDate,
+                      status: newStatus,
                       color: newColor,
+                      area: calculateArea(newPolygonCoords),
                       coords: [...newPolygonCoords, newPolygonCoords[0]],
                   }
                 : polygon
@@ -162,9 +264,15 @@ const AdminProMgmt = () => {
         setNewPolygonCoords([]);
         setNewTitle("");
         setNewDescription("");
+        setNewBudget("");
+        setNewStartDate("");
+        setNewEndDate("");
+        setNewStatus("Planned");
         setNewColor("blue");
         setIsAdding(false);
         setEditingPolygonId(null);
+        setHistory([]);
+        setHistoryIndex(-1);
         console.log("Saved edited polygon with id:", editingPolygonId);
     };
 
@@ -173,25 +281,31 @@ const AdminProMgmt = () => {
         setNewPolygonCoords([]);
         setNewTitle("");
         setNewDescription("");
+        setNewBudget("");
+        setNewStartDate("");
+        setNewEndDate("");
+        setNewStatus("Planned");
         setNewColor("blue");
         setIsAdding(false);
         setEditingPolygonId(null);
-        setDraggingVertexIndex(null); // Reset dragging state
+        setDraggingVertexIndex(null);
+        setHistory([]);
+        setHistoryIndex(-1);
         console.log("Canceled editing mode");
     };
 
-    // Color mapping for polygons
-    const getPolygonStyle = (color) => {
-        switch (color) {
-            case "blue":
-                return { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 };
-            case "green":
-                return { fillColor: "rgba(0, 255, 0, 0.5)", color: "green", weight: 2 };
-            case "red":
-                return { fillColor: "rgba(255, 0, 0, 0.5)", color: "red", weight: 2 };
-            default:
-                return { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 };
-        }
+    // Color and status styling for polygons
+    const getPolygonStyle = (color, status) => {
+        const baseStyle = {
+            blue: { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 },
+            green: { fillColor: "rgba(0, 255, 0, 0.5)", color: "green", weight: 2 },
+            red: { fillColor: "rgba(255, 0, 0, 0.5)", color: "red", weight: 2 },
+        }[color] || { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 };
+
+        return {
+            ...baseStyle,
+            dashArray: status === "Completed" ? "5, 5" : status === "In Progress" ? "10, 10" : null,
+        };
     };
 
     return (
@@ -201,12 +315,24 @@ const AdminProMgmt = () => {
                 Manage planned areas for strategic road projects in Barangay Bonbon.
             </p>
 
+            {/* Map Layer Toggle */}
+            <div className="flex justify-center mb-4">
+                <select
+                    value={mapLayer}
+                    onChange={(e) => setMapLayer(e.target.value)}
+                    className="px-3 py-2 border rounded"
+                >
+                    <option value="street">Street Map</option>
+                    <option value="satellite">Satellite</option>
+                </select>
+            </div>
+
             {/* Map Section */}
             <div className="w-full h-96">
                 <MapContainer center={bonbonCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
                     <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url={layers[mapLayer].url}
+                        attribution={layers[mapLayer].attribution}
                     />
 
                     {/* Interactive Marker for Bonbon Barangay Hall */}
@@ -230,13 +356,21 @@ const AdminProMgmt = () => {
                         <Polygon
                             key={polygon.id}
                             positions={polygon.coords}
-                            pathOptions={getPolygonStyle(polygon.color)}
+                            pathOptions={getPolygonStyle(polygon.color, polygon.status)}
                         >
                             <Popup>
                                 <div>
                                     <strong>{polygon.title}</strong>
                                     <br />
                                     {polygon.description}
+                                    <br />
+                                    <strong>Budget:</strong> {polygon.budget}
+                                    <br />
+                                    <strong>Timeline:</strong> {polygon.startDate} to {polygon.endDate}
+                                    <br />
+                                    <strong>Status:</strong> {polygon.status}
+                                    <br />
+                                    <strong>Area:</strong> {polygon.area} sqm
                                     <div className="mt-2">
                                         <button
                                             onClick={() => handleEditPolygon(polygon.id)}
@@ -261,14 +395,14 @@ const AdminProMgmt = () => {
                         <Polygon
                             positions={newPolygonCoords}
                             pathOptions={{
-                                fillColor: "rgba(255, 165, 0, 0.5)", // Orange for preview
+                                fillColor: "rgba(255, 165, 0, 0.5)",
                                 color: "orange",
                                 weight: 2,
                             }}
                         />
                     )}
 
-                    {/* Render Circle Markers for New/Editing Polygon Vertices (only in editing mode) */}
+                    {/* Render Circle Markers for New/Editing Polygon Vertices */}
                     {editingPolygonId &&
                         newPolygonCoords.map((coord, index) => (
                             <CircleMarker
@@ -280,16 +414,15 @@ const AdminProMgmt = () => {
                                     fillColor: "orange",
                                     fillOpacity: 1,
                                 }}
-                                draggable={false} // Disable default left-click dragging
+                                draggable={false}
                                 eventHandlers={{
                                     contextmenu: (e) => {
-                                        // Start right-click dragging
-                                        L.DomEvent.preventDefault(e); // Prevent default context menu
+                                        L.DomEvent.preventDefault(e);
                                         setDraggingVertexIndex(index);
                                         console.log(`Started right-click dragging vertex ${index}`);
                                     },
                                     click: (e) => {
-                                        L.DomEvent.stopPropagation(e); // Prevent click events from bubbling
+                                        L.DomEvent.stopPropagation(e);
                                         console.log(`Clicked vertex ${index}`);
                                     },
                                 }}
@@ -327,6 +460,38 @@ const AdminProMgmt = () => {
                                 className="w-full px-3 py-2 mb-2 border rounded"
                                 rows="3"
                             />
+                            <input
+                                type="text"
+                                placeholder="Budget (e.g., PHP 1,000,000)"
+                                value={newBudget}
+                                onChange={(e) => setNewBudget(e.target.value)}
+                                className="w-full px-3 py-2 mb-2 border rounded"
+                            />
+                            <div className="flex space-x-2 mb-2">
+                                <input
+                                    type="date"
+                                    placeholder="Start Date"
+                                    value={newStartDate}
+                                    onChange={(e) => setNewStartDate(e.target.value)}
+                                    className="w-1/2 px-3 py-2 border rounded"
+                                />
+                                <input
+                                    type="date"
+                                    placeholder="End Date"
+                                    value={newEndDate}
+                                    onChange={(e) => setNewEndDate(e.target.value)}
+                                    className="w-1/2 px-3 py-2 border rounded"
+                                />
+                            </div>
+                            <select
+                                value={newStatus}
+                                onChange={(e) => setNewStatus(e.target.value)}
+                                className="w-full px-3 py-2 mb-2 border rounded"
+                            >
+                                <option value="Planned">Planned</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                            </select>
                             <select
                                 value={newColor}
                                 onChange={(e) => setNewColor(e.target.value)}
@@ -336,6 +501,22 @@ const AdminProMgmt = () => {
                                 <option value="green">Green (Eco-Friendly Projects)</option>
                                 <option value="red">Red (Big/Heavy Projects)</option>
                             </select>
+                        </div>
+                        <div className="flex space-x-2 mb-2">
+                            <button
+                                onClick={undo}
+                                disabled={historyIndex <= 0}
+                                className="bg-gray-500 text-white px-4 py-2 rounded disabled:opacity-50"
+                            >
+                                Undo
+                            </button>
+                            <button
+                                onClick={redo}
+                                disabled={historyIndex >= history.length - 1}
+                                className="bg-gray-500 text-white px-4 py-2 rounded disabled:opacity-50"
+                            >
+                                Redo
+                            </button>
                         </div>
                         <div className="flex">
                             <button
@@ -356,7 +537,7 @@ const AdminProMgmt = () => {
             </div>
 
             {/* Color Legend */}
-            <div className="flex justify-center mt-4">
+            <div className="flex flex-col items-center mt-4">
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center">
                         <div className="w-5 h-5 bg-blue-500 rounded-full mr-2"></div>
@@ -369,6 +550,20 @@ const AdminProMgmt = () => {
                     <div className="flex items-center">
                         <div className="w-5 h-5 bg-red-500 rounded-full mr-2"></div>
                         <span>Big/Heavy Projects</span>
+                    </div>
+                </div>
+                <div className="flex items-center space-x-4 mt-2">
+                    <div className="flex items-center">
+                        <div className="w-5 h-5 border-2 border-blue-500 mr-2"></div>
+                        <span>Planned</span>
+                    </div>
+                    <div className="flex items-center">
+                        <div className="w-5 h-5 border-2 border-blue-500 border-dashed mr-2"></div>
+                        <span>In Progress</span>
+                    </div>
+                    <div className="flex items-center">
+                        <div className="w-5 h-5 border-2 border-blue-500 border-dotted mr-2"></div>
+                        <span>Completed</span>
                     </div>
                 </div>
             </div>
