@@ -12,9 +12,8 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
     const [gender, setGender] = useState(data?.gender || "");
     const [customGender, setCustomGender] = useState(data?.customGender || "");
     const [employmentType, setEmploymentType] = useState(data?.employmentType || "");
-    const [isAlertVisible, setIsAlertVisible] = useState(false); // Prevent spamming alerts
+    const [isAlertVisible, setIsAlertVisible] = useState(false);
 
-    // Fetch user data from Supabase
     const fetchUserData = useCallback(async () => {
         if (!userId) {
             console.log("No userId provided, skipping fetch.");
@@ -163,6 +162,11 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         }
     };
 
+    const handleBackClick = (e) => {
+        e.preventDefault(); // Prevent browser navigation
+        if (onBack) onBack();
+    };
+
     return (
         <div className="p-4 shadow-lg rounded-lg">
             <form className="space-y-6">
@@ -229,8 +233,22 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 </fieldset>
 
                 <div className="flex justify-between mt-4">
-                    {onBack && <button className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600" onClick={onBack}>Back</button>}
-                    <button type="button" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700" onClick={handleSubmit}>Next</button>
+                    {onBack && (
+                        <button
+                            type="button"
+                            className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 hover:bg-gray-600 active:bg-gray-700"
+                            onClick={handleBackClick}
+                        >
+                            Back
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 hover:bg-blue-700 active:bg-blue-800"
+                        onClick={handleSubmit}
+                    >
+                        Next
+                    </button>
                 </div>
             </form>
         </div>
