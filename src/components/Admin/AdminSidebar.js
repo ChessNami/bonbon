@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaBars, FaHome, FaUsers, FaCog, FaUserTie, FaClipboardList } from "react-icons/fa"; // Added FaClipboardList for Resident Management
+import { FaBars, FaHome, FaUsers, FaCog, FaUserTie, FaUserFriends, FaClipboardList } from "react-icons/fa";
 import logo from "../../img/Logo/bonbon-logo.png";
 
 const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPage }) => {
@@ -17,6 +17,7 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
     const navItems = [
         { label: "Home", icon: FaHome },
         { label: "Barangay Officials", icon: FaUserTie },
+        { label: "SK Officials", icon: FaUserFriends },
         { label: "Resident Management", icon: FaUsers },
         { label: "Strategic Road Map", icon: FaClipboardList },
         { label: "Project Management", icon: FaClipboardList },

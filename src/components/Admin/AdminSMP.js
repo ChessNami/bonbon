@@ -39,45 +39,72 @@ const AdminSMP = () => {
     const [newTitle, setNewTitle] = useState("");
     const [newDescription, setNewDescription] = useState("");
     const [newColor, setNewColor] = useState("blue");
-    const [draggingVertexIndex, setDraggingVertexIndex] = useState(null); // Track which vertex is being dragged
+    const [draggingVertexIndex, setDraggingVertexIndex] = useState(null);
+    const [undoStack, setUndoStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
 
     // Component to handle map clicks for adding new points
     const MapClickHandler = () => {
         const map = useMapEvents({
             click(e) {
-                if (isAdding && !editingPolygonId) {
+                if (isAdding && draggingVertexIndex === null) {
                     const newCoord = [e.latlng.lat, e.latlng.lng];
-                    setNewPolygonCoords([...newPolygonCoords, newCoord]);
+                    setNewPolygonCoords((prev) => {
+                        const updatedCoords = [...prev, newCoord];
+                        setUndoStack((stack) => [...stack, [...prev]]);
+                        setRedoStack([]);
+                        return updatedCoords;
+                    });
                     console.log("Added new coordinate:", newCoord);
+                }
+            },
+            mousedown(e) {
+                if (e.originalEvent.button === 1) {
+                    map.dragging.enable();
+                    console.log("Middle mouse dragging enabled");
+                }
+            },
+            mouseup(e) {
+                if (e.originalEvent.button === 1) {
+                    map.dragging.disable();
+                    console.log("Middle mouse dragging disabled");
+                }
+            },
+            mousewheel(e) {
+                const delta = e.deltaY;
+                if (delta > 0) {
+                    map.zoomOut();
+                    console.log("Zoomed out with middle mouse scroll");
+                } else {
+                    map.zoomIn();
+                    console.log("Zoomed in with middle mouse scroll");
                 }
             },
         });
 
-        // Disable map dragging and zooming during editing or adding mode
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // Disable default right-click context menu
         useEffect(() => {
-            if (isAdding || editingPolygonId) {
-                map.dragging.disable();
-                map.scrollWheelZoom.disable();
-                map.touchZoom.disable();
-                console.log("Disabled map interactions");
-            } else {
-                map.dragging.enable();
-                map.scrollWheelZoom.enable();
-                map.touchZoom.enable();
-                console.log("Enabled map interactions");
-            }
-        }, [map, isAdding, editingPolygonId]); // Dependencies needed for effect to re-run
+            const mapContainer = map.getContainer();
+            mapContainer.addEventListener("contextmenu", (e) => {
+                e.preventDefault();
+            });
+            return () => {
+                mapContainer.removeEventListener("contextmenu", (e) => {
+                    e.preventDefault();
+                });
+            };
+        }, [map]);
 
         // Handle mouse move and mouse up for right-click dragging
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         useEffect(() => {
             const handleMouseMove = (e) => {
                 if (draggingVertexIndex !== null) {
                     const latlng = map.mouseEventToLatLng(e);
-                    const updatedCoords = [...newPolygonCoords];
-                    updatedCoords[draggingVertexIndex] = [latlng.lat, latlng.lng];
-                    setNewPolygonCoords(updatedCoords);
+                    setNewPolygonCoords((prev) => {
+                        const updatedCoords = [...prev];
+                        updatedCoords[draggingVertexIndex] = [latlng.lat, latlng.lng];
+                        return updatedCoords;
+                    });
                     console.log(`Dragging vertex ${draggingVertexIndex} to:`, [latlng.lat, latlng.lng]);
                 }
             };
@@ -85,24 +112,62 @@ const AdminSMP = () => {
             const handleMouseUp = () => {
                 if (draggingVertexIndex !== null) {
                     console.log(`Finished dragging vertex ${draggingVertexIndex}`);
-                    setDraggingVertexIndex(null); // Stop dragging
+                    setDraggingVertexIndex(null);
                 }
             };
 
-            if (editingPolygonId) {
-                // Add event listeners to the map's container (Leaflet's DOM element)
-                const mapContainer = map.getContainer();
-                mapContainer.addEventListener("mousemove", handleMouseMove);
-                mapContainer.addEventListener("mouseup", handleMouseUp);
-                mapContainer.addEventListener("mouseleave", handleMouseUp); // Stop dragging if mouse leaves map
+            const mapContainer = map.getContainer();
+            mapContainer.addEventListener("mousemove", handleMouseMove);
+            mapContainer.addEventListener("mouseup", handleMouseUp);
+            mapContainer.addEventListener("mouseleave", handleMouseUp);
 
-                return () => {
-                    mapContainer.removeEventListener("mousemove", handleMouseMove);
-                    mapContainer.removeEventListener("mouseup", handleMouseUp);
-                    mapContainer.removeEventListener("mouseleave", handleMouseUp);
-                };
-            }
-        }, [map, draggingVertexIndex, editingPolygonId]); // Dependencies needed for effect to re-run
+            return () => {
+                mapContainer.removeEventListener("mousemove", handleMouseMove);
+                mapContainer.removeEventListener("mouseup", handleMouseUp);
+                mapContainer.removeEventListener("mouseleave", handleMouseUp);
+            };
+        }, [map]); // Removed draggingVertexIndex from dependencies
+
+        // Handle keyboard shortcuts for undo/redo and delete
+        useEffect(() => {
+            const handleKeyDown = (e) => {
+                if (e.ctrlKey && e.key === "z" && isAdding) {
+                    e.preventDefault();
+                    setUndoStack((stack) => {
+                        if (stack.length === 0) return stack;
+                        const lastState = stack[stack.length - 1];
+                        setRedoStack((redo) => [...redo, newPolygonCoords]);
+                        setNewPolygonCoords(lastState);
+                        return stack.slice(0, -1);
+                    });
+                    console.log("Undo last point");
+                } else if (e.ctrlKey && e.key === "y" && isAdding) {
+                    e.preventDefault();
+                    setRedoStack((stack) => {
+                        if (stack.length === 0) return stack;
+                        const lastState = stack[stack.length - 1];
+                        setUndoStack((undo) => [...undo, newPolygonCoords]);
+                        setNewPolygonCoords(lastState);
+                        return stack.slice(0, -1);
+                    });
+                    console.log("Redo last point");
+                } else if (e.ctrlKey && e.key === "x" && isAdding && newPolygonCoords.length > 0) {
+                    e.preventDefault();
+                    setNewPolygonCoords((prev) => {
+                        const updatedCoords = prev.slice(0, -1);
+                        setUndoStack((stack) => [...stack, prev]);
+                        setRedoStack([]);
+                        return updatedCoords;
+                    });
+                    console.log("Deleted last point with Ctrl+X");
+                }
+            };
+
+            window.addEventListener("keydown", handleKeyDown);
+            return () => {
+                window.removeEventListener("keydown", handleKeyDown);
+            };
+        }, []); // Removed isAdding and newPolygonCoords from dependencies
 
         return null;
     };
@@ -122,7 +187,7 @@ const AdminSMP = () => {
             title: newTitle,
             description: newDescription,
             color: newColor,
-            coords: [...newPolygonCoords, newPolygonCoords[0]], // Close the polygon
+            coords: [...newPolygonCoords, newPolygonCoords[0]],
         };
         setPolygons([...polygons, newPolygon]);
         setNewPolygonCoords([]);
@@ -130,6 +195,8 @@ const AdminSMP = () => {
         setNewDescription("");
         setNewColor("blue");
         setIsAdding(false);
+        setUndoStack([]);
+        setRedoStack([]);
         console.log("Added new polygon:", newPolygon);
     };
 
@@ -143,11 +210,13 @@ const AdminSMP = () => {
     const handleEditPolygon = (id) => {
         setEditingPolygonId(id);
         const polygonToEdit = polygons.find((p) => p.id === id);
-        setNewPolygonCoords(polygonToEdit.coords.slice(0, -1)); // Exclude the closing point
+        setNewPolygonCoords(polygonToEdit.coords.slice(0, -1));
         setNewTitle(polygonToEdit.title);
         setNewDescription(polygonToEdit.description);
         setNewColor(polygonToEdit.color);
         setIsAdding(true);
+        setUndoStack([]);
+        setRedoStack([]);
         console.log("Entered edit mode for polygon id:", id);
     };
 
@@ -164,12 +233,12 @@ const AdminSMP = () => {
         const updatedPolygons = polygons.map((polygon) =>
             polygon.id === editingPolygonId
                 ? {
-                      ...polygon,
-                      title: newTitle,
-                      description: newDescription,
-                      color: newColor,
-                      coords: [...newPolygonCoords, newPolygonCoords[0]],
-                  }
+                    ...polygon,
+                    title: newTitle,
+                    description: newDescription,
+                    color: newColor,
+                    coords: [...newPolygonCoords, newPolygonCoords[0]],
+                }
                 : polygon
         );
         setPolygons(updatedPolygons);
@@ -179,6 +248,8 @@ const AdminSMP = () => {
         setNewColor("blue");
         setIsAdding(false);
         setEditingPolygonId(null);
+        setUndoStack([]);
+        setRedoStack([]);
         console.log("Saved edited polygon with id:", editingPolygonId);
     };
 
@@ -190,7 +261,9 @@ const AdminSMP = () => {
         setNewColor("blue");
         setIsAdding(false);
         setEditingPolygonId(null);
-        setDraggingVertexIndex(null); // Reset dragging state
+        setDraggingVertexIndex(null);
+        setUndoStack([]);
+        setRedoStack([]);
         console.log("Canceled editing mode");
     };
 
@@ -209,181 +282,204 @@ const AdminSMP = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-4xl font-bold text-center mb-8">Admin Strategic Mapping</h1>
-            <p className="text-lg text-gray-700 mb-4 text-center">
-                Manage planned areas for strategic road projects in Barangay Bonbon.
+        <div className="p-4">
+            <h1 className="text-3xl md:text-4xl font-bold text-center mb-6">Admin Strategic Road Mapping</h1>
+            <p className="text-base md:text-lg text-gray-700 mb-4 text-center">
+                Plan and manage strategic road projects in Barangay Bonbon.
             </p>
 
-            {/* Map Section */}
-            <div className="w-full h-96">
-                <MapContainer center={bonbonCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
-                    <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    />
-
-                    {/* Interactive Marker for Bonbon Barangay Hall */}
-                    <Marker position={bonbonCoords} icon={customIcon}>
-                        <Popup>
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-                                <img
-                                    src={bonbonLogo}
-                                    alt="Bonbon Barangay Hall Logo"
-                                    style={{ width: "100px", height: "auto", marginBottom: "5px", borderRadius: "5px" }}
-                                />
-                                <strong>Bonbon Barangay Hall</strong>
-                                <br />
-                                Barangay Bonbon, Cagayan de Oro City
-                            </div>
-                        </Popup>
-                    </Marker>
-
-                    {/* Render Existing Polygons */}
-                    {polygons.map((polygon) => (
-                        <Polygon
-                            key={polygon.id}
-                            positions={polygon.coords}
-                            pathOptions={getPolygonStyle(polygon.color)}
-                        >
-                            <Popup>
-                                <div>
-                                    <strong>{polygon.title}</strong>
-                                    <br />
-                                    {polygon.description}
-                                    <div className="mt-2">
-                                        <button
-                                            onClick={() => handleEditPolygon(polygon.id)}
-                                            className="bg-yellow-500 text-white px-2 py-1 rounded mr-2"
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeletePolygon(polygon.id)}
-                                            className="bg-red-500 text-white px-2 py-1 rounded"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            </Popup>
-                        </Polygon>
-                    ))}
-
-                    {/* Render New/Editing Polygon Preview */}
-                    {newPolygonCoords.length > 0 && (
-                        <Polygon
-                            positions={newPolygonCoords}
-                            pathOptions={{
-                                fillColor: "rgba(255, 165, 0, 0.5)", // Orange for preview
-                                color: "orange",
-                                weight: 2,
-                            }}
-                        />
-                    )}
-
-                    {/* Render Circle Markers for New/Editing Polygon Vertices (only in editing mode) */}
-                    {editingPolygonId &&
-                        newPolygonCoords.map((coord, index) => (
-                            <CircleMarker
-                                key={`new-${index}`}
-                                center={coord}
-                                radius={5}
-                                pathOptions={{
-                                    color: "orange",
-                                    fillColor: "orange",
-                                    fillOpacity: 1,
-                                }}
-                                draggable={false} // Disable default left-click dragging
-                                eventHandlers={{
-                                    contextmenu: (e) => {
-                                        // Start right-click dragging
-                                        L.DomEvent.preventDefault(e); // Prevent default context menu
-                                        setDraggingVertexIndex(index);
-                                        console.log(`Started right-click dragging vertex ${index}`);
-                                    },
-                                    click: (e) => {
-                                        L.DomEvent.stopPropagation(e); // Prevent click events from bubbling
-                                        console.log(`Clicked vertex ${index}`);
-                                    },
-                                }}
-                            />
-                        ))}
-
-                    {/* Map Click Handler for Adding Points */}
-                    <MapClickHandler />
-                </MapContainer>
-            </div>
-
-            {/* Controls for CRUD - Centered */}
-            <div className="mb-4 flex justify-center mt-4">
-                {!isAdding ? (
+            {/* Create Strategic Mapping Button */}
+            <div className="flex justify-center mb-4">
+                {!isAdding && (
                     <button
                         onClick={() => setIsAdding(true)}
-                        className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
                     >
-                        Add New Polygon
+                        Create Strategic Mapping
                     </button>
-                ) : (
-                    <div className="flex flex-col items-center">
-                        <div className="mb-4 w-full max-w-md">
-                            <input
-                                type="text"
-                                placeholder="Title"
-                                value={newTitle}
-                                onChange={(e) => setNewTitle(e.target.value)}
-                                className="w-full px-3 py-2 mb-2 border rounded"
+                )}
+            </div>
+
+            {/* Map and Input Form Section */}
+            <div className="flex flex-col lg:flex-row gap-4 mb-4">
+                {/* Map Section */}
+                <div className="w-full lg:w-3/4 h-96 lg:h-[500px]">
+                    <MapContainer center={bonbonCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+                        <Marker position={bonbonCoords} icon={customIcon}>
+                            <Popup>
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                                    <img
+                                        src={bonbonLogo}
+                                        alt="Bonbon Barangay Hall Logo"
+                                        style={{ width: "100px", height: "auto", marginBottom: "5px", borderRadius: "5px" }}
+                                    />
+                                    <strong>Bonbon Barangay Hall</strong>
+                                    <br />
+                                    Barangay Bonbon, Cagayan de Oro City
+                                </div>
+                            </Popup>
+                        </Marker>
+                        {polygons.map((polygon) => (
+                            <Polygon
+                                key={polygon.id}
+                                positions={polygon.coords}
+                                pathOptions={getPolygonStyle(polygon.color)}
+                            >
+                                <Popup>
+                                    <div>
+                                        <strong>{polygon.title}</strong>
+                                        <br />
+                                        {polygon.description}
+                                        <div className="mt-2">
+                                            <button
+                                                onClick={() => handleEditPolygon(polygon.id)}
+                                                className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeletePolygon(polygon.id)}
+                                                className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </Popup>
+                            </Polygon>
+                        ))}
+                        {newPolygonCoords.length > 0 && (
+                            <Polygon
+                                positions={newPolygonCoords}
+                                pathOptions={{
+                                    fillColor: "rgba(255, 165, 0, 0.5)",
+                                    color: "orange",
+                                    weight: 2,
+                                }}
                             />
-                            <textarea
-                                placeholder="Description"
-                                value={newDescription}
-                                onChange={(e) => setNewDescription(e.target.value)}
-                                className="w-full px-3 py-2 mb-2 border rounded"
-                                rows="3"
-                            />
-                            <select
-                                value={newColor}
-                                onChange={(e) => setNewColor(e.target.value)}
-                                className="w-full px-3 py-2 mb-2 border rounded"
-                            >
-                                <option value="blue">Blue (Small Projects)</option>
-                                <option value="green">Green (Eco-Friendly Projects)</option>
-                                <option value="red">Red (Big/Heavy Projects)</option>
-                            </select>
-                        </div>
-                        <div className="flex">
-                            <button
-                                onClick={editingPolygonId ? handleSaveEdit : handleAddPolygon}
-                                className="bg-green-500 text-white px-4 py-2 rounded mr-2"
-                            >
-                                {editingPolygonId ? "Save Edit" : "Save Polygon"}
-                            </button>
-                            <button
-                                onClick={handleCancel}
-                                className="bg-red-500 text-white px-4 py-2 rounded"
-                            >
-                                Cancel
-                            </button>
+                        )}
+                        {isAdding &&
+                            newPolygonCoords.map((coord, index) => (
+                                <CircleMarker
+                                    key={`new-${index}`}
+                                    center={coord}
+                                    radius={5}
+                                    pathOptions={{
+                                        color: "orange",
+                                        fillColor: "orange",
+                                        fillOpacity: 1,
+                                    }}
+                                    draggable={false}
+                                    eventHandlers={{
+                                        mousedown: (e) => {
+                                            if (e.originalEvent.button === 2) {
+                                                L.DomEvent.preventDefault(e);
+                                                setDraggingVertexIndex(index);
+                                                console.log(`Started right-click dragging vertex ${index}`);
+                                            }
+                                        },
+                                    }}
+                                />
+                            ))}
+                        <MapClickHandler />
+                    </MapContainer>
+                </div>
+
+                {/* Input Form Section */}
+                {isAdding && (
+                    <div className="w-full lg:w-1/4 bg-gray-100 p-4 rounded-lg">
+                        <h2 className="text-lg font-semibold mb-4">
+                            {editingPolygonId ? "Edit Road Project" : "New Road Project"}
+                        </h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Project Title</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter project title"
+                                    value={newTitle}
+                                    onChange={(e) => setNewTitle(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea
+                                    placeholder="Enter project description"
+                                    value={newDescription}
+                                    onChange={(e) => setNewDescription(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    rows="4"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Project Type</label>
+                                <select
+                                    value={newColor}
+                                    onChange={(e) => setNewColor(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="blue">Small Project (Blue)</option>
+                                    <option value="green">Eco-Friendly Project (Green)</option>
+                                    <option value="red">Big/Heavy Project (Red)</option>
+                                </select>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={editingPolygonId ? handleSaveEdit : handleAddPolygon}
+                                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+                                >
+                                    {editingPolygonId ? "Save Changes" : "Save Project"}
+                                </button>
+                                <button
+                                    onClick={handleCancel}
+                                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Color Legend */}
-            <div className="flex justify-center mt-4">
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                        <div className="w-5 h-5 bg-blue-500 rounded-full mr-2"></div>
-                        <span>Small Projects</span>
-                    </div>
-                    <div className="flex items-center">
-                        <div className="w-5 h-5 bg-green-500 rounded-full mr-2"></div>
-                        <span>Eco-Friendly Projects</span>
-                    </div>
-                    <div className="flex items-center">
-                        <div className="w-5 h-5 bg-red-500 rounded-full mr-2"></div>
-                        <span>Big/Heavy Projects</span>
-                    </div>
+            {/* Legends Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {/* Shortcut Legends */}
+                <div className="bg-gray-100 p-4 rounded-lg">
+                    <h3 className="text-sm font-semibold mb-2">Keyboard Shortcuts</h3>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                        <li><strong>Left Click:</strong> Add a new point</li>
+                        <li><strong>Right Click:</strong> Move a point</li>
+                        <li><strong>Ctrl + Z:</strong> Undo last point</li>
+                        <li><strong>Ctrl + Y:</strong> Redo last point</li>
+                        <li><strong>Ctrl + X:</strong> Delete last point</li>
+                        <li><strong>Middle Mouse Scroll:</strong> Zoom in/out</li>
+                        <li><strong>Middle Mouse Hold:</strong> Drag map</li>
+                    </ul>
+                </div>
+
+                {/* Color Legends */}
+                <div className="bg-gray-100 p-4 rounded-lg">
+                    <h3 className="text-sm font-semibold mb-2">Color Legends</h3>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                        <li className="flex items-center">
+                            <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
+                            Small Projects
+                        </li>
+                        <li className="flex items-center">
+                            <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+                            Eco-Friendly Projects
+                        </li>
+                        <li className="flex items-center">
+                            <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
+                            Big/Heavy Projects
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
