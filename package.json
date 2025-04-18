@@ -9,6 +9,8 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
+    "@turf/kinks": "^7.2.0",
+    "@turf/turf": "^7.2.0",
     "axios": "^1.8.4",
     "compressorjs": "^1.2.1",
     "concurrently": "^9.1.2",
