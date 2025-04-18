@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { supabase } from '../../../supabaseClient'; // Import Supabase client
 
 const BarangayCouncilTable = () => {
     const [activeTab, setActiveTab] = useState("Barangay Officials");
@@ -9,40 +10,48 @@ const BarangayCouncilTable = () => {
     const rowsPerPage = 10;
 
     useEffect(() => {
-        const names = [
-            "Juan Dela Cruz", "Maria Santos", "Pedro Reyes", "Ana Mendoza",
-            "Carlos Garcia", "Josefina Torres", "Ricardo Fernandez", "Luisa Diaz",
-            "Manuel Cruz", "Carmen Velasquez", "Miguel Ramos", "Elena Bautista"
-        ];
+        const fetchOfficials = async () => {
+            try {
+                if (activeTab === "Barangay Officials") {
+                    const { data, error } = await supabase
+                        .from('barangay_officials')
+                        .select('name, position');
 
-        const officials = [
-            { title: "Punong Barangay", name: names[Math.floor(Math.random() * names.length)], isHeader: true },
-            ...Array(6).fill().map(() => ({ position: "Kagawad", name: names[Math.floor(Math.random() * names.length)] })),
-            { position: "Secretary", name: names[Math.floor(Math.random() * names.length)] },
-            { position: "Treasurer", name: names[Math.floor(Math.random() * names.length)] }
-        ];
+                    if (error) throw error;
 
-        const skOfficials = [
-            { title: "SK Chairman", name: names[Math.floor(Math.random() * names.length)], isHeader: true },
-            ...Array(7).fill().map(() => ({ position: "SK Kagawad", name: names[Math.floor(Math.random() * names.length)] })),
-            { position: "SK Secretary", name: names[Math.floor(Math.random() * names.length)] },
-            { position: "SK Treasurer", name: names[Math.floor(Math.random() * names.length)] }
-        ];
+                    // Map data to match the expected format
+                    const officials = data.map(official => ({
+                        position: official.position,
+                        name: official.name,
+                        isHeader: official.position.toLowerCase() === "punong barangay" // Highlight Punong Barangay
+                    }));
 
-        const luponMembers = [
-            { title: "Lupon Chairman", name: names[Math.floor(Math.random() * names.length)], isHeader: true },
-            ...Array(8).fill().map(() => ({ position: "Lupon Member", name: names[Math.floor(Math.random() * names.length)] }))
-        ];
+                    setCouncilMembers(officials);
+                } else if (activeTab === "Sangguniang Kabataan") {
+                    const { data, error } = await supabase
+                        .from('sk_officials')
+                        .select('name, position');
 
-        if (activeTab === "Barangay Officials") {
-            setCouncilMembers(officials);
-        } else if (activeTab === "Sangguniang Kabataan") {
-            setCouncilMembers(skOfficials);
-        } else if (activeTab === "Lupon Members") {
-            setCouncilMembers(luponMembers);
-        }
+                    if (error) throw error;
 
-        setCurrentPage(1);
+                    // Map data to match the expected format
+                    const skOfficials = data.map(official => ({
+                        position: official.position,
+                        name: official.name,
+                        isHeader: official.position.toLowerCase() === "sk chairman" // Highlight SK Chairman
+                    }));
+
+                    setCouncilMembers(skOfficials);
+                }
+            } catch (error) {
+                console.error('Error fetching officials:', error);
+                setCouncilMembers([]);
+            }
+
+            setCurrentPage(1);
+        };
+
+        fetchOfficials();
     }, [activeTab]);
 
     const totalPages = Math.ceil(councilMembers.length / rowsPerPage);
@@ -57,7 +66,7 @@ const BarangayCouncilTable = () => {
             {/* Tabs with Animation */}
             <div className="flex justify-center border-b pb-2">
                 <div className="flex space-x-4">
-                    {["Barangay Officials", "Sangguniang Kabataan", "Lupon Members"].map((tab) => (
+                    {["Barangay Officials", "Sangguniang Kabataan"].map((tab) => (
                         <button
                             key={tab}
                             className={`px-4 py-2 font-semibold relative transition-colors duration-300 ${activeTab === tab ? "text-blue-600 border-b-2 border-blue-500" : "text-gray-500"}`}
@@ -81,27 +90,36 @@ const BarangayCouncilTable = () => {
                 >
                     <table className="w-full border-collapse border border-gray-300">
                         <tbody>
-                            {currentRows.map((member, index) => (
-                                <motion.tr
-                                    key={index}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    transition={{ duration: 0.2, delay: index * 0.05 }}
-                                    className={member.isHeader ? "bg-gray-200" : ""}
-                                >
-                                    {member.isHeader ? (
-                                        <td colSpan="2" className="text-center font-semibold p-3 border border-gray-300">
-                                            {member.title} {member.name && ` - ${member.name}`}
-                                        </td>
-                                    ) : (
-                                        <>
-                                            <td className="p-3 border border-gray-300">{member.position}</td>
-                                            <td className="p-3 border border-gray-300">{member.name}</td>
-                                        </>
-                                    )}
-                                </motion.tr>
-                            ))}
+                            {currentRows.length === 0 ? (
+                                <tr>
+                                    <td colSpan="2" className="text-center p-3 border border-gray-300">
+                                        No data available.
+                                    </td>
+                                </tr>
+                            ) : (
+                                currentRows.map((member, index) => (
+                                    <motion.tr
+                                        key={index}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                                        className={member.isHeader ? "bg-gray-200" : ""}
+                                    >
+                                        {(member.position.toLowerCase() === "punong barangay" || member.position.toLowerCase() === "sk chairman") ? (
+                                            <td colSpan="2" className="text-center font-semibold p-3 border border-gray-300 bg-gray-200">
+                                                <div>{member.name}</div>
+                                                <div className="text-sm font-normal">{member.position}</div>
+                                            </td>
+                                        ) : (
+                                            <>
+                                                <td className="p-3 border border-gray-300">{member.position}</td>
+                                                <td className="p-3 border border-gray-300">{member.name}</td>
+                                            </>
+                                        )}
+                                    </motion.tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </motion.div>
