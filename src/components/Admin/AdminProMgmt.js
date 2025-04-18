@@ -24,6 +24,9 @@ const AdminProMgmt = () => {
     const [editingPolygonId, setEditingPolygonId] = useState(null);
     const [newTitle, setNewTitle] = useState("");
     const [newDescription, setNewDescription] = useState("");
+    const [newBudget, setNewBudget] = useState("");
+    const [newStartDate, setNewStartDate] = useState("");
+    const [newEndDate, setNewEndDate] = useState("");
     const [newColor, setNewColor] = useState("blue");
     const [draggingVertexIndex, setDraggingVertexIndex] = useState(null); // Track which vertex is being dragged
 
@@ -40,7 +43,6 @@ const AdminProMgmt = () => {
         });
 
         // Disable map dragging and zooming during editing or adding mode
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         useEffect(() => {
             if (isAdding || editingPolygonId) {
                 map.dragging.disable();
@@ -53,10 +55,10 @@ const AdminProMgmt = () => {
                 map.touchZoom.enable();
                 console.log("Enabled map interactions");
             }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [map, isAdding, editingPolygonId]); // Dependencies needed for effect to re-run
 
         // Handle mouse move and mouse up for right-click dragging
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         useEffect(() => {
             const handleMouseMove = (e) => {
                 if (draggingVertexIndex !== null) {
@@ -88,6 +90,7 @@ const AdminProMgmt = () => {
                     mapContainer.removeEventListener("mouseleave", handleMouseUp);
                 };
             }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [map, draggingVertexIndex, editingPolygonId]); // Dependencies needed for effect to re-run
 
         return null;
@@ -99,14 +102,17 @@ const AdminProMgmt = () => {
             alert("A polygon must have at least 3 points!");
             return;
         }
-        if (!newTitle || !newDescription) {
-            alert("Please provide a title and description for the planned area!");
+        if (!newTitle || !newDescription || !newBudget || !newStartDate || !newEndDate) {
+            alert("Please provide a title, description, budget, start date, and end date for the planned area!");
             return;
         }
         const newPolygon = {
             id: polygons.length + 1,
             title: newTitle,
             description: newDescription,
+            budget: newBudget,
+            startDate: newStartDate,
+            endDate: newEndDate,
             color: newColor,
             coords: [...newPolygonCoords, newPolygonCoords[0]], // Close the polygon
         };
@@ -114,6 +120,9 @@ const AdminProMgmt = () => {
         setNewPolygonCoords([]);
         setNewTitle("");
         setNewDescription("");
+        setNewBudget("");
+        setNewStartDate("");
+        setNewEndDate("");
         setNewColor("blue");
         setIsAdding(false);
         console.log("Added new polygon:", newPolygon);
@@ -132,6 +141,9 @@ const AdminProMgmt = () => {
         setNewPolygonCoords(polygonToEdit.coords.slice(0, -1)); // Exclude the closing point
         setNewTitle(polygonToEdit.title);
         setNewDescription(polygonToEdit.description);
+        setNewBudget(polygonToEdit.budget);
+        setNewStartDate(polygonToEdit.startDate);
+        setNewEndDate(polygonToEdit.endDate);
         setNewColor(polygonToEdit.color);
         setIsAdding(true);
         console.log("Entered edit mode for polygon id:", id);
@@ -143,8 +155,8 @@ const AdminProMgmt = () => {
             alert("A polygon must have at least 3 points!");
             return;
         }
-        if (!newTitle || !newDescription) {
-            alert("Please provide a title and description for the planned area!");
+        if (!newTitle || !newDescription || !newBudget || !newStartDate || !newEndDate) {
+            alert("Please provide a title, description, budget, start date, and end date for the planned area!");
             return;
         }
         const updatedPolygons = polygons.map((polygon) =>
@@ -153,6 +165,9 @@ const AdminProMgmt = () => {
                       ...polygon,
                       title: newTitle,
                       description: newDescription,
+                      budget: newBudget,
+                      startDate: newStartDate,
+                      endDate: newEndDate,
                       color: newColor,
                       coords: [...newPolygonCoords, newPolygonCoords[0]],
                   }
@@ -162,6 +177,9 @@ const AdminProMgmt = () => {
         setNewPolygonCoords([]);
         setNewTitle("");
         setNewDescription("");
+        setNewBudget("");
+        setNewStartDate("");
+        setNewEndDate("");
         setNewColor("blue");
         setIsAdding(false);
         setEditingPolygonId(null);
@@ -173,6 +191,9 @@ const AdminProMgmt = () => {
         setNewPolygonCoords([]);
         setNewTitle("");
         setNewDescription("");
+        setNewBudget("");
+        setNewStartDate("");
+        setNewEndDate("");
         setNewColor("blue");
         setIsAdding(false);
         setEditingPolygonId(null);
@@ -237,6 +258,10 @@ const AdminProMgmt = () => {
                                     <strong>{polygon.title}</strong>
                                     <br />
                                     {polygon.description}
+                                    <br />
+                                    <strong>Budget:</strong> {polygon.budget}
+                                    <br />
+                                    <strong>Timeline:</strong> {polygon.startDate} to {polygon.endDate}
                                     <div className="mt-2">
                                         <button
                                             onClick={() => handleEditPolygon(polygon.id)}
@@ -327,6 +352,29 @@ const AdminProMgmt = () => {
                                 className="w-full px-3 py-2 mb-2 border rounded"
                                 rows="3"
                             />
+                            <input
+                                type="text"
+                                placeholder="Budget (e.g., PHP 1,000,000)"
+                                value={newBudget}
+                                onChange={(e) => setNewBudget(e.target.value)}
+                                className="w-full px-3 py-2 mb-2 border rounded"
+                            />
+                            <div className="flex space-x-2 mb-2">
+                                <input
+                                    type="date"
+                                    placeholder="Start Date"
+                                    value={newStartDate}
+                                    onChange={(e) => setNewStartDate(e.target.value)}
+                                    className="w-1/2 px-3 py-2 border rounded"
+                                />
+                                <input
+                                    type="date"
+                                    placeholder="End Date"
+                                    value={newEndDate}
+                                    onChange={(e) => setNewEndDate(e.target.value)}
+                                    className="w-1/2 px-3 py-2 border rounded"
+                                />
+                            </div>
                             <select
                                 value={newColor}
                                 onChange={(e) => setNewColor(e.target.value)}
