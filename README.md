@@ -59,6 +59,8 @@ Make sure you have the following installed on your machine:
    npm install express nodemailer cors dotenv concurrently
    npm install sweetalert2 sweetalert2-react-content
    npm install leaflet-draw
+   npm install @turf/turf
+   npm install @turf/kinks
    ```
 
 ### Usage
