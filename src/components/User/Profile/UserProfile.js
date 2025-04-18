@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../../../supabaseClient";
 import Swal from "sweetalert2";
 import placeholderImg from "../../../img/Placeholder/placeholder.png";
@@ -15,7 +15,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const [profilePicLoading, setProfilePicLoading] = useState(true);
     const [coverPhotoLoading, setCoverPhotoLoading] = useState(true);
     const [residentProfileStatus, setResidentProfileStatus] = useState(null);
-    const [userRoleId, setUserRoleId] = useState(null); // New state for user role
+    const [rejectionReason, setRejectionReason] = useState(null);
+    const [userRoleId, setUserRoleId] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const [showCoverDropdown, setShowCoverDropdown] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -25,98 +26,163 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const coverDropdownRef = useRef(null);
     const coverDropdownButtonRef = useRef(null);
 
-    useEffect(() => {
-        const fetchUserAndStatus = async () => {
-            const { data: authData, error: authError } = await supabase.auth.getUser();
+    // Fetch user data and profile status, memoized with useCallback
+    const fetchUserAndStatus = useCallback(async () => {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
 
-            if (authError || !authData?.user) {
-                console.error("Error fetching user:", authError?.message || "No user found");
-                setProfilePicLoading(false);
-                setCoverPhotoLoading(false);
-                onLoadingComplete(false);
-                return;
-            }
+        if (authError || !authData?.user) {
+            console.error("Error fetching user:", authError?.message || "No user found");
+            setProfilePicLoading(false);
+            setCoverPhotoLoading(false);
+            onLoadingComplete(false);
+            return;
+        }
 
-            const userData = authData.user;
-            setUser(userData);
+        const userData = authData.user;
+        setUser(userData);
 
-            // Fetch user's role
-            const { data: roleData, error: roleError } = await supabase
-                .from("user_roles")
-                .select("role_id")
-                .eq("user_id", userData.id)
+        // Fetch user's role
+        const { data: roleData, error: roleError } = await supabase
+            .from("user_roles")
+            .select("role_id")
+            .eq("user_id", userData.id)
+            .single();
+
+        if (roleError || !roleData) {
+            console.error("Error fetching user role:", roleError?.message);
+            setUserRoleId(null);
+        } else {
+            setUserRoleId(roleData.role_id);
+        }
+
+        // Fetch Resident Profile Status and Rejection Reason
+        const { data: residentData, error: residentError } = await supabase
+            .from("residents")
+            .select("id")
+            .eq("user_id", userData.id)
+            .single();
+
+        if (residentError || !residentData) {
+            console.error("Error fetching resident data:", residentError?.message);
+            setResidentProfileStatus(null);
+            setRejectionReason(null);
+        } else {
+            const { data: statusData, error: statusError } = await supabase
+                .from("resident_profile_status")
+                .select("status, rejection_reason")
+                .eq("resident_id", residentData.id)
                 .single();
 
-            if (roleError || !roleData) {
-                console.error("Error fetching user role:", roleError?.message);
-                setUserRoleId(null); // Default to no role if error
+            if (statusError || !statusData) {
+                console.error("Error fetching resident profile status:", statusError?.message);
+                setResidentProfileStatus(null);
+                setRejectionReason(null);
             } else {
-                setUserRoleId(roleData.role_id);
+                setResidentProfileStatus(statusData.status);
+                setRejectionReason(statusData.rejection_reason);
+            }
+        }
+
+        const profilePicPath = userData.user_metadata?.profilePic?.split("/").slice(-2).join("/");
+        const coverPhotoPath = userData.user_metadata?.coverPhoto?.split("/").slice(-2).join("/");
+
+        try {
+            if (profilePicPath) {
+                const { data: signedProfilePic, error: profilePicError } = await supabase.storage
+                    .from("user-assets")
+                    .createSignedUrl(profilePicPath, 3600);
+
+                if (profilePicError) {
+                    console.error("Error generating signed URL for profile picture:", profilePicError.message);
+                } else {
+                    setProfilePic(signedProfilePic.signedUrl);
+                }
             }
 
-            // Fetch Resident Profile Status
-            const { data: residentData, error: residentError } = await supabase
+            if (coverPhotoPath) {
+                const { data: signedCoverPhoto, error: coverPhotoError } = await supabase.storage
+                    .from("user-assets")
+                    .createSignedUrl(coverPhotoPath, 3600);
+
+                if (coverPhotoError) {
+                    console.error("Error generating signed URL for cover photo:", coverPhotoError.message);
+                } else {
+                    setCoverPhoto(signedCoverPhoto.signedUrl);
+                }
+            }
+        } catch (err) {
+            console.error("Error generating signed URLs:", err.message);
+        } finally {
+            setProfilePicLoading(false);
+            setCoverPhotoLoading(false);
+            onLoadingComplete(true);
+        }
+    }, [onLoadingComplete]);
+
+    useEffect(() => {
+        fetchUserAndStatus();
+
+        // Set up real-time subscription
+        const setupSubscription = async () => {
+            const { data: authData } = await supabase.auth.getUser();
+            if (!authData?.user) return;
+
+            const { data: residentData } = await supabase
                 .from("residents")
                 .select("id")
-                .eq("user_id", userData.id)
+                .eq("user_id", authData.user.id)
                 .single();
 
-            if (residentError || !residentData) {
-                console.error("Error fetching resident data:", residentError?.message);
-                setResidentProfileStatus(null);
-            } else {
-                const { data: statusData, error: statusError } = await supabase
-                    .from("resident_profile_status")
-                    .select("status")
-                    .eq("resident_id", residentData.id)
-                    .single();
+            if (!residentData) return;
 
-                if (statusError || !statusData) {
-                    console.error("Error fetching resident profile status:", statusError?.message);
-                    setResidentProfileStatus(null);
-                } else {
-                    setResidentProfileStatus(statusData.status);
-                }
-            }
+            const residentId = residentData.id;
 
-            const profilePicPath = userData.user_metadata?.profilePic?.split("/").slice(-2).join("/");
-            const coverPhotoPath = userData.user_metadata?.coverPhoto?.split("/").slice(-2).join("/");
-
-            try {
-                if (profilePicPath) {
-                    const { data: signedProfilePic, error: profilePicError } = await supabase.storage
-                        .from("user-assets")
-                        .createSignedUrl(profilePicPath, 3600);
-
-                    if (profilePicError) {
-                        console.error("Error generating signed URL for profile picture:", profilePicError.message);
-                    } else {
-                        setProfilePic(signedProfilePic.signedUrl);
+            const channel = supabase
+                .channel("resident_profile_status_changes")
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: "resident_profile_status",
+                        filter: `resident_id=eq.${residentId}`,
+                    },
+                    (payload) => {
+                        console.log("Resident profile status change received:", payload);
+                        fetchUserAndStatus(); // Refetch status on change
                     }
-                }
-
-                if (coverPhotoPath) {
-                    const { data: signedCoverPhoto, error: coverPhotoError } = await supabase.storage
-                        .from("user-assets")
-                        .createSignedUrl(coverPhotoPath, 3600);
-
-                    if (coverPhotoError) {
-                        console.error("Error generating signed URL for cover photo:", coverPhotoError.message);
-                    } else {
-                        setCoverPhoto(signedCoverPhoto.signedUrl);
+                )
+                .subscribe((status, error) => {
+                    if (error) {
+                        console.error("Subscription error:", error);
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: "error",
+                            title: "Failed to subscribe to real-time updates",
+                            timer: 1500,
+                            showConfirmButton: false,
+                            scrollbarPadding: false,
+                        });
                     }
-                }
-            } catch (err) {
-                console.error("Error generating signed URLs:", err.message);
-            } finally {
-                setProfilePicLoading(false);
-                setCoverPhotoLoading(false);
-                onLoadingComplete(true);
-            }
+                    console.log("Subscription status:", status);
+                });
+
+            return channel;
         };
 
-        fetchUserAndStatus();
-    }, [onLoadingComplete]);
+        let channel;
+        setupSubscription().then((ch) => {
+            channel = ch;
+        });
+
+        // Cleanup subscription on unmount
+        return () => {
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
+        };
+    }, [fetchUserAndStatus]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -350,7 +416,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     };
 
     const handleTabClick = async (tabKey) => {
-        if (tabKey === "residentProfiling" && userRoleId !== 1) { // Only show for non-admins
+        if (tabKey === "residentProfiling" && userRoleId !== 1) {
             const result = await Swal.fire({
                 title: "Are you sure?",
                 text: "Do you want to proceed to Resident Profiling?",
@@ -360,6 +426,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 cancelButtonColor: "#d33",
                 confirmButtonText: "Yes, proceed",
                 cancelButtonText: "No, cancel",
+                scrollbarPadding: false,
             });
 
             if (result.isConfirmed) {
@@ -368,6 +435,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     text: "Please wait",
                     allowOutsideClick: false,
                     allowEscapeKey: false,
+                    scrollbarPadding: false,
                     didOpen: () => {
                         Swal.showLoading();
                     },
@@ -386,7 +454,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const tabs = [
         { key: "myAccount", label: "My Account" },
         { key: "accountSettings", label: "Account Settings" },
-        ...(userRoleId !== 1 ? [{ key: "residentProfiling", label: "Resident Profiling" }] : []), // Hide for admins
+        ...(userRoleId !== 1 ? [{ key: "residentProfiling", label: "Resident Profiling" }] : []),
         { key: "help", label: "Help" },
     ];
 
@@ -504,7 +572,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                 className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100"
                                 onClick={() => {
                                     handleViewImage(profilePic);
-                                    setShowDropdown(false);
+                                    setShowCoverDropdown(false);
                                 }}
                             >
                                 <FaEye className="mr-2" /> View Profile Picture
@@ -586,12 +654,17 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             </div>
 
             {/* Resident Profile Status */}
-            {userRoleId !== 1 && ( // Hide status for admins
+            {userRoleId !== 1 && (
                 <div className="py-2 px-4 text-center bg-white sm:text-left shadow-lg rounded">
                     <h3 className="text-lg font-bold">Resident Profile Status</h3>
                     <p className={`mt-2 ${residentProfileStatus === 1 ? "text-green-600" : residentProfileStatus === 2 ? "text-red-600" : residentProfileStatus === 3 ? "text-yellow-600" : "text-gray-600"}`}>
                         {getStatusText()}
                     </p>
+                    {residentProfileStatus === 2 && rejectionReason && (
+                        <p className="mt-2 text-sm text-gray-600 italic">
+                            <span className="font-semibold">Reason:</span> {rejectionReason}
+                        </p>
+                    )}
                 </div>
             )}
         </div>

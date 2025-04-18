@@ -119,11 +119,23 @@ const HouseholdComposition = ({ data, childrenCount, numberOfhouseholdMembers, o
             .eq("user_id", userId);
 
         if (error) {
-            Swal.fire("Error", "Failed to save data", "error");
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Failed to save data",
+                timer: 1500,
+                showConfirmButton: false,
+            });
             return;
         }
 
         onNext(householdMembers, "confirmation", localChildrenCount, localNumberOfhouseholdMembers);
+    };
+
+    const handleBackClick = (e) => {
+        e.preventDefault();
+        if (onBack) onBack();
     };
 
     return (
@@ -333,14 +345,15 @@ const HouseholdComposition = ({ data, childrenCount, numberOfhouseholdMembers, o
 
                 <div className="flex justify-between mt-4">
                     <button
-                        className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
-                        onClick={onBack}
+                        type="button"
+                        className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 hover:bg-gray-600 active:bg-gray-700"
+                        onClick={handleBackClick}
                     >
                         Back
                     </button>
                     <button
                         type="button"
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 hover:bg-blue-700 active:bg-blue-800"
                         onClick={handleSubmit}
                     >
                         Next

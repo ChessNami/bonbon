@@ -37,7 +37,6 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
         setRegions(getAllRegions());
         fetchUserData();
 
-        // Automatically set spouse's civilStatus to "Married" if householdForm is "Married"
         if (data?.civilStatus === "Married") {
             setFormData((prevData) => ({ ...prevData, civilStatus: "Married" }));
         }
@@ -118,6 +117,11 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
         onNext(updatedData);
     };
 
+    const handleBackClick = (e) => {
+        e.preventDefault(); // Prevent browser navigation
+        if (onBack) onBack();
+    };
+
     return (
         <div className="p-4 shadow-lg rounded-lg">
             <form className="space-y-6">
@@ -184,8 +188,20 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                 </fieldset>
 
                 <div className="flex justify-between mt-4">
-                    <button className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600" onClick={onBack}>Back</button>
-                    <button type="button" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700" onClick={handleSubmit}>Next</button>
+                    <button
+                        type="button"
+                        className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 transform hover:scale-105 active:scale-95"
+                        onClick={handleBackClick}
+                    >
+                        Back
+                    </button>
+                    <button
+                        type="button"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 transform hover:scale-105 active:scale-95"
+                        onClick={handleSubmit}
+                    >
+                        Next
+                    </button>
                 </div>
             </form>
         </div>
