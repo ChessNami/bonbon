@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polygon, useMapEvents, CircleMarker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, CircleMarker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../../index.css";
@@ -21,41 +21,66 @@ const customIcon = L.divIcon({
 
 const AdminStrategicRoadmap = () => {
     const bonbonCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);
-    const [polygons, setPolygons] = useState([
+    const [roads, setRoads] = useState([
         {
             id: 1,
-            title: "Initial Strategic Plan",
-            description: "This area is designated for community development initiatives.",
-            type: "Community Development",
-            color: "green",
+            title: "Main Road Plan",
+            description: "This road is designated for widening.",
+            type: "Widening",
+            color: "blue",
             coords: [
-                [8.5105, 124.6480],
-                [8.5110, 124.6500],
-                [8.5090, 124.6510],
-                [8.5080, 124.6490],
-                [8.5105, 124.6480],
+                [8.5095, 124.6480],
+                [8.5100, 124.6490],
+                [8.5105, 124.6500],
             ],
         },
     ]);
-    const [newPolygonCoords, setNewPolygonCoords] = useState([]);
+    const [newRoadCoords, setNewRoadCoords] = useState([]);
     const [actionHistory, setActionHistory] = useState([]);
     const [redoHistory, setRedoHistory] = useState([]);
     const [isAdding, setIsAdding] = useState(false);
-    const [editingPolygonId, setEditingPolygonId] = useState(null);
+    const [editingRoadId, setEditingRoadId] = useState(null);
     const [newTitle, setNewTitle] = useState("");
     const [newDescription, setNewDescription] = useState("");
-    const [newType, setNewType] = useState("Infrastructure");
+    const [newType, setNewType] = useState("Widening");
     const [newColor, setNewColor] = useState("blue");
     const [draggingVertexIndex, setDraggingVertexIndex] = useState(null);
     const [dragStartCoord, setDragStartCoord] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const maxDistance = 0.001; // ~100 meters in lat/lng degrees (approximate)
 
     const MapClickHandler = () => {
         const map = useMapEvents({
             click(e) {
                 if (isAdding && draggingVertexIndex === null) {
-                    const newCoord = [e.latlng.lat, e.latlng.lng];
-                    setNewPolygonCoords((prev) => {
+                    const clickedCoord = [e.latlng.lat, e.latlng.lng];
+                    // Placeholder for road-snapping logic
+                    // Use an API like Overpass API or OSRM to snap to nearest road
+                    // Example: fetch road geometry within maxDistance
+                    /*
+                    async function snapToRoad(coord) {
+                        const response = await fetch(`OSRM_API_ENDPOINT/nearest?coordinates=${coord[1]},${coord[0]}`);
+                        const data = await response.json();
+                        return data.waypoints[0].location; // [lng, lat]
+                    }
+                    */
+                    const newCoord = clickedCoord; // Replace with snapped coord from API
+                    if (newRoadCoords.length > 0) {
+                        const lastCoord = newRoadCoords[newRoadCoords.length - 1];
+                        const distance = L.latLng(lastCoord).distanceTo(L.latLng(newCoord)) / 1000; // in km
+                        if (distance > maxDistance * 200) { // Convert degrees to km approximately
+                            Swal.fire({
+                                toast: true,
+                                position: "top-end",
+                                icon: "error",
+                                title: `Point too far! Max distance is ~${maxDistance * 200000} meters.`,
+                                showConfirmButton: false,
+                                timer: 1500,
+                            });
+                            return;
+                        }
+                    }
+                    setNewRoadCoords((prev) => {
                         const updatedCoords = [...prev, newCoord];
                         setActionHistory((prevHistory) => [
                             ...prevHistory,
@@ -127,9 +152,12 @@ const AdminStrategicRoadmap = () => {
             const handleMouseMove = (e) => {
                 if (draggingVertexIndex !== null) {
                     const latlng = map.mouseEventToLatLng(e);
-                    setNewPolygonCoords((prev) => {
+                    // Placeholder for snapping dragged point to road
+                    // Use API to snap latlng to nearest road point
+                    const newCoord = [latlng.lat, latlng.lng];
+                    setNewRoadCoords((prev) => {
                         const updatedCoords = [...prev];
-                        updatedCoords[draggingVertexIndex] = [latlng.lat, latlng.lng];
+                        updatedCoords[draggingVertexIndex] = newCoord;
                         return updatedCoords;
                     });
                 }
@@ -137,7 +165,7 @@ const AdminStrategicRoadmap = () => {
 
             const handleMouseUp = () => {
                 if (draggingVertexIndex !== null) {
-                    const endCoord = newPolygonCoords[draggingVertexIndex];
+                    const endCoord = newRoadCoords[draggingVertexIndex];
                     if (dragStartCoord) {
                         setActionHistory((prevHistory) => [
                             ...prevHistory,
@@ -180,9 +208,9 @@ const AdminStrategicRoadmap = () => {
                 setRedoHistory((prev) => [...prev, lastAction]);
 
                 if (lastAction.type === "add") {
-                    setNewPolygonCoords((prev) => prev.filter((_, i) => i !== lastAction.index));
+                    setNewRoadCoords((prev) => prev.filter((_, i) => i !== lastAction.index));
                 } else if (lastAction.type === "drag") {
-                    setNewPolygonCoords((prev) => {
+                    setNewRoadCoords((prev) => {
                         const updatedCoords = [...prev];
                         updatedCoords[lastAction.index] = lastAction.startCoord;
                         return updatedCoords;
@@ -195,21 +223,21 @@ const AdminStrategicRoadmap = () => {
                 setActionHistory((prev) => [...prev, lastRedo]);
 
                 if (lastRedo.type === "add") {
-                    setNewPolygonCoords((prev) => {
+                    setNewRoadCoords((prev) => {
                         const updatedCoords = [...prev];
                         updatedCoords.splice(lastRedo.index, 0, lastRedo.coord);
                         return updatedCoords;
                     });
                 } else if (lastRedo.type === "drag") {
-                    setNewPolygonCoords((prev) => {
+                    setNewRoadCoords((prev) => {
                         const updatedCoords = [...prev];
                         updatedCoords[lastRedo.index] = lastRedo.endCoord;
                         return updatedCoords;
                     });
                 }
-            } else if (e.ctrlKey && e.key === "x" && newPolygonCoords.length > 0 && !editingPolygonId) {
+            } else if (e.ctrlKey && e.key === "x" && newRoadCoords.length > 0 && !editingRoadId) {
                 e.preventDefault();
-                setNewPolygonCoords((prev) => {
+                setNewRoadCoords((prev) => {
                     const lastCoord = prev[prev.length - 1];
                     setActionHistory((prevHistory) => [
                         ...prevHistory,
@@ -220,7 +248,7 @@ const AdminStrategicRoadmap = () => {
                 });
             }
         },
-        [actionHistory, redoHistory, isAdding, newPolygonCoords, editingPolygonId]
+        [actionHistory, redoHistory, isAdding, newRoadCoords, editingRoadId]
     );
 
     useEffect(() => {
@@ -228,13 +256,13 @@ const AdminStrategicRoadmap = () => {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
 
-    const handleAddPolygon = () => {
-        if (newPolygonCoords.length < 3) {
+    const handleAddRoad = () => {
+        if (newRoadCoords.length < 2) {
             Swal.fire({
                 toast: true,
                 position: "top-end",
                 icon: "error",
-                title: "A strategic area must have at least 3 points!",
+                title: "A road must have at least 2 points!",
                 showConfirmButton: false,
                 timer: 1500,
             });
@@ -251,58 +279,58 @@ const AdminStrategicRoadmap = () => {
             });
             return;
         }
-        const newPolygon = {
-            id: polygons.length + 1,
+        const newRoad = {
+            id: roads.length + 1,
             title: newTitle,
             description: newDescription,
             type: newType,
             color: newColor,
-            coords: [...newPolygonCoords, newPolygonCoords[0]],
+            coords: [...newRoadCoords],
         };
-        setPolygons([...polygons, newPolygon]);
+        setRoads([...roads, newRoad]);
         Swal.fire({
             toast: true,
             position: "top-end",
             icon: "success",
-            title: "Strategic area added successfully!",
+            title: "Road added successfully!",
             showConfirmButton: false,
             timer: 1500,
         });
         resetForm();
     };
 
-    const handleDeletePolygon = (id) => {
-        setPolygons(polygons.filter((polygon) => polygon.id !== id));
+    const handleDeleteRoad = (id) => {
+        setRoads(roads.filter((road) => road.id !== id));
         Swal.fire({
             toast: true,
             position: "top-end",
             icon: "success",
-            title: "Strategic area deleted successfully!",
+            title: "Road deleted successfully!",
             showConfirmButton: false,
             timer: 1500,
         });
     };
 
-    const handleEditPolygon = (id) => {
-        setEditingPolygonId(id);
-        const polygonToEdit = polygons.find((p) => p.id === id);
-        setNewPolygonCoords(polygonToEdit.coords.slice(0, -1));
+    const handleEditRoad = (id) => {
+        setEditingRoadId(id);
+        const roadToEdit = roads.find((r) => r.id === id);
+        setNewRoadCoords(roadToEdit.coords);
         setActionHistory([]);
         setRedoHistory([]);
-        setNewTitle(polygonToEdit.title);
-        setNewDescription(polygonToEdit.description);
-        setNewType(polygonToEdit.type);
-        setNewColor(polygonToEdit.color);
+        setNewTitle(roadToEdit.title);
+        setNewDescription(roadToEdit.description);
+        setNewType(roadToEdit.type);
+        setNewColor(roadToEdit.color);
         setIsAdding(true);
     };
 
     const handleSaveEdit = () => {
-        if (newPolygonCoords.length < 3) {
+        if (newRoadCoords.length < 2) {
             Swal.fire({
                 toast: true,
                 position: "top-end",
                 icon: "error",
-                title: "A strategic area must have at least 3 points!",
+                title: "A road must have at least 2 points!",
                 showConfirmButton: false,
                 timer: 1500,
             });
@@ -319,24 +347,24 @@ const AdminStrategicRoadmap = () => {
             });
             return;
         }
-        const updatedPolygons = polygons.map((polygon) =>
-            polygon.id === editingPolygonId
+        const updatedRoads = roads.map((road) =>
+            road.id === editingRoadId
                 ? {
-                    ...polygon,
+                    ...road,
                     title: newTitle,
                     description: newDescription,
                     type: newType,
                     color: newColor,
-                    coords: [...newPolygonCoords, newPolygonCoords[0]],
+                    coords: [...newRoadCoords],
                 }
-                : polygon
+                : road
         );
-        setPolygons(updatedPolygons);
+        setRoads(updatedRoads);
         Swal.fire({
             toast: true,
             position: "top-end",
             icon: "success",
-            title: "Strategic area updated successfully!",
+            title: "Road updated successfully!",
             showConfirmButton: false,
             timer: 1500,
         });
@@ -344,31 +372,29 @@ const AdminStrategicRoadmap = () => {
     };
 
     const resetForm = () => {
-        setNewPolygonCoords([]);
+        setNewRoadCoords([]);
         setActionHistory([]);
         setRedoHistory([]);
         setNewTitle("");
         setNewDescription("");
-        setNewType("Infrastructure");
+        setNewType("Widening");
         setNewColor("blue");
         setIsAdding(false);
-        setEditingPolygonId(null);
+        setEditingRoadId(null);
         setDraggingVertexIndex(null);
         setDragStartCoord(null);
     };
 
-    const getPolygonStyle = (color) => {
+    const getRoadStyle = (color) => {
         const styles = {
-            blue: { fillColor: "rgba(59, 130, 246, 0.5)", color: "blue", weight: 2 },
-            green: { fillColor: "rgba(34, 197, 94, 0.5)", color: "green", weight: 2 },
-            red: { fillColor: "rgba(239, 68, 68, 0.5)", color: "red", weight: 2 },
-            purple: { fillColor: "rgba(147, 51, 234, 0.5)", color: "purple", weight: 2 },
-            yellow: { fillColor: "rgba(234, 179, 8, 0.5)", color: "yellow", weight: 2 },
+            gray: { color: "gray", weight: 4 },
+            yellow: { color: "yellow", weight: 4 },
+            blue: { color: "blue", weight: 4 },
         };
         return styles[color] || styles.blue;
     };
 
-    const getPolygonCenter = (coords) => {
+    const getRoadCenter = (coords) => {
         const lat = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
         const lng = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
         return [lat, lng];
@@ -392,7 +418,7 @@ const AdminStrategicRoadmap = () => {
                         whileTap={{ scale: isAdding ? 1 : 0.95 }}
                     >
                         <FaMapMarkedAlt />
-                        Create Strategic Area
+                        Create Road Marking
                     </motion.button>
                     <motion.button
                         onClick={() => setIsModalOpen(true)}
@@ -401,7 +427,7 @@ const AdminStrategicRoadmap = () => {
                         whileTap={{ scale: 0.95 }}
                     >
                         <FaMap />
-                        View All Strategic Areas
+                        View All Roads
                     </motion.button>
                 </div>
 
@@ -442,18 +468,18 @@ const AdminStrategicRoadmap = () => {
                                             </div>
                                         </Popup>
                                     </Marker>
-                                    {polygons.map((polygon) => (
-                                        <Polygon key={polygon.id} positions={polygon.coords} pathOptions={getPolygonStyle(polygon.color)}>
+                                    {roads.map((road) => (
+                                        <Polyline key={road.id} positions={road.coords} pathOptions={getRoadStyle(road.color)}>
                                             <Popup>
                                                 <div className="p-2">
-                                                    <h3 className="font-semibold">{polygon.title}</h3>
+                                                    <h3 className="font-semibold">{road.title}</h3>
                                                     <p>
-                                                        <strong>Type:</strong> {polygon.type}
+                                                        <strong>Status:</strong> {road.type}
                                                     </p>
-                                                    <p className="mt-2">{polygon.description}</p>
+                                                    <p className="mt-2">{road.description}</p>
                                                     <div className="mt-3 flex gap-2">
                                                         <motion.button
-                                                            onClick={() => handleEditPolygon(polygon.id)}
+                                                            onClick={() => handleEditRoad(road.id)}
                                                             className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
@@ -462,7 +488,7 @@ const AdminStrategicRoadmap = () => {
                                                             Edit
                                                         </motion.button>
                                                         <motion.button
-                                                            onClick={() => handleDeletePolygon(polygon.id)}
+                                                            onClick={() => handleDeleteRoad(road.id)}
                                                             className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
@@ -473,20 +499,19 @@ const AdminStrategicRoadmap = () => {
                                                     </div>
                                                 </div>
                                             </Popup>
-                                        </Polygon>
+                                        </Polyline>
                                     ))}
-                                    {newPolygonCoords.length > 0 && (
-                                        <Polygon
-                                            positions={newPolygonCoords}
+                                    {newRoadCoords.length > 0 && (
+                                        <Polyline
+                                            positions={newRoadCoords}
                                             pathOptions={{
-                                                fillColor: "rgba(255, 165, 0, 0.5)",
                                                 color: "orange",
-                                                weight: 2,
+                                                weight: 4,
                                             }}
                                         />
                                     )}
                                     {isAdding &&
-                                        newPolygonCoords.map((coord, index) => (
+                                        newRoadCoords.map((coord, index) => (
                                             <CircleMarker
                                                 key={`new-${index}`}
                                                 center={coord}
@@ -532,7 +557,7 @@ const AdminStrategicRoadmap = () => {
                                             <FaRedo className="text-gray-500" /> <strong>Ctrl + Y:</strong> Redo last action
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <FaTrash className="text-gray-500" /> <strong>Ctrl + X:</strong> Remove last point (new areas only)
+                                            <FaTrash className="text-gray-500" /> <strong>Ctrl + X:</strong> Remove last point (new roads only)
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <FaMap className="text-gray-500" /> <strong>Middle Mouse:</strong> Drag map
@@ -542,23 +567,17 @@ const AdminStrategicRoadmap = () => {
                                 <div className="bg-white p-4 rounded-lg shadow">
                                     <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
                                         <FaTag className="text-blue-600" />
-                                        Strategic Area Types
+                                        Road Statuses
                                     </h3>
                                     <ul className="text-sm text-gray-600 space-y-2">
                                         <li className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-blue-500 rounded-full"></div> Infrastructure
+                                            <div className="w-4 h-4 bg-gray-500 rounded-full"></div> Concrete
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-green-500 rounded-full"></div> Community Development
+                                            <div className="w-4 h-4 bg-yellow-500 rounded-full"></div> Improvement
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-red-500 rounded-full"></div> Environmental Sustainability
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-purple-500 rounded-full"></div> Disaster Preparedness
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-yellow-500 rounded-full"></div> Economic Development
+                                            <div className="w-4 h-4 bg-blue-500 rounded-full"></div> Widening
                                         </li>
                                     </ul>
                                 </div>
@@ -579,17 +598,17 @@ const AdminStrategicRoadmap = () => {
                             >
                                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                     <FaMapMarkedAlt className="text-blue-600" />
-                                    {editingPolygonId ? "Edit Strategic Area" : "New Strategic Area"}
+                                    {editingRoadId ? "Edit Road Marking" : "New Road Marking"}
                                 </h2>
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
                                             <FaHeading className="text-gray-500" />
-                                            Area Title
+                                            Road Title
                                         </label>
                                         <input
                                             type="text"
-                                            placeholder="Enter area title"
+                                            placeholder="Enter road title"
                                             value={newTitle}
                                             onChange={(e) => setNewTitle(e.target.value)}
                                             className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -601,7 +620,7 @@ const AdminStrategicRoadmap = () => {
                                             Description
                                         </label>
                                         <textarea
-                                            placeholder="Enter area description"
+                                            placeholder="Enter road description"
                                             value={newDescription}
                                             onChange={(e) => setNewDescription(e.target.value)}
                                             className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -611,39 +630,35 @@ const AdminStrategicRoadmap = () => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
                                             <FaTag className="text-gray-500" />
-                                            Strategic Type
+                                            Road Status
                                         </label>
                                         <select
                                             value={newType}
                                             onChange={(e) => {
                                                 setNewType(e.target.value);
                                                 const colors = {
-                                                    Infrastructure: "blue",
-                                                    "Community Development": "green",
-                                                    "Environmental Sustainability": "red",
-                                                    "Disaster Preparedness": "purple",
-                                                    "Economic Development": "yellow",
+                                                    Concrete: "gray",
+                                                    Improvement: "yellow",
+                                                    Widening: "blue",
                                                 };
                                                 setNewColor(colors[e.target.value] || "blue");
                                             }}
                                             className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
-                                            <option value="Infrastructure">Infrastructure (Blue)</option>
-                                            <option value="Community Development">Community Development (Green)</option>
-                                            <option value="Environmental Sustainability">Environmental Sustainability (Red)</option>
-                                            <option value="Disaster Preparedness">Disaster Preparedness (Purple)</option>
-                                            <option value="Economic Development">Economic Development (Yellow)</option>
+                                            <option value="Concrete">Concrete (Gray)</option>
+                                            <option value="Improvement">Improvement (Yellow)</option>
+                                            <option value="Widening">Widening (Blue)</option>
                                         </select>
                                     </div>
                                     <div className="flex flex-wrap gap-3">
                                         <motion.button
-                                            onClick={editingPolygonId ? handleSaveEdit : handleAddPolygon}
+                                            onClick={editingRoadId ? handleSaveEdit : handleAddRoad}
                                             className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                         >
                                             <FaSave />
-                                            {editingPolygonId ? "Save Changes" : "Save Area"}
+                                            {editingRoadId ? "Save Changes" : "Save Road"}
                                         </motion.button>
                                         <motion.button
                                             onClick={resetForm}
@@ -681,7 +696,7 @@ const AdminStrategicRoadmap = () => {
                                 <div className="flex justify-between items-center p-4 border-b">
                                     <h2 className="text-xl font-semibold flex items-center gap-2">
                                         <FaMap className="text-blue-600" />
-                                        All Strategic Areas
+                                        All Marked Roads
                                     </h2>
                                     <motion.button
                                         onClick={() => setIsModalOpen(false)}
@@ -693,25 +708,25 @@ const AdminStrategicRoadmap = () => {
                                     </motion.button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-4">
-                                    {polygons.length === 0 ? (
-                                        <p className="text-gray-500 text-center">No strategic areas created yet.</p>
+                                    {roads.length === 0 ? (
+                                        <p className="text-gray-500 text-center">No roads marked yet.</p>
                                     ) : (
-                                        polygons.map((polygon) => (
+                                        roads.map((road) => (
                                             <motion.div
-                                                key={polygon.id}
+                                                key={road.id}
                                                 className="mb-6 p-4 bg-gray-50 rounded-lg shadow"
                                                 initial={{ opacity: 0, y: 20 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ duration: 0.15 }}
                                             >
-                                                <h3 className="text-lg font-semibold">{polygon.title}</h3>
+                                                <h3 className="text-lg font-semibold">{road.title}</h3>
                                                 <p className="text-sm text-gray-600">
-                                                    <strong>Type:</strong> {polygon.type}
+                                                    <strong>Status:</strong> {road.type}
                                                 </p>
-                                                <p className="text-sm text-gray-600 mt-2">{polygon.description}</p>
+                                                <p className="text-sm text-gray-600 mt-2">{road.description}</p>
                                                 <div className="mt-4 h-64 rounded-lg overflow-hidden">
                                                     <MapContainer
-                                                        center={getPolygonCenter(polygon.coords)}
+                                                        center={getRoadCenter(road.coords)}
                                                         zoom={16}
                                                         style={{ height: "100%", width: "100%" }}
                                                         scrollWheelZoom={false}
@@ -720,13 +735,13 @@ const AdminStrategicRoadmap = () => {
                                                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                                             attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                                         />
-                                                        <Polygon positions={polygon.coords} pathOptions={getPolygonStyle(polygon.color)} />
+                                                        <Polyline positions={road.coords} pathOptions={getRoadStyle(road.color)} />
                                                     </MapContainer>
                                                 </div>
                                                 <div className="mt-3 flex gap-2">
                                                     <motion.button
                                                         onClick={() => {
-                                                            handleEditPolygon(polygon.id);
+                                                            handleEditRoad(road.id);
                                                             setIsModalOpen(false);
                                                         }}
                                                         className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
@@ -737,7 +752,7 @@ const AdminStrategicRoadmap = () => {
                                                         Edit
                                                     </motion.button>
                                                     <motion.button
-                                                        onClick={() => handleDeletePolygon(polygon.id)}
+                                                        onClick={() => handleDeleteRoad(road.id)}
                                                         className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                                                         whileHover={{ scale: 1.05 }}
                                                         whileTap={{ scale: 0.95 }}

@@ -6,6 +6,8 @@ import Demographics from "./Demographics";
 import ProjectManagement from "./ProjectManagement";
 import StrategicRoad from "./StrategicRoad";
 import MainProfileComponent from "../User/Profile/MainProfileComponent";
+import GeotaggingView from "./GeotaggingView";
+import Feedback from "./Feedback";
 
 const pageVariants = {
     initial: { opacity: 0, x: -25 }, // Start with opacity 0 and slide in from the left
@@ -26,6 +28,10 @@ const UserMainPage = ({ currentPage }) => {
                 return <ProjectManagement />;
             case "Strategic Road":
                 return <StrategicRoad />;
+            case "Geotagging":
+                return <GeotaggingView />;
+            case "Feedback":
+                return <Feedback />;
             case "Profile":
                 return <MainProfileComponent />;
             default:

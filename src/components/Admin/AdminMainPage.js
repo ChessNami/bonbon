@@ -7,6 +7,7 @@ import AdminMainProfileComponent from "./AdminMainProfileComponent";
 import AdminProMgmt from "./AdminProMgmt";
 import Settings from "./Settings";
 import AdminStrategicRoadmap from "./AdminStrategicRoadmap";
+import Geotagging from "./Geotagging";
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
@@ -19,6 +20,8 @@ const AdminMainPage = ({ currentPage }) => {
                 return <SKOfficials />;
             case "Resident Management":
                 return <ResidentManagement />;
+            case "Geotagging":
+                return <Geotagging />;
             case "Strategic Road Map":
                 return <AdminStrategicRoadmap />;
             case "Project Management":

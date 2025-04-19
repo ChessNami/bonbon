@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../contexts/UserContext";
 import { supabase } from "../../supabaseClient";
-import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser } from "react-icons/fa";
+import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaMapMarkerAlt } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 
 const Header = ({ onLogout, setCurrentPage }) => {
@@ -120,7 +120,8 @@ const Header = ({ onLogout, setCurrentPage }) => {
     const dropdownItems = [
         { icon: <FaUser className="mr-2 text-gray-700" />, label: "Profile", action: () => setCurrentPage("Profile") },
         { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => console.log("Settings Clicked") },
-        { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => console.log("Feedback Clicked") },
+        { icon: <FaMapMarkerAlt className="mr-2 text-gray-700" />, label: "Geotagging", action: () => setCurrentPage("Geotagging") },
+        { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => setCurrentPage("Feedback") },
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
     ];
 
