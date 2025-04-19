@@ -5,7 +5,8 @@ import FullNav from "./FullNav";
 import { useUser } from "../contexts/UserContext";
 import { FaSignOutAlt, FaCog, FaCommentDots } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
-import { supabase } from "../../supabaseClient"; // Ensure Supabase is imported
+import { supabase } from "../../supabaseClient";
+import { fetchUserPhotos } from "../../utils/supabaseUtils";
 
 const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     const { displayName } = useUser();
@@ -27,8 +28,10 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
-                dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-                profileRef.current && !profileRef.current.contains(event.target)
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target) &&
+                profileRef.current &&
+                !profileRef.current.contains(event.target)
             ) {
                 setDropdownOpen(false);
             }
@@ -39,35 +42,20 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     }, []);
 
     useEffect(() => {
-        const fetchUserProfilePic = async () => {
-            const { data, error } = await supabase.auth.getUser();
+        const fetchProfilePic = async () => {
+            const { data: { user }, error } = await supabase.auth.getUser();
 
-            if (error || !data?.user) {
+            if (error || !user) {
                 console.error("Error fetching user:", error?.message || "No user found");
+                setProfilePic(placeholderImg);
                 return;
             }
 
-            const userData = data.user;
-            const profilePicPath = userData.user_metadata?.profilePic?.split("/").slice(-2).join("/");
-
-            if (profilePicPath) {
-                try {
-                    const { data: signedProfilePic, error: profilePicError } = await supabase.storage
-                        .from("user-assets")
-                        .createSignedUrl(profilePicPath, 3600); // 3600 seconds = 1 hour
-
-                    if (profilePicError) {
-                        console.error("Error generating signed URL for profile picture:", profilePicError.message);
-                    } else {
-                        setProfilePic(signedProfilePic.signedUrl);
-                    }
-                } catch (err) {
-                    console.error("Error generating signed URL for profile picture:", err.message);
-                }
-            }
+            const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
+            setProfilePic(profilePicUrl || placeholderImg);
         };
 
-        fetchUserProfilePic();
+        fetchProfilePic();
     }, []);
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
@@ -78,7 +66,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                 {/* Left Side - Logo and Navigation */}
                 <div className="flex items-center">
                     <DropdownNav handleNavClick={setCurrentPage} currentPage={currentPage} />
-                    <button onClick={() => setCurrentPage('Home')} className="ml-4">
+                    <button onClick={() => setCurrentPage("Home")} className="ml-4">
                         <img src={logo} alt="Bonbon Logo" className="w-20 h-auto select-none" draggable="false" />
                     </button>
                     <div className="ml-2">
@@ -113,7 +101,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                         <li
                                             className="px-4 py-2 flex items-center cursor-pointer active:bg-blue-200 hover:bg-blue-100 rounded-md transition"
                                             onClick={() => {
-                                                setCurrentPage('Profile');
+                                                setCurrentPage("Profile");
                                                 setDropdownOpen(false);
                                             }}
                                         >

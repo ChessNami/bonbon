@@ -8,6 +8,7 @@ import AdminProMgmt from "./AdminProMgmt";
 import Settings from "./Settings";
 import AdminStrategicRoadmap from "./AdminStrategicRoadmap";
 import Geotagging from "./Geotagging";
+import UserFeedback from "./UserFeedback";
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
@@ -26,6 +27,8 @@ const AdminMainPage = ({ currentPage }) => {
                 return <AdminStrategicRoadmap />;
             case "Project Management":
                 return <AdminProMgmt />;
+            case "User Feedback":
+                return <UserFeedback />;
             case "Profile":
                 return <AdminMainProfileComponent />;
             case "Settings":

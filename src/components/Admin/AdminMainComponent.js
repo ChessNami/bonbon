@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import AdminHeader from "./AdminHeader";
 import AdminSidebar from "./AdminSidebar";
 import AdminMainPage from "./AdminMainPage";
+import AdminTitles from "./AdminTitles"; // Import the new AdminTitles component
 import Footer from "../Footer"; // Adjust path if needed
 
 const AdminMainComponent = ({ onLogout }) => {
@@ -29,6 +30,9 @@ const AdminMainComponent = ({ onLogout }) => {
             <div className="flex flex-col flex-grow">
                 {/* Header - Fixed */}
                 <AdminHeader onLogout={onLogout} setCurrentPage={setCurrentPage} />
+
+                {/* Title */}
+                <AdminTitles currentPage={currentPage} />
 
                 {/* Scrollable Main Content and Footer Container */}
                 <div className="flex-1 flex flex-col">

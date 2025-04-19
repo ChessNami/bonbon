@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
+import { fetchUserPhotos } from "../../utils/supabaseUtils";
 
 const AdminHeader = ({ onLogout, setCurrentPage }) => {
     const [displayName, setDisplayName] = useState();
@@ -11,8 +12,8 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     const [notifOpen, setNotifOpen] = useState(false);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
-    const notifButtonRef = useRef(null); // Ref for the notification button
-    const notifDropdownRef = useRef(null); // Ref for the notification dropdown
+    const notifButtonRef = useRef(null);
+    const notifDropdownRef = useRef(null);
     const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
 
     useEffect(() => {
@@ -31,31 +32,15 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
 
             if (error || !user) {
                 console.error("Error fetching user:", error?.message || "No user found");
+                setProfilePicture(placeholderImg);
+                setDisplayName("Admin");
                 return;
             }
 
             setDisplayName(user.user_metadata?.display_name || "Admin");
 
-            const userProfilePicPath = user.user_metadata?.profilePic;
-            if (userProfilePicPath) {
-                try {
-                    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-                        .from("user-assets")
-                        .createSignedUrl(userProfilePicPath, 3600);
-
-                    if (signedUrlError) {
-                        console.error("Error generating signed URL for profile picture:", signedUrlError.message);
-                        setProfilePicture(placeholderImg);
-                    } else {
-                        setProfilePicture(signedUrlData.signedUrl);
-                    }
-                } catch (err) {
-                    console.error("Error generating signed URL:", err.message);
-                    setProfilePicture(placeholderImg);
-                }
-            } else {
-                setProfilePicture(placeholderImg);
-            }
+            const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
+            setProfilePicture(profilePicUrl || placeholderImg);
         };
 
         fetchUserData();
@@ -73,7 +58,6 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            // Close profile dropdown if clicked outside
             if (
                 dropdownRef.current &&
                 !dropdownRef.current.contains(event.target) &&
@@ -82,7 +66,6 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
             ) {
                 setDropdownOpen(false);
             }
-            // Close notification dropdown if clicked outside both button and dropdown
             if (
                 notifDropdownRef.current &&
                 !notifDropdownRef.current.contains(event.target) &&
@@ -122,7 +105,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     };
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
-    const toggleNotif = () => setNotifOpen((prev) => !prev); // Toggle notification state
+    const toggleNotif = () => setNotifOpen((prev) => !prev);
 
     const handleDropdownClick = (action) => {
         action();
@@ -198,7 +181,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                     <div
                         className="p-2 cursor-pointer rounded-md hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
                         onClick={toggleNotif}
-                        ref={notifButtonRef} // Ref for the button
+                        ref={notifButtonRef}
                         aria-label="Notifications"
                         tabIndex={0}
                     >
@@ -206,7 +189,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                     </div>
                     {notifOpen && (
                         <div
-                            ref={notifDropdownRef} // Ref for the dropdown
+                            ref={notifDropdownRef}
                             className="absolute right-0 mt-3 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
                             style={{ top: "100%" }}
                         >

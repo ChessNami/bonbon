@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
-import { FaPlus, FaEdit, FaTrash, FaTimes, FaUserFriends } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaTimes } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from '../../supabaseClient';
 import Compressor from 'compressorjs';
@@ -332,294 +332,288 @@ const SKOfficials = () => {
     };
 
     return (
-        <div>
-            <h1 className="text-2xl font-bold bg-[#dee5f8] p-4 flex items-center gap-2">
-                <FaUserFriends className="text-[#172554]" size={30} />
-                SK Officials
-            </h1>
-            <div className="min-h-screen bg-gray-100 p-4">
-                <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-                    <button
-                        onClick={handleCreate}
-                        className="px-3 py-2 sm:px-4 sm:py-2 md:px-6 md:py-3 bg-green-500 text-white rounded hover:bg-green-600 flex items-center shadow-md text-sm sm:text-base"
-                    >
-                        <FaPlus className="mr-2" /> Add SK Official
-                    </button>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full border-collapse border border-gray-300 bg-white rounded-lg shadow-md">
-                        <thead>
-                            <tr className="bg-gray-100">
-                                <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Name</th>
-                                <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Position</th>
-                                <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Official Type</th>
-                                <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-center text-xs sm:text-sm md:text-base">Actions</th>
+        <div className="min-h-screen bg-gray-100 p-4">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+                <button
+                    onClick={handleCreate}
+                    className="px-3 py-2 sm:px-4 sm:py-2 md:px-6 md:py-3 bg-green-500 text-white rounded hover:bg-green-600 flex items-center shadow-md text-sm sm:text-base"
+                >
+                    <FaPlus className="mr-2" /> Add SK Official
+                </button>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse border border-gray-300 bg-white rounded-lg shadow-md">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Name</th>
+                            <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Position</th>
+                            <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Official Type</th>
+                            <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-center text-xs sm:text-sm md:text-base">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {isLoading ? (
+                            <tr>
+                                <td colSpan="4" className="text-center py-4">
+                                    <div className="inline-block">
+                                        <Loader />
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan="4" className="text-center py-4">
-                                        <div className="inline-block">
-                                            <Loader />
+                        ) : officials.length === 0 ? (
+                            <tr>
+                                <td colSpan="4" className="text-center py-4 text-gray-500 text-sm sm:text-base">
+                                    No data available.
+                                </td>
+                            </tr>
+                        ) : (
+                            officials.map((official) => (
+                                <tr key={official.id} className="hover:bg-gray-50">
+                                    <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4">
+                                        <div className="flex items-center gap-2">
+                                            <img
+                                                src={official.signedImageUrl || placeholderImage}
+                                                alt={official.name}
+                                                className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded object-cover mr-2"
+                                                onError={(e) => {
+                                                    console.error(`Failed to load signed image for ${official.name}:`, official.signedImageUrl);
+                                                    e.target.src = placeholderImage;
+                                                }}
+                                            />
+                                            <span className="text-xs sm:text-sm md:text-base">{official.name}</span>
+                                        </div>
+                                    </td>
+                                    <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-xs sm:text-sm md:text-base">{official.position}</td>
+                                    <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-xs sm:text-sm md:text-base">{official.official_type}</td>
+                                    <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-center">
+                                        <div className="flex justify-center space-x-2 flex-wrap gap-2">
+                                            <button
+                                                onClick={() => handleEdit(official)}
+                                                className="px-2 py-1 sm:px-3 sm:py-2 md:px-3 md:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm"
+                                            >
+                                                <FaEdit className="mr-1" /> Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(official)}
+                                                className="px-2 py-1 sm:px-3 sm:py-2 md:px-3 md:py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center text-xs sm:text-sm"
+                                            >
+                                                <FaTrash className="mr-1" /> Delete
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
-                            ) : officials.length === 0 ? (
-                                <tr>
-                                    <td colSpan="4" className="text-center py-4 text-gray-500 text-sm sm:text-base">
-                                        No data available.
-                                    </td>
-                                </tr>
-                            ) : (
-                                officials.map((official) => (
-                                    <tr key={official.id} className="hover:bg-gray-50">
-                                        <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4">
-                                            <div className="flex items-center gap-2">
-                                                <img
-                                                    src={official.signedImageUrl || placeholderImage}
-                                                    alt={official.name}
-                                                    className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded object-cover mr-2"
-                                                    onError={(e) => {
-                                                        console.error(`Failed to load signed image for ${official.name}:`, official.signedImageUrl);
-                                                        e.target.src = placeholderImage;
-                                                    }}
-                                                />
-                                                <span className="text-xs sm:text-sm md:text-base">{official.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-xs sm:text-sm md:text-base">{official.position}</td>
-                                        <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-xs sm:text-sm md:text-base">{official.official_type}</td>
-                                        <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-center">
-                                            <div className="flex justify-center space-x-2 flex-wrap gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(official)}
-                                                    className="px-2 py-1 sm:px-3 sm:py-2 md:px-3 md:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm"
-                                                >
-                                                    <FaEdit className="mr-1" /> Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(official)}
-                                                    className="px-2 py-1 sm:px-3 sm:py-2 md:px-3 md:py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center text-xs sm:text-sm"
-                                                >
-                                                    <FaTrash className="mr-1" /> Delete
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
-                <AnimatePresence>
-                    {isModalOpen && (
+            <AnimatePresence>
+                {isModalOpen && (
+                    <motion.div
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
                         <motion.div
-                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            className="bg-white p-4 rounded-lg shadow-lg w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto"
+                            variants={modalVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
                         >
-                            <motion.div
-                                className="bg-white p-4 rounded-lg shadow-lg w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto"
-                                variants={modalVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10">
-                                    <h2 className="text-base sm:text-lg md:text-xl font-bold">
-                                        {modalMode === "create" && "Add New SK Official"}
-                                        {modalMode === "edit" && "Edit SK Official"}
-                                        {modalMode === "delete" && "Confirm Delete"}
-                                    </h2>
-                                    <button
-                                        onClick={closeModal}
-                                        className="text-gray-500 hover:text-gray-700 transition"
-                                    >
-                                        <FaTimes size={16} />
-                                    </button>
-                                </div>
+                            <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10">
+                                <h2 className="text-base sm:text-lg md:text-xl font-bold">
+                                    {modalMode === "create" && "Add New SK Official"}
+                                    {modalMode === "edit" && "Edit SK Official"}
+                                    {modalMode === "delete" && "Confirm Delete"}
+                                </h2>
+                                <button
+                                    onClick={closeModal}
+                                    className="text-gray-500 hover:text-gray-700 transition"
+                                >
+                                    <FaTimes size={16} />
+                                </button>
+                            </div>
 
-                                {modalMode === "create" && (
-                                    <form onSubmit={handleSubmit} className="space-y-4">
-                                        <div className="grid grid-cols-1 gap-4">
-                                            <div>
-                                                <label className="block text-xs sm:text-sm font-medium mb-1">Name</label>
-                                                <input
-                                                    type="text"
-                                                    name="name"
-                                                    value={formData.name}
-                                                    onChange={handleInputChange}
-                                                    className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
-                                                    required
-                                                />
-                                                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs sm:text-sm font-medium mb-1">Position</label>
-                                                <input
-                                                    type="text"
-                                                    name="position"
-                                                    value={formData.position}
-                                                    onChange={handleInputChange}
-                                                    className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
-                                                    required
-                                                />
-                                                {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs sm:text-sm font-medium mb-1">Official Type</label>
-                                                <input
-                                                    type="text"
-                                                    name="official_type"
-                                                    value={formData.official_type}
-                                                    onChange={handleInputChange}
-                                                    className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
-                                                    required
-                                                />
-                                                {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs sm:text-sm font-medium mb-1">Image (PNG/JPEG)</label>
-                                                <input
-                                                    type="file"
-                                                    accept="image/png, image/jpeg"
-                                                    onChange={handleImageChange}
-                                                    className={`w-full p-2 border rounded ${errors.image ? "border-red-500" : ""} text-xs sm:text-sm`}
-                                                />
-                                                {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
-                                            </div>
+                            {modalMode === "create" && (
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium mb-1">Name</label>
+                                            <input
+                                                type="text"
+                                                name="name"
+                                                value={formData.name}
+                                                onChange={handleInputChange}
+                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                required
+                                            />
+                                            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium mb-1">Position</label>
+                                            <input
+                                                type="text"
+                                                name="position"
+                                                value={formData.position}
+                                                onChange={handleInputChange}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                required
+                                            />
+                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium mb-1">Official Type</label>
+                                            <input
+                                                type="text"
+                                                name="official_type"
+                                                value={formData.official_type}
+                                                onChange={handleInputChange}
+                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                required
+                                            />
+                                            {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium mb-1">Image (PNG/JPEG)</label>
+                                            <input
+                                                type="file"
+                                                accept="image/png, image/jpeg"
+                                                onChange={handleImageChange}
+                                                className={`w-full p-2 border rounded ${errors.image ? "border-red-500" : ""} text-xs sm:text-sm`}
+                                            />
+                                            {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
+                                        </div>
 
-                                            {formData.image_preview && (
-                                                <div className="mt-4">
-                                                    <Cropper
-                                                        ref={cropperRef}
+                                        {formData.image_preview && (
+                                            <div className="mt-4">
+                                                <Cropper
+                                                    ref={cropperRef}
+                                                    src={formData.image_preview}
+                                                    style={{ height: 300, width: "100%" }}
+                                                    aspectRatio={1}
+                                                    guides={true}
+                                                    cropBoxMovable={true}
+                                                    cropBoxResizable={true}
+                                                    zoomable={true}
+                                                    scalable={true}
+                                                    viewMode={1} // Ensures the crop box stays within the image
+                                                    className="w-full"
+                                                />
+                                                {formData.croppedImage && (
+                                                    <img
                                                         src={formData.image_preview}
-                                                        style={{ height: 300, width: "100%" }}
-                                                        aspectRatio={1}
-                                                        guides={true}
-                                                        cropBoxMovable={true}
-                                                        cropBoxResizable={true}
-                                                        zoomable={true}
-                                                        scalable={true}
-                                                        viewMode={1} // Ensures the crop box stays within the image
-                                                        className="w-full"
+                                                        alt="Cropped Preview"
+                                                        className="mt-2 w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 object-cover rounded mx-auto"
                                                     />
-                                                    {formData.croppedImage && (
-                                                        <img
-                                                            src={formData.image_preview}
-                                                            alt="Cropped Preview"
-                                                            className="mt-2 w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 object-cover rounded mx-auto"
-                                                        />
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex justify-end space-x-2 flex-wrap gap-2 mt-4">
-                                            <button
-                                                type="button"
-                                                onClick={closeModal}
-                                                className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
-                                            >
-                                                <FaTimes className="mr-2" /> Cancel
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm md:text-base"
-                                            >
-                                                <FaPlus className={modalMode === "edit" ? "hidden" : "mr-2"} />
-                                                <FaEdit className={modalMode === "edit" ? "mr-2" : "hidden"} /> Save
-                                            </button>
-                                        </div>
-                                    </form>
-                                )}
-
-                                {modalMode === "edit" && (
-                                    <form onSubmit={handleSubmit} className="space-y-4">
-                                        <div className="grid grid-cols-1 gap-4">
-                                            <div>
-                                                <label className="block text-xs sm:text-sm font-medium mb-1">Name</label>
-                                                <input
-                                                    type="text"
-                                                    name="name"
-                                                    value={formData.name}
-                                                    onChange={handleInputChange}
-                                                    className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
-                                                    required
-                                                />
-                                                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                                                )}
                                             </div>
-                                            <div>
-                                                <label className="block text-xs sm:text-sm font-medium mb-1">Position</label>
-                                                <input
-                                                    type="text"
-                                                    name="position"
-                                                    value={formData.position}
-                                                    onChange={handleInputChange}
-                                                    className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
-                                                    required
-                                                />
-                                                {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs sm:text-sm font-medium mb-1">Official Type</label>
-                                                <input
-                                                    type="text"
-                                                    name="official_type"
-                                                    value={formData.official_type}
-                                                    onChange={handleInputChange}
-                                                    className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
-                                                    required
-                                                />
-                                                {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
-                                            </div>
-                                        </div>
+                                        )}
+                                    </div>
 
-                                        <div className="flex justify-end space-x-2 flex-wrap gap-2 mt-4">
-                                            <button
-                                                type="button"
-                                                onClick={closeModal}
-                                                className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
-                                            >
-                                                <FaTimes className="mr-2" /> Cancel
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm md:text-base"
-                                            >
-                                                <FaEdit className="mr-2" /> Save
-                                            </button>
-                                        </div>
-                                    </form>
-                                )}
+                                    <div className="flex justify-end space-x-2 flex-wrap gap-2 mt-4">
+                                        <button
+                                            type="button"
+                                            onClick={closeModal}
+                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
+                                        >
+                                            <FaTimes className="mr-2" /> Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm md:text-base"
+                                        >
+                                            <FaPlus className={modalMode === "edit" ? "hidden" : "mr-2"} />
+                                            <FaEdit className={modalMode === "edit" ? "mr-2" : "hidden"} /> Save
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
 
-                                {modalMode === "delete" && currentOfficial && (
-                                    <div className="space-y-4">
-                                        <p className="text-xs sm:text-sm md:text-base">Are you sure you want to月初 delete {currentOfficial.name}?</p>
-                                        <div className="flex justify-end space-x-2 flex-wrap gap-2">
-                                            <button
-                                                onClick={closeModal}
-                                                className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
-                                            >
-                                                <FaTimes className="mr-2" /> Cancel
-                                            </button>
-                                            <button
-                                                onClick={handleDeleteConfirm}
-                                                className="px-3 py-2 sm:px-4 sm:py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center text-xs sm:text-sm md:text-base"
-                                            >
-                                                <FaTrash className="mr-2" /> Delete
-                                            </button>
+                            {modalMode === "edit" && (
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium mb-1">Name</label>
+                                            <input
+                                                type="text"
+                                                name="name"
+                                                value={formData.name}
+                                                onChange={handleInputChange}
+                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                required
+                                            />
+                                            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium mb-1">Position</label>
+                                            <input
+                                                type="text"
+                                                name="position"
+                                                value={formData.position}
+                                                onChange={handleInputChange}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                required
+                                            />
+                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium mb-1">Official Type</label>
+                                            <input
+                                                type="text"
+                                                name="official_type"
+                                                value={formData.official_type}
+                                                onChange={handleInputChange}
+                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                required
+                                            />
+                                            {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
                                         </div>
                                     </div>
-                                )}
-                            </motion.div>
+
+                                    <div className="flex justify-end space-x-2 flex-wrap gap-2 mt-4">
+                                        <button
+                                            type="button"
+                                            onClick={closeModal}
+                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
+                                        >
+                                            <FaTimes className="mr-2" /> Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm md:text-base"
+                                        >
+                                            <FaEdit className="mr-2" /> Save
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {modalMode === "delete" && currentOfficial && (
+                                <div className="space-y-4">
+                                    <p className="text-xs sm:text-sm md:text-base">Are you sure you want to月初 delete {currentOfficial.name}?</p>
+                                    <div className="flex justify-end space-x-2 flex-wrap gap-2">
+                                        <button
+                                            onClick={closeModal}
+                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
+                                        >
+                                            <FaTimes className="mr-2" /> Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleDeleteConfirm}
+                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center text-xs sm:text-sm md:text-base"
+                                        >
+                                            <FaTrash className="mr-2" /> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

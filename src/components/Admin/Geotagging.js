@@ -191,173 +191,167 @@ const Geotagging = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <h1 className="text-2xl font-bold bg-[#dee5f8] p-4 flex items-center gap-2">
-                <FaMapMarkerAlt className="text-[#172554]" size={30} />
-                Geotagging
-            </h1>
-            <div className="p-4 mx-auto">
-                <div className="flex flex-wrap gap-3 mb-6">
-                    <motion.button
-                        onClick={() => !isAdding && setIsAdding(true)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 ${isAdding ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-                        disabled={isAdding}
-                        whileHover={{ scale: isAdding ? 1 : 1.05 }}
-                        whileTap={{ scale: isAdding ? 1 : 0.95 }}
-                    >
-                        <FaMapMarkerAlt />
-                        Add Establishment Marker
-                    </motion.button>
-                </div>
-                <div className="flex flex-col lg:flex-row gap-6">
+        <div className="p-4 mx-auto">
+            <div className="flex flex-wrap gap-3 mb-6">
+                <motion.button
+                    onClick={() => !isAdding && setIsAdding(true)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 ${isAdding ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+                    disabled={isAdding}
+                    whileHover={{ scale: isAdding ? 1 : 1.05 }}
+                    whileTap={{ scale: isAdding ? 1 : 0.95 }}
+                >
+                    <FaMapMarkerAlt />
+                    Add Establishment Marker
+                </motion.button>
+            </div>
+            <div className="flex flex-col lg:flex-row gap-6">
+                <motion.div
+                    className={`flex flex-col gap-6 ${isAdding ? "w-full lg:w-2/3" : "w-full"}`}
+                    initial={{ width: "100%", opacity: 0.8, scale: 0.95 }}
+                    animate={{ width: isAdding ? "66.67%" : "100%", opacity: 1, scale: 1 }}
+                    exit={{ width: "100%", opacity: 0.8, scale: 0.95 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
                     <motion.div
-                        className={`flex flex-col gap-6 ${isAdding ? "w-full lg:w-2/3" : "w-full"}`}
-                        initial={{ width: "100%", opacity: 0.8, scale: 0.95 }}
-                        animate={{ width: isAdding ? "66.67%" : "100%", opacity: 1, scale: 1 }}
-                        exit={{ width: "100%", opacity: 0.8, scale: 0.95 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg shadow-lg overflow-hidden"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
                     >
-                        <motion.div
-                            className="w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg shadow-lg overflow-hidden"
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ duration: 0.3, delay: 0.1 }}
-                        >
-                            <MapContainer center={centerCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
-                                <LayersControl position="topright">
-                                    <LayersControl.BaseLayer checked name="Street Map">
-                                        <TileLayer
-                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                        />
-                                    </LayersControl.BaseLayer>
-                                    <LayersControl.BaseLayer name="Satellite">
-                                        <TileLayer
-                                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                                            attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                                        />
-                                    </LayersControl.BaseLayer>
-                                    <LayersControl.BaseLayer name="Terrain">
-                                        <TileLayer
-                                            url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                                            attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-                                        />
-                                    </LayersControl.BaseLayer>
-                                    <LayersControl.BaseLayer name="Grayscale">
-                                        <TileLayer
-                                            url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                            attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                        />
-                                    </LayersControl.BaseLayer>
-                                </LayersControl>
-                                {markers.map((marker) => (
-                                    <Marker
-                                        key={marker.id}
-                                        position={marker.coord}
-                                        icon={getCustomIcon(ReactDOMServer.renderToString(getIconByType(marker.type)), marker.name)}
-                                    >
-                                        <Popup>
-                                            <MarkerPopup marker={marker} handleDeleteMarker={handleDeleteMarker} />
-                                        </Popup>
-                                    </Marker>
-                                ))}
-                                {newMarkerCoord && isAdding && (
-                                    <Marker
-                                        position={newMarkerCoord}
-                                        icon={getCustomIcon(ReactDOMServer.renderToString(getIconByType(newType)), newName || "New Marker")}
+                        <MapContainer center={centerCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
+                            <LayersControl position="topright">
+                                <LayersControl.BaseLayer checked name="Street Map">
+                                    <TileLayer
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                     />
-                                )}
-                                <MapClickHandler />
-                            </MapContainer>
-                        </motion.div>
-                        <div className="bg-white p-4 rounded-lg shadow-lg">
+                                </LayersControl.BaseLayer>
+                                <LayersControl.BaseLayer name="Satellite">
+                                    <TileLayer
+                                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                        attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                    />
+                                </LayersControl.BaseLayer>
+                                <LayersControl.BaseLayer name="Terrain">
+                                    <TileLayer
+                                        url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                                        attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+                                    />
+                                </LayersControl.BaseLayer>
+                                <LayersControl.BaseLayer name="Grayscale">
+                                    <TileLayer
+                                        url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
+                                        attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                    />
+                                </LayersControl.BaseLayer>
+                            </LayersControl>
+                            {markers.map((marker) => (
+                                <Marker
+                                    key={marker.id}
+                                    position={marker.coord}
+                                    icon={getCustomIcon(ReactDOMServer.renderToString(getIconByType(marker.type)), marker.name)}
+                                >
+                                    <Popup>
+                                        <MarkerPopup marker={marker} handleDeleteMarker={handleDeleteMarker} />
+                                    </Popup>
+                                </Marker>
+                            ))}
+                            {newMarkerCoord && isAdding && (
+                                <Marker
+                                    position={newMarkerCoord}
+                                    icon={getCustomIcon(ReactDOMServer.renderToString(getIconByType(newType)), newName || "New Marker")}
+                                />
+                            )}
+                            <MapClickHandler />
+                        </MapContainer>
+                    </motion.div>
+                    <div className="bg-white p-4 rounded-lg shadow-lg">
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <FaMapMarkerAlt className="text-blue-600" />
+                            Map Legend
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {establishmentTypes.map((est) => (
+                                <div key={est.type} className="flex items-center gap-2">
+                                    <div className="text-2xl">{React.createElement(getIconByType(est.type).type, { style: { color: est.color } })}</div>
+                                    <div>
+                                        <p className="font-medium">{est.type}</p>
+                                        <p className="text-sm text-gray-600">{est.description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </motion.div>
+                <AnimatePresence>
+                    {isAdding && (
+                        <motion.div
+                            className="w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-lg"
+                            initial={{ x: 100, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 100, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                        >
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <FaMapMarkerAlt className="text-blue-600" />
-                                Map Legend
+                                New Establishment Marker
                             </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                {establishmentTypes.map((est) => (
-                                    <div key={est.type} className="flex items-center gap-2">
-                                        <div className="text-2xl">{React.createElement(getIconByType(est.type).type, { style: { color: est.color } })}</div>
-                                        <div>
-                                            <p className="font-medium">{est.type}</p>
-                                            <p className="text-sm text-gray-600">{est.description}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </motion.div>
-                    <AnimatePresence>
-                        {isAdding && (
-                            <motion.div
-                                className="w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-lg"
-                                initial={{ x: 100, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                exit={{ x: 100, opacity: 0 }}
-                                transition={{ duration: 0.3, ease: "easeInOut" }}
-                            >
-                                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                    <FaMapMarkerAlt className="text-blue-600" />
-                                    New Establishment Marker
-                                </h2>
-                                <form onSubmit={(e) => { e.preventDefault(); handleAddMarker(); }} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                            <FaHeading className="text-gray-500" />
-                                            Establishment Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter establishment name"
-                                            value={newName}
-                                            onChange={(e) => setNewName(e.target.value)}
-                                            className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                            <FaBuilding className="text-gray-500" />
-                                            Establishment Type
-                                        </label>
-                                        <select
-                                            value={newType}
-                                            onChange={(e) => setNewType(e.target.value)}
-                                            className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            {establishmentTypes.map((est) => (
-                                                <option key={est.type} value={est.type}>
-                                                    {est.type}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-wrap gap-3">
-                                        <motion.button
-                                            type="submit"
-                                            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                        >
-                                            <FaSave />
-                                            Save Marker
-                                        </motion.button>
-                                        <motion.button
-                                            type="button"
-                                            onClick={resetForm}
-                                            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all"
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                        >
-                                            <FaBan />
-                                            Cancel
-                                        </motion.button>
-                                    </div>
-                                </form>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                            <form onSubmit={(e) => { e.preventDefault(); handleAddMarker(); }} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <FaHeading className="text-gray-500" />
+                                        Establishment Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter establishment name"
+                                        value={newName}
+                                        onChange={(e) => setNewName(e.target.value)}
+                                        className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <FaBuilding className="text-gray-500" />
+                                        Establishment Type
+                                    </label>
+                                    <select
+                                        value={newType}
+                                        onChange={(e) => setNewType(e.target.value)}
+                                        className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {establishmentTypes.map((est) => (
+                                            <option key={est.type} value={est.type}>
+                                                {est.type}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex flex-wrap gap-3">
+                                    <motion.button
+                                        type="submit"
+                                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <FaSave />
+                                        Save Marker
+                                    </motion.button>
+                                    <motion.button
+                                        type="button"
+                                        onClick={resetForm}
+                                        className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <FaBan />
+                                        Cancel
+                                    </motion.button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

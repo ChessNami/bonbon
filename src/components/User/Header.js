@@ -3,6 +3,7 @@ import { useUser } from "../contexts/UserContext";
 import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaMapMarkerAlt } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
+import { fetchUserPhotos } from "../../utils/supabaseUtils";
 
 const Header = ({ onLogout, setCurrentPage }) => {
     const { displayName } = useUser();
@@ -50,35 +51,20 @@ const Header = ({ onLogout, setCurrentPage }) => {
     }, []);
 
     useEffect(() => {
-        const fetchUserProfilePic = async () => {
-            const { data, error } = await supabase.auth.getUser();
+        const fetchProfilePic = async () => {
+            const { data: { user }, error } = await supabase.auth.getUser();
 
-            if (error || !data?.user) {
+            if (error || !user) {
                 console.error("Error fetching user:", error?.message || "No user found");
+                setProfilePic(placeholderImg);
                 return;
             }
 
-            const userProfilePicPath = data.user.user_metadata?.profilePic; // File path from metadata
-            if (userProfilePicPath) {
-                try {
-                    // Generate a signed URL for the profile picture
-                    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-                        .from("user-assets")
-                        .createSignedUrl(userProfilePicPath, 3600); // 3600 seconds = 1 hour
-
-                    if (signedUrlError) {
-                        console.error("Error generating signed URL for profile picture:", signedUrlError.message);
-                        return;
-                    }
-
-                    setProfilePic(signedUrlData.signedUrl); // Update state with the signed URL
-                } catch (err) {
-                    console.error("Error generating signed URL:", err.message);
-                }
-            }
+            const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
+            setProfilePic(profilePicUrl || placeholderImg);
         };
 
-        fetchUserProfilePic();
+        fetchProfilePic();
     }, []);
 
     const formatDate = (date) => {
@@ -165,8 +151,7 @@ const Header = ({ onLogout, setCurrentPage }) => {
                                 {dropdownItems.map((item, index) => (
                                     <li
                                         key={index}
-                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""
-                                            }`}
+                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition ${item.textColor || ""}`}
                                         onClick={() => handleDropdownClick(item.action)}
                                         tabIndex={0}
                                     >

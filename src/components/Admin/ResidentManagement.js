@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FaUsers, FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBarangaysByMunicipality } from '@aivangogh/ph-address';
@@ -575,10 +575,6 @@ const ResidentManagement = () => {
                 {isLoading && <Loader />}
             </AnimatePresence>
             <div className={isLoading ? 'opacity-0' : 'opacity-100'}>
-                <h1 className="text-xl sm:text-2xl font-bold bg-[#dee5f8] p-4 flex items-center gap-2">
-                    <FaUsers className="text-[#172554]" size={24} />
-                    Resident Management
-                </h1>
                 <div className="min-h-screen p-2 sm:p-4">
                     <div className="flex justify-start items-center mb-4 sm:mb-6 space-x-4">
                         <motion.button

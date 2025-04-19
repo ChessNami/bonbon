@@ -7,6 +7,7 @@ import Compressor from "compressorjs";
 import { FaCamera, FaEye, FaEdit, FaTrash, FaTimes } from "react-icons/fa";
 import { motion } from "framer-motion";
 import Loader from "../../Loader";
+import { fetchUserPhotos } from "../../../utils/supabaseUtils";
 
 const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const [user, setUser] = useState(null);
@@ -20,16 +21,15 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [showCoverDropdown, setShowCoverDropdown] = useState(false);
     const [showModal, setShowModal] = useState(false);
-    const [modalType, setModalType] = useState(false);
+    const [modalType, setModalType] = useState("");
     const [modalImage, setModalImage] = useState("");
     const dropdownRef = useRef(null);
     const coverDropdownRef = useRef(null);
     const coverDropdownButtonRef = useRef(null);
 
-    // Fetch user data and profile status, memoized with useCallback
-    const fetchUserAndStatus = useCallback(async () => {
+    // Fetch user data, role, status, and photos
+    const fetchUserAndData = useCallback(async () => {
         const { data: authData, error: authError } = await supabase.auth.getUser();
-
         if (authError || !authData?.user) {
             console.error("Error fetching user:", authError?.message || "No user found");
             setProfilePicLoading(false);
@@ -47,7 +47,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             .select("role_id")
             .eq("user_id", userData.id)
             .single();
-
         if (roleError || !roleData) {
             console.error("Error fetching user role:", roleError?.message);
             setUserRoleId(null);
@@ -55,87 +54,53 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             setUserRoleId(roleData.role_id);
         }
 
-        // Fetch Resident Profile Status and Rejection Reason
+        // Fetch resident profile status
         const { data: residentData, error: residentError } = await supabase
             .from("residents")
             .select("id")
             .eq("user_id", userData.id)
             .single();
-
         if (residentError || !residentData) {
             console.error("Error fetching resident data:", residentError?.message);
-            setResidentProfileStatus(null);
-            setRejectionReason(null);
         } else {
             const { data: statusData, error: statusError } = await supabase
                 .from("resident_profile_status")
                 .select("status, rejection_reason")
                 .eq("resident_id", residentData.id)
                 .single();
-
             if (statusError || !statusData) {
                 console.error("Error fetching resident profile status:", statusError?.message);
-                setResidentProfileStatus(null);
-                setRejectionReason(null);
             } else {
                 setResidentProfileStatus(statusData.status);
                 setRejectionReason(statusData.rejection_reason);
             }
         }
 
-        const profilePicPath = userData.user_metadata?.profilePic?.split("/").slice(-2).join("/");
-        const coverPhotoPath = userData.user_metadata?.coverPhoto?.split("/").slice(-2).join("/");
+        // Fetch photos using utility
+        const { profilePic: profilePicUrl, coverPhoto: coverPhotoUrl } = await fetchUserPhotos(userData.id);
+        setProfilePic(profilePicUrl || placeholderImg);
+        setCoverPhoto(coverPhotoUrl || coverPhotoPlaceholder);
 
-        try {
-            if (profilePicPath) {
-                const { data: signedProfilePic, error: profilePicError } = await supabase.storage
-                    .from("user-assets")
-                    .createSignedUrl(profilePicPath, 3600);
-
-                if (profilePicError) {
-                    console.error("Error generating signed URL for profile picture:", profilePicError.message);
-                } else {
-                    setProfilePic(signedProfilePic.signedUrl);
-                }
-            }
-
-            if (coverPhotoPath) {
-                const { data: signedCoverPhoto, error: coverPhotoError } = await supabase.storage
-                    .from("user-assets")
-                    .createSignedUrl(coverPhotoPath, 3600);
-
-                if (coverPhotoError) {
-                    console.error("Error generating signed URL for cover photo:", coverPhotoError.message);
-                } else {
-                    setCoverPhoto(signedCoverPhoto.signedUrl);
-                }
-            }
-        } catch (err) {
-            console.error("Error generating signed URLs:", err.message);
-        } finally {
-            setProfilePicLoading(false);
-            setCoverPhotoLoading(false);
-            onLoadingComplete(true);
-        }
+        setProfilePicLoading(false);
+        setCoverPhotoLoading(false);
+        onLoadingComplete(true);
     }, [onLoadingComplete]);
 
+    // Set up real-time subscriptions for profile status and photos
     useEffect(() => {
-        fetchUserAndStatus();
+        fetchUserAndData();
 
-        // Set up real-time subscription
-        const setupSubscription = async () => {
+        // Real-time subscription for resident profile status
+        const setupStatusSubscription = async () => {
             const { data: authData } = await supabase.auth.getUser();
-            if (!authData?.user) return;
+            if (!authData?.user) return null;
 
             const { data: residentData } = await supabase
                 .from("residents")
                 .select("id")
                 .eq("user_id", authData.user.id)
                 .single();
-
-            if (!residentData) return;
-
-            const residentId = residentData.id;
+            if (!residentData) return null;
 
             const channel = supabase
                 .channel("resident_profile_status_changes")
@@ -145,45 +110,82 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         event: "*",
                         schema: "public",
                         table: "resident_profile_status",
-                        filter: `resident_id=eq.${residentId}`,
+                        filter: `resident_id=eq.${residentData.id}`,
                     },
                     (payload) => {
-                        console.log("Resident profile status change received:", payload);
-                        fetchUserAndStatus(); // Refetch status on change
+                        console.log("Resident profile status change:", payload);
+                        setResidentProfileStatus(payload.new.status);
+                        setRejectionReason(payload.new.rejection_reason);
                     }
                 )
                 .subscribe((status, error) => {
                     if (error) {
-                        console.error("Subscription error:", error);
+                        console.error("Status subscription error:", error);
                         Swal.fire({
                             toast: true,
                             position: "top-end",
                             icon: "error",
-                            title: "Failed to subscribe to real-time updates",
+                            title: "Failed to subscribe to status updates",
                             timer: 1500,
                             showConfirmButton: false,
                             scrollbarPadding: false,
                         });
                     }
-                    console.log("Subscription status:", status);
                 });
-
             return channel;
         };
 
-        let channel;
-        setupSubscription().then((ch) => {
-            channel = ch;
-        });
+        // Real-time subscription for user photos
+        const setupPhotoSubscription = async () => {
+            const { data: authData } = await supabase.auth.getUser();
+            if (!authData?.user) return null;
 
-        // Cleanup subscription on unmount
-        return () => {
-            if (channel) {
-                supabase.removeChannel(channel);
-            }
+            const channel = supabase
+                .channel("user_photos_changes")
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: "user_photos",
+                        filter: `user_id=eq.${authData.user.id}`,
+                    },
+                    async (payload) => {
+                        console.log("User photos change:", payload);
+                        const { profilePic: newProfilePic, coverPhoto: newCoverPhoto } = await fetchUserPhotos(authData.user.id);
+                        setProfilePic(newProfilePic || placeholderImg);
+                        setCoverPhoto(newCoverPhoto || coverPhotoPlaceholder);
+                    }
+                )
+                .subscribe((status, error) => {
+                    if (error) {
+                        console.error("Photo subscription error:", error);
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: "error",
+                            title: "Failed to subscribe to photo updates",
+                            timer: 1500,
+                            showConfirmButton: false,
+                            scrollbarPadding: false,
+                        });
+                    }
+                });
+            return channel;
         };
-    }, [fetchUserAndStatus]);
 
+        let statusChannel, photoChannel;
+        setupStatusSubscription().then((ch) => (statusChannel = ch));
+        setupPhotoSubscription().then((ch) => (photoChannel = ch));
+
+        // Cleanup subscriptions
+        return () => {
+            if (statusChannel) supabase.removeChannel(statusChannel);
+            if (photoChannel) supabase.removeChannel(photoChannel);
+        };
+    }, [fetchUserAndData]);
+
+    // Handle click outside for dropdowns
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -198,11 +200,11 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 setShowCoverDropdown(false);
             }
         };
-
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Handle file upload
     const handleFileUpload = async (e, type) => {
         const file = e.target.files[0];
         const { data: userData, error: authError } = await supabase.auth.getUser();
@@ -254,9 +256,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             text: "Please wait while your photo is being uploaded.",
             allowOutsideClick: false,
             scrollbarPadding: false,
-            didOpen: () => {
-                Swal.showLoading();
-            },
+            didOpen: () => Swal.showLoading(),
         });
 
         if (type === "profilePic") setProfilePicLoading(true);
@@ -266,40 +266,67 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             quality: 0.8,
             success: async (compressedFile) => {
                 const fileExt = compressedFile.name.split(".").pop();
-                const fileName = `${userData.user.id}/${type}.${fileExt}`;
+                const fileName = `${userData.user.id}/${crypto.randomUUID()}.${fileExt}`;
+                const columnName = type === "profilePic" ? "profile_pic_path" : "cover_photo_path";
 
                 try {
+                    // Fetch current photo path to delete it
+                    const { data: currentPhotoData, error: fetchError } = await supabase
+                        .from("user_photos")
+                        .select(columnName)
+                        .eq("user_id", userData.user.id)
+                        .single();
+
+                    if (fetchError && fetchError.code !== "PGRST116") {
+                        console.error("Error fetching current photo path:", fetchError);
+                        throw fetchError;
+                    }
+
+                    const currentPhotoPath = currentPhotoData?.[columnName];
+
+                    // Delete the old photo from storage if it exists
+                    if (currentPhotoPath) {
+                        console.log(`Deleting old ${type} from storage: ${currentPhotoPath}`);
+                        const { error: deleteError } = await supabase.storage
+                            .from("user-assets")
+                            .remove([currentPhotoPath]);
+                        if (deleteError) {
+                            console.error("Storage delete error:", deleteError);
+                            throw deleteError;
+                        }
+                        console.log(`Old ${type} deleted successfully from storage`);
+                    }
+
+                    // Upload new photo to storage
+                    console.log(`Uploading ${type} to storage: ${fileName}`);
                     const { error: uploadError } = await supabase.storage
                         .from("user-assets")
                         .upload(fileName, compressedFile, { upsert: true });
-
                     if (uploadError) {
+                        console.error("Storage upload error:", uploadError);
                         throw uploadError;
                     }
+                    console.log(`${type} uploaded successfully to storage`);
 
-                    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-                        .from("user-assets")
-                        .createSignedUrl(fileName, 3600);
-
-                    if (signedUrlError) {
-                        throw signedUrlError;
-                    }
-
-                    const signedUrl = signedUrlData.signedUrl;
-
-                    const { error: updateError } = await supabase.auth.updateUser({
-                        data: { [type]: fileName },
-                    });
-
+                    // Update user_photos table
+                    console.log(`Updating user_photos table: user_id=${userData.user.id}, ${columnName}=${fileName}`);
+                    const { data: upsertData, error: updateError } = await supabase
+                        .from("user_photos")
+                        .upsert(
+                            { user_id: userData.user.id, [columnName]: fileName },
+                            { onConflict: "user_id" }
+                        );
                     if (updateError) {
+                        console.error("Upsert error:", updateError);
                         throw updateError;
                     }
+                    console.log("Upsert successful:", upsertData);
 
-                    if (type === "profilePic") {
-                        setProfilePic(signedUrl);
-                    } else {
-                        setCoverPhoto(signedUrl);
-                    }
+                    // Fetch updated signed URLs
+                    console.log("Fetching updated photos...");
+                    const { profilePic: newProfilePic, coverPhoto: newCoverPhoto } = await fetchUserPhotos(userData.user.id);
+                    setProfilePic(newProfilePic || placeholderImg);
+                    setCoverPhoto(newCoverPhoto || coverPhotoPlaceholder);
 
                     Swal.fire({
                         toast: true,
@@ -312,6 +339,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         scrollbarPadding: false,
                     });
                 } catch (error) {
+                    console.error("Upload process error:", error);
                     Swal.fire({
                         toast: true,
                         position: "top-end",
@@ -328,6 +356,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 }
             },
             error(err) {
+                console.error("Compression error:", err);
                 Swal.fire({
                     toast: true,
                     position: "top-end",
@@ -344,6 +373,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         });
     };
 
+    // Handle photo deletion
     const handleDeletePhoto = async (type) => {
         if (!user) {
             Swal.fire({
@@ -352,42 +382,55 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 text: "User is not authenticated.",
                 timer: 2000,
                 showConfirmButton: false,
+                scrollbarPadding: false,
             });
             return;
         }
 
         const currentPhotoUrl = type === "profilePic" ? profilePic : coverPhoto;
-
-        if (!currentPhotoUrl || currentPhotoUrl === placeholderImg || currentPhotoUrl === coverPhotoPlaceholder) {
+        if (currentPhotoUrl === placeholderImg || currentPhotoUrl === coverPhotoPlaceholder) {
             Swal.fire({
                 icon: "info",
                 title: "No Photo to Delete",
                 text: `There is no ${type === "profilePic" ? "profile" : "cover"} photo to delete.`,
                 timer: 2000,
                 showConfirmButton: false,
+                scrollbarPadding: false,
             });
             return;
         }
 
-        const filePath = currentPhotoUrl.split("/").slice(-2).join("/");
-
         try {
-            const { error: deleteError } = await supabase.storage
-                .from("user-assets")
-                .remove([filePath]);
+            // Fetch current photo path
+            const columnName = type === "profilePic" ? "profile_pic_path" : "cover_photo_path";
+            const { data: currentPhotoData, error: fetchError } = await supabase
+                .from("user_photos")
+                .select(columnName)
+                .eq("user_id", user.id)
+                .single();
 
-            if (deleteError) {
-                throw deleteError;
+            if (fetchError && fetchError.code !== "PGRST116") {
+                throw fetchError;
             }
 
-            const { error: updateError } = await supabase.auth.updateUser({
-                data: { [type]: null },
-            });
+            const currentPhotoPath = currentPhotoData?.[columnName];
 
-            if (updateError) {
-                throw updateError;
+            // Delete from storage if path exists
+            if (currentPhotoPath) {
+                const { error: deleteError } = await supabase.storage
+                    .from("user-assets")
+                    .remove([currentPhotoPath]);
+                if (deleteError) throw deleteError;
             }
 
+            // Update user_photos table
+            const { error: updateError } = await supabase
+                .from("user_photos")
+                .update({ [columnName]: null })
+                .eq("user_id", user.id);
+            if (updateError) throw updateError;
+
+            // Update state
             if (type === "profilePic") setProfilePic(placeholderImg);
             else setCoverPhoto(coverPhotoPlaceholder);
 
@@ -397,6 +440,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 text: `${type === "profilePic" ? "Profile" : "Cover"} photo has been deleted.`,
                 timer: 1500,
                 showConfirmButton: false,
+                scrollbarPadding: false,
             });
         } catch (error) {
             Swal.fire({
@@ -405,16 +449,19 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 text: error.message,
                 timer: 2000,
                 showConfirmButton: false,
+                scrollbarPadding: false,
             });
         }
     };
 
+    // Handle image viewing
     const handleViewImage = (image, type) => {
         setModalImage(image);
         setShowModal(true);
         setModalType(type);
     };
 
+    // Handle tab click
     const handleTabClick = async (tabKey) => {
         if (tabKey === "residentProfiling" && userRoleId !== 1) {
             const result = await Swal.fire({
@@ -436,9 +483,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     allowOutsideClick: false,
                     allowEscapeKey: false,
                     scrollbarPadding: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    },
+                    didOpen: () => Swal.showLoading(),
                 });
                 await new Promise((resolve) => setTimeout(resolve, 1000));
                 Swal.close();
@@ -485,6 +530,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         src={coverPhoto}
                         alt="Cover"
                         className="w-full h-full object-cover cursor-pointer"
+                        onClick={() => handleViewImage(coverPhoto, "cover")}
                     />
                 )}
                 <div className="absolute bottom-4 right-4">
@@ -512,7 +558,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             <button
                                 className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100"
                                 onClick={() => {
-                                    handleViewImage(coverPhoto);
+                                    handleViewImage(coverPhoto, "cover");
                                     setShowCoverDropdown(false);
                                 }}
                             >
@@ -571,8 +617,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             <button
                                 className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100"
                                 onClick={() => {
-                                    handleViewImage(profilePic);
-                                    setShowCoverDropdown(false);
+                                    handleViewImage(profilePic, "profile");
+                                    setShowDropdown(false);
                                 }}
                             >
                                 <FaEye className="mr-2" /> View Profile Picture
@@ -619,10 +665,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             <img
                                 src={modalImage}
                                 alt="Full View"
-                                className={`object-cover mx-auto ${modalType === "profile"
-                                    ? "w-64 h-64 rounded-full"
-                                    : "w-full h-auto max-h-[500px] rounded-lg"
-                                    }`}
+                                className={`object-cover mx-auto ${modalType === "profile" ? "w-64 h-64 rounded-full" : "w-full h-auto max-h-[500px] rounded-lg"}`}
                             />
                         </div>
                     </div>
@@ -635,9 +678,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     <div
                         key={tab.key}
                         onClick={() => handleTabClick(tab.key)}
-                        className={`cursor-pointer px-4 py-3 text-sm font-medium transition-all relative ${activeTab === tab.key
-                            ? "text-blue-700"
-                            : "text-gray-600 hover:text-blue-700"
+                        className={`cursor-pointer px-4 py-3 text-sm font-medium transition-all relative ${activeTab === tab.key ? "text-blue-700" : "text-gray-600 hover:text-blue-700"
                             }`}
                     >
                         {tab.label}
@@ -657,7 +698,16 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             {userRoleId !== 1 && (
                 <div className="py-2 px-4 text-center bg-white sm:text-left shadow-lg rounded">
                     <h3 className="text-lg font-bold">Resident Profile Status</h3>
-                    <p className={`mt-2 ${residentProfileStatus === 1 ? "text-green-600" : residentProfileStatus === 2 ? "text-red-600" : residentProfileStatus === 3 ? "text-yellow-600" : "text-gray-600"}`}>
+                    <p
+                        className={`mt-2 ${residentProfileStatus === 1
+                                ? "text-green-600"
+                                : residentProfileStatus === 2
+                                    ? "text-red-600"
+                                    : residentProfileStatus === 3
+                                        ? "text-yellow-600"
+                                        : "text-gray-600"
+                            }`}
+                    >
                         {getStatusText()}
                     </p>
                     {residentProfileStatus === 2 && rejectionReason && (
