@@ -46,6 +46,16 @@ const AdminProMgmt = () => {
     const imageModalRef = useRef(null);
     const completionModalRef = useRef(null);
 
+    const [filterTitle, setFilterTitle] = useState("");
+    const [filterStatus, setFilterStatus] = useState("");
+    const [filterColor, setFilterColor] = useState("");
+    const [filterCompletionMin, setFilterCompletionMin] = useState("");
+    const [filterCompletionMax, setFilterCompletionMax] = useState("");
+    const [filterDateStart, setFilterDateStart] = useState("");
+    const [filterDateEnd, setFilterDateEnd] = useState("");
+
+
+
     // Number formatting utility
     const formatNumberWithCommas = (number) => {
         if (!number) return "";
@@ -166,6 +176,30 @@ const AdminProMgmt = () => {
 
         fetchProjects();
     }, []);
+
+    const filteredPolygons = useMemo(() => {
+        return polygons.filter((polygon) => {
+            const matchesTitle = polygon.title.toLowerCase().includes(filterTitle.toLowerCase());
+            const matchesStatus = filterStatus ? polygon.update_status === filterStatus : true;
+            const matchesColor = filterColor ? polygon.color === filterColor : true;
+            const matchesCompletion =
+                (filterCompletionMin === "" || (polygon.completion_rate || 0) >= Number(filterCompletionMin)) &&
+                (filterCompletionMax === "" || (polygon.completion_rate || 0) <= Number(filterCompletionMax));
+            const matchesDate =
+                (filterDateStart === "" || polygon.date_monitoring_start >= filterDateStart) &&
+                (filterDateEnd === "" || polygon.date_monitoring_end <= filterDateEnd);
+            return matchesTitle && matchesStatus && matchesColor && matchesCompletion && matchesDate;
+        });
+    }, [
+        polygons,
+        filterTitle,
+        filterStatus,
+        filterColor,
+        filterCompletionMin,
+        filterCompletionMax,
+        filterDateStart,
+        filterDateEnd,
+    ]);
 
     // Close modals on outside click
     useEffect(() => {
@@ -1522,11 +1556,112 @@ const AdminProMgmt = () => {
                                     <FaTimes size={24} />
                                 </motion.button>
                             </div>
+                            {/* Filter Section */}
+                            <div className="p-4 border-b">
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="flex-1 min-w-[200px]">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Search by Title</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter project title"
+                                            value={filterTitle}
+                                            onChange={(e) => setFilterTitle(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-[150px]">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Update Status</label>
+                                        <select
+                                            value={filterStatus}
+                                            onChange={(e) => setFilterStatus(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        >
+                                            <option value="">All Statuses</option>
+                                            <option value="Planned">Planned</option>
+                                            <option value="In Progress">In Progress</option>
+                                            <option value="Completed">Completed</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex-1 min-w-[150px]">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                                        <select
+                                            value={filterColor}
+                                            onChange={(e) => setFilterColor(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        >
+                                            <option value="">All Colors</option>
+                                            <option value="Satisfactory">Satisfactory</option>
+                                            <option value="With Minor Deficiencies">With Minor Deficiencies</option>
+                                            <option value="With Serious Deficiencies">With Serious Deficiencies</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex-1 min-w-[150px]">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Completion Rate (%)</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="number"
+                                                placeholder="Min"
+                                                value={filterCompletionMin}
+                                                onChange={(e) => setFilterCompletionMin(e.target.value)}
+                                                min="0"
+                                                max="100"
+                                                className="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                            />
+                                            <input
+                                                type="number"
+                                                placeholder="Max"
+                                                value={filterCompletionMax}
+                                                onChange={(e) => setFilterCompletionMax(e.target.value)}
+                                                min="0"
+                                                max="100"
+                                                className="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-[200px]">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Monitoring Date Range</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="date"
+                                                value={filterDateStart}
+                                                onChange={(e) => setFilterDateStart(e.target.value)}
+                                                className="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                            />
+                                            <input
+                                                type="date"
+                                                value={filterDateEnd}
+                                                onChange={(e) => setFilterDateEnd(e.target.value)}
+                                                className="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-end">
+                                        <motion.button
+                                            onClick={() => {
+                                                setFilterTitle("");
+                                                setFilterStatus("");
+                                                setFilterColor("");
+                                                setFilterCompletionMin("");
+                                                setFilterCompletionMax("");
+                                                setFilterDateStart("");
+                                                setFilterDateEnd("");
+                                            }}
+                                            className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm"
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            <FaBan />
+                                            Clear Filters
+                                        </motion.button>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Projects List */}
                             <div className="flex-1 overflow-y-auto p-4">
-                                {polygons.length === 0 ? (
-                                    <p className="text-gray-500 text-center">No projects marked yet.</p>
+                                {filteredPolygons.length === 0 ? (
+                                    <p className="text-gray-500 text-center">No projects match the filters.</p>
                                 ) : (
-                                    polygons.map((polygon) => (
+                                    filteredPolygons.map((polygon) => (
                                         <motion.div
                                             key={polygon.id}
                                             className="mb-6 p-4 bg-gray-50 rounded-lg shadow"
@@ -1542,8 +1677,7 @@ const AdminProMgmt = () => {
                                                 <strong>Contractor:</strong> {polygon.contractor}
                                             </p>
                                             <p className="text-sm text-gray-600">
-                                                <strong>Contract Payment:</strong> ₱
-                                                {formatNumberWithCommas(polygon.contract_payment)}
+                                                <strong>Contract Payment:</strong> ₱{formatNumberWithCommas(polygon.contract_payment)}
                                             </p>
                                             <p className="text-sm text-gray-600">
                                                 <strong>Update Status:</strong> {polygon.update_status}
@@ -1628,7 +1762,7 @@ const AdminProMgmt = () => {
                                                         <LayersControl.BaseLayer name="Grayscale">
                                                             <TileLayer
                                                                 url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                                                attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                                attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                                                 maxZoom={20}
                                                             />
                                                         </LayersControl.BaseLayer>
