@@ -115,7 +115,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             setUserRoleId(roleData.role_id);
         }
 
-        // Fetch resident profile status and resident data
+        // Fetch resident profile status and resident data (Updated to include census)
         const { data: residentData, error: residentError } = await supabase
             .from("residents")
             .select(`
@@ -123,6 +123,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 household,
                 spouse,
                 household_composition,
+                census, -- Added census column
                 children_count,
                 number_of_household_members,
                 resident_profile_status (
@@ -177,11 +178,24 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 householdComposition = [];
             }
 
+            let census = {};
+            try {
+                if (residentData.census) {
+                    census = typeof residentData.census === 'string'
+                        ? JSON.parse(residentData.census)
+                        : residentData.census;
+                }
+            } catch (parseError) {
+                console.error(`Error parsing census for user ${userData.id}:`, parseError);
+                census = {};
+            }
+
             setResidentData({
                 id: residentData.id,
                 householdData: household,
                 spouseData: spouse,
                 householdComposition: householdComposition,
+                censusData: census, // Added censusData
                 childrenCount: residentData.children_count || 0,
                 numberOfHouseholdMembers: residentData.number_of_household_members || 0,
             });
@@ -962,12 +976,12 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                 <div className="flex-1 overflow-hidden">
                                     {/* Tabs */}
                                     <div className="border-b bg-gray-100 flex">
-                                        {['Household Head', 'Spouse', 'Household Composition'].map((tab, index) => (
+                                        {['Household Head', 'Spouse', 'Household Composition', 'Census Questions'].map((tab, index) => (
                                             <button
                                                 key={index}
                                                 className={`flex-1 px-4 py-2 text-sm font-medium transition-all ${activeProfileTab === index
-                                                    ? 'text-blue-700 border-b-2 border-blue-700'
-                                                    : 'text-gray-600 hover:text-blue-700'
+                                                        ? 'text-blue-700 border-b-2 border-blue-700'
+                                                        : 'text-gray-600 hover:text-blue-700'
                                                     }`}
                                                 onClick={() => setActiveProfileTab(index)}
                                             >
@@ -1213,6 +1227,35 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                 )}
                                                 {residentData.childrenCount === 0 && residentData.numberOfHouseholdMembers === 0 && (
                                                     <p>No household members or children added.</p>
+                                                )}
+                                            </fieldset>
+                                        )}
+                                        {/* Census Questions Tab */}
+                                        {activeProfileTab === 3 && (
+                                            <fieldset className="border p-4 rounded-lg">
+                                                <legend className="font-semibold">Census Questions</legend>
+                                                {residentData.censusData && Object.keys(residentData.censusData).length > 0 ? (
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                        {[
+                                                            { key: 'ownsHouse', label: 'Owns House' },
+                                                            { key: 'isRenting', label: 'Is Renting' },
+                                                            { key: 'yearsInBarangay', label: 'Years in Barangay' },
+                                                            { key: 'isRegisteredVoter', label: 'Registered Voter' },
+                                                            { key: 'voterPrecinctNo', label: 'Voter Precinct Number' },
+                                                            { key: 'hasOwnComfortRoom', label: 'Own Comfort Room' },
+                                                            { key: 'hasOwnWaterSupply', label: 'Own Water Supply' },
+                                                            { key: 'hasOwnElectricity', label: 'Own Electricity' },
+                                                        ].map(({ key, label }) => (
+                                                            <div key={key}>
+                                                                <label className="font-medium">{label}:</label>
+                                                                <p className="p-2 border rounded capitalize">
+                                                                    {residentData.censusData[key] || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-gray-600">No census data available.</p>
                                                 )}
                                             </fieldset>
                                         )}

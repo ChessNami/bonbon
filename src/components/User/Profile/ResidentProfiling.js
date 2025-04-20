@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import HouseholdForm from './HouseholdForm';
 import SpouseForm from './SpouseForm';
 import HouseholdComposition from './HouseholdComposition';
+import CensusQuestions from './CensusQuestions';
 import Loader from '../../Loader';
 import { supabase } from '../../../supabaseClient';
 import axios from 'axios';
@@ -21,6 +22,7 @@ const ResidentProfiling = () => {
         household: {},
         spouse: null,
         householdComposition: [],
+        census: {},
         childrenCount: 0,
         numberOfhouseholdMembers: 0,
     });
@@ -38,6 +40,7 @@ const ResidentProfiling = () => {
         { key: 'householdForm', label: 'Household Head Form' },
         { key: 'spouseForm', label: 'Spouse Information' },
         { key: 'householdComposition', label: 'Household Composition' },
+        { key: 'censusQuestions', label: 'Census Questions' },
         { key: 'confirmation', label: 'Confirmation' },
     ];
 
@@ -45,6 +48,7 @@ const ResidentProfiling = () => {
         { key: 'householdHead', label: 'Household Head' },
         { key: 'spouse', label: 'Spouse', disabled: !formData.spouse },
         { key: 'householdComposition', label: 'Household Composition' },
+        { key: 'census', label: 'Census Questions' },
     ];
 
     useEffect(() => {
@@ -82,6 +86,7 @@ const ResidentProfiling = () => {
                         householdComposition: Array.isArray(data.household_composition)
                             ? data.household_composition
                             : [],
+                        census: data.census || {},
                         childrenCount: data.children_count || 0,
                         numberOfhouseholdMembers: data.number_of_household_members || 0,
                     });
@@ -91,6 +96,7 @@ const ResidentProfiling = () => {
                             household: {},
                             spouse: null,
                             householdComposition: [],
+                            census: {},
                             childrenCount: 0,
                             numberOfhouseholdMembers: 0,
                         });
@@ -100,6 +106,7 @@ const ResidentProfiling = () => {
                         household: {},
                         spouse: null,
                         householdComposition: [],
+                        census: {},
                         childrenCount: 0,
                         numberOfhouseholdMembers: 0,
                     });
@@ -160,6 +167,18 @@ const ResidentProfiling = () => {
                 return { ...prev, household: data, spouse: { ...prev.spouse, civilStatus: 'Married' } };
             } else if (nextTab === 'householdComposition') {
                 return { ...prev, spouse: data };
+            } else if (nextTab === 'censusQuestions') {
+                return {
+                    ...prev,
+                    householdComposition: Array.isArray(data) ? data : [],
+                    childrenCount: childrenCount !== undefined ? parseInt(childrenCount, 10) || 0 : prev.childrenCount,
+                    numberOfhouseholdMembers:
+                        numberOfhouseholdMembers !== undefined
+                            ? parseInt(numberOfhouseholdMembers, 10) || 0
+                            : prev.numberOfhouseholdMembers,
+                };
+            } else if (nextTab === 'confirmation') {
+                return { ...prev, census: data };
             } else {
                 return {
                     ...prev,
@@ -319,6 +338,43 @@ const ResidentProfiling = () => {
                 }
             }
 
+            const requiredCensusFields = [
+                'ownsHouse',
+                'isRenting',
+                'yearsInBarangay',
+                'isRegisteredVoter',
+                'hasOwnComfortRoom',
+                'hasOwnWaterSupply',
+                'hasOwnElectricity',
+            ];
+            for (let field of requiredCensusFields) {
+                if (!formData.census[field]) {
+                    await loadingSwal.close();
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: `Census form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
+                        timer: 1500,
+                        showConfirmButton: false,
+                    });
+                    return;
+                }
+            }
+
+            if (formData.census.isRegisteredVoter === 'Yes' && !formData.census.voterPrecinctNo) {
+                await loadingSwal.close();
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Census form is incomplete: Voter’s Precinct Number is required',
+                    timer: 1500,
+                    showConfirmButton: false,
+                });
+                return;
+            }
+
             const { data: residentData, error: residentError } = await supabase
                 .from('residents')
                 .upsert(
@@ -327,6 +383,7 @@ const ResidentProfiling = () => {
                         household: formData.household,
                         spouse: formData.spouse,
                         household_composition: formData.householdComposition,
+                        census: formData.census,
                         children_count: parseInt(formData.childrenCount, 10) || 0,
                         number_of_household_members: parseInt(formData.numberOfhouseholdMembers, 10) || 0,
                     },
@@ -431,11 +488,11 @@ const ResidentProfiling = () => {
 
         if (profileStatus === 1) {
             return (
-                <div className="relative flex items-center justify-center min-h-[50vh]">
+                <div className="relative flex items-center justify-center min-h-[50vh] w-full px-4">
                     <div className="absolute inset-0 bg-green-100 opacity-50 rounded-lg"></div>
                     <div className="relative z-10 text-center">
-                        <h2 className="text-4xl font-bold text-green-600">Profiling Approved</h2>
-                        <p className="mt-4 text-lg text-gray-600">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-600">Profiling Approved</h2>
+                        <p className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-gray-600">
                             Your resident profile has been successfully approved.
                         </p>
                     </div>
@@ -445,11 +502,11 @@ const ResidentProfiling = () => {
 
         if (profileStatus === 4) {
             return (
-                <div className="relative flex items-center justify-center min-h-[50vh]">
+                <div className="relative flex items-center justify-center min-h-[50vh] w-full px-4">
                     <div className="absolute inset-0 bg-blue-100 opacity-50 rounded-lg"></div>
                     <div className="relative z-10 text-center">
-                        <h2 className="text-4xl font-bold text-blue-600">Update Request Pending</h2>
-                        <p className="mt-4 text-lg text-gray-600">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-blue-600">Update Request Pending</h2>
+                        <p className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-gray-600">
                             Your request to update your resident profile is pending admin approval.
                         </p>
                     </div>
@@ -488,15 +545,24 @@ const ResidentProfiling = () => {
                         userId={userId}
                     />
                 );
+            case 'censusQuestions':
+                return (
+                    <CensusQuestions
+                        data={formData.census}
+                        onNext={handleNext}
+                        onBack={handleBack}
+                        userId={userId}
+                    />
+                );
             case 'confirmation':
                 return (
-                    <div>
-                        <div className="border-b bg-gray-100 flex mb-4">
+                    <div className="w-full">
+                        <div className="border-b bg-gray-100 flex flex-wrap mb-4">
                             {confirmationTabs.map((tab) => (
                                 <div
                                     key={tab.key}
                                     onClick={() => !tab.disabled && setActiveConfirmationTab(tab.key)}
-                                    className={`cursor-pointer px-4 py-2 text-sm font-medium ${activeConfirmationTab === tab.key
+                                    className={`cursor-pointer px-3 py-2 text-xs sm:text-sm font-medium flex-shrink-0 ${activeConfirmationTab === tab.key
                                             ? 'border-b-2 border-blue-700 text-blue-700'
                                             : 'text-gray-600 hover:text-blue-700'
                                         } ${tab.disabled ? 'pointer-events-none opacity-50' : ''}`}
@@ -508,9 +574,9 @@ const ResidentProfiling = () => {
 
                         <div className="space-y-4">
                             {activeConfirmationTab === 'householdHead' && (
-                                <fieldset className="border p-4 rounded-lg">
-                                    <legend className="font-semibold">Household Head</legend>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                                    <legend className="font-semibold text-sm sm:text-base">Household Head</legend>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                         {[
                                             'firstName',
                                             'middleName',
@@ -539,8 +605,8 @@ const ResidentProfiling = () => {
 
                                             return (
                                                 <div key={key}>
-                                                    <label className="font-medium">{label}:</label>
-                                                    <p className="p-2 border rounded capitalize">
+                                                    <label className="font-medium text-xs sm:text-sm">{label}:</label>
+                                                    <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
                                                         {['region', 'province', 'city', 'barangay'].includes(key)
                                                             ? addressMappings[key][formData.household[key]] || 'N/A'
                                                             : formData.household[key] || 'N/A'}
@@ -553,9 +619,9 @@ const ResidentProfiling = () => {
                             )}
 
                             {activeConfirmationTab === 'spouse' && formData.spouse && (
-                                <fieldset className="border p-4 rounded-lg">
-                                    <legend className="font-semibold">Spouse</legend>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                                    <legend className="font-semibold text-sm sm:text-base">Spouse</legend>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                         {[
                                             'firstName',
                                             'middleName',
@@ -582,8 +648,8 @@ const ResidentProfiling = () => {
 
                                             return (
                                                 <div key={key}>
-                                                    <label className="font-medium">{label}:</label>
-                                                    <p className="p-2 border rounded capitalize">
+                                                    <label className="font-medium text-xs sm:text-sm">{label}:</label>
+                                                    <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
                                                         {['region', 'province', 'city', 'barangay'].includes(key)
                                                             ? addressMappings[key][formData.spouse[key]] || 'N/A'
                                                             : formData.spouse[key] || 'N/A'}
@@ -596,28 +662,28 @@ const ResidentProfiling = () => {
                             )}
 
                             {activeConfirmationTab === 'householdComposition' && (
-                                <fieldset className="border p-4 rounded-lg">
-                                    <legend className="font-semibold">Household Composition</legend>
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                                    <legend className="font-semibold text-sm sm:text-base">Household Composition</legend>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                                         <div>
-                                            <label className="font-medium">Number of Children:</label>
-                                            <p className="p-2 border rounded">{formData.childrenCount}</p>
+                                            <label className="font-medium text-xs sm:text-sm">Number of Children:</label>
+                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm">{formData.childrenCount}</p>
                                         </div>
                                         <div>
-                                            <label className="font-medium">Number of Other Household Members:</label>
-                                            <p className="p-2 border rounded">{formData.numberOfhouseholdMembers}</p>
+                                            <label className="font-medium text-xs sm:text-sm">Number of Other Household Members:</label>
+                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm">{formData.numberOfhouseholdMembers}</p>
                                         </div>
                                     </div>
 
                                     {formData.childrenCount > 0 && (
                                         <div className="border-t pt-4">
-                                            <h3 className="font-semibold text-lg mb-2">Children</h3>
+                                            <h3 className="font-semibold text-base sm:text-lg mb-2">Children</h3>
                                             {formData.householdComposition
                                                 .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
                                                 .map((member, index) => (
-                                                    <div key={`child-${index}`} className="border p-4 rounded-lg mb-4">
-                                                        <h4 className="font-semibold">Child {index + 1}</h4>
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                    <div key={`child-${index}`} className="border p-3 sm:p-4 rounded-lg mb-4">
+                                                        <h4 className="font-semibold text-sm sm:text-base">Child {index + 1}</h4>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                                             {[
                                                                 'firstName',
                                                                 'middleName',
@@ -638,8 +704,10 @@ const ResidentProfiling = () => {
 
                                                                 return (
                                                                     <div key={key}>
-                                                                        <label className="font-medium">{label}:</label>
-                                                                        <p className="p-2 border rounded capitalize">{member[key] || 'N/A'}</p>
+                                                                        <label className="font-medium text-xs sm:text-sm">{label}:</label>
+                                                                        <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
+                                                                            {member[key] || 'N/A'}
+                                                                        </p>
                                                                     </div>
                                                                 );
                                                             })}
@@ -651,13 +719,13 @@ const ResidentProfiling = () => {
 
                                     {formData.numberOfhouseholdMembers > 0 && (
                                         <div className="border-t pt-4">
-                                            <h3 className="font-semibold text-lg mb-2">Other Household Members</h3>
+                                            <h3 className="font-semibold text-base sm:text-lg mb-2">Other Household Members</h3>
                                             {formData.householdComposition
                                                 .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
                                                 .map((member, index) => (
-                                                    <div key={`member-${index}`} className="border p-4 rounded-lg mb-4">
-                                                        <h4 className="font-semibold">Member {index + 1}</h4>
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                    <div key={`member-${index}`} className="border p-3 sm:p-4 rounded-lg mb-4">
+                                                        <h4 className="font-semibold text-sm sm:text-base">Member {index + 1}</h4>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                                             {[
                                                                 'firstName',
                                                                 'middleName',
@@ -678,8 +746,10 @@ const ResidentProfiling = () => {
 
                                                                 return (
                                                                     <div key={key}>
-                                                                        <label className="font-medium">{label}:</label>
-                                                                        <p className="p-2 border rounded capitalize">{member[key] || 'N/A'}</p>
+                                                                        <label className="font-medium text-xs sm:text-sm">{label}:</label>
+                                                                        <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
+                                                                            {member[key] || 'N/A'}
+                                                                        </p>
                                                                     </div>
                                                                 );
                                                             })}
@@ -690,21 +760,46 @@ const ResidentProfiling = () => {
                                     )}
 
                                     {formData.childrenCount === 0 && formData.numberOfhouseholdMembers === 0 && (
-                                        <p>No household members or children added.</p>
+                                        <p className="text-xs sm:text-sm">No household members or children added.</p>
                                     )}
+                                </fieldset>
+                            )}
+
+                            {activeConfirmationTab === 'census' && (
+                                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                                    <legend className="font-semibold text-sm sm:text-base">Census Questions</legend>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                        {[
+                                            { key: 'ownsHouse', label: 'Owns House' },
+                                            { key: 'isRenting', label: 'Is Renting' },
+                                            { key: 'yearsInBarangay', label: 'Years in Barangay Bonbon' },
+                                            { key: 'isRegisteredVoter', label: 'Is Registered Voter' },
+                                            { key: 'voterPrecinctNo', label: 'Voter’s Precinct Number' },
+                                            { key: 'hasOwnComfortRoom', label: 'Has Own Comfort Room (C.R.)' },
+                                            { key: 'hasOwnWaterSupply', label: 'Has Own Water Supply' },
+                                            { key: 'hasOwnElectricity', label: 'Has Own Electricity' },
+                                        ].map(({ key, label }) => (
+                                            <div key={key}>
+                                                <label className="font-medium text-xs sm:text-sm">{label}:</label>
+                                                <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
+                                                    {formData.census[key] || 'N/A'}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </fieldset>
                             )}
                         </div>
 
-                        <div className="flex justify-between mt-4">
+                        <div className="flex flex-col sm:flex-row justify-between mt-4 space-y-3 sm:space-y-0 sm:space-x-3">
                             <button
-                                className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 transform hover:scale-105 active:scale-95"
+                                className="bg-gray-500 text-white px-3 sm:px-4 py-1 sm:py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 transform hover:scale-105 active:scale-95 w-full sm:w-auto text-xs sm:text-sm"
                                 onClick={handleBack}
                             >
                                 Back
                             </button>
                             <button
-                                className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 transform hover:scale-105 active:scale-95"
+                                className="bg-blue-600 text-white px-3 sm:px-4 py-1 sm:py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 transform hover:scale-105 active:scale-95 w-full sm:w-auto text-xs sm:text-sm"
                                 onClick={handleSubmit}
                             >
                                 Submit
@@ -718,15 +813,15 @@ const ResidentProfiling = () => {
     };
 
     return (
-        <div className="flex flex-col lg:flex-row overflow-hidden">
+        <div className="flex flex-col w-full overflow-hidden">
             <div className="w-full relative">
-                <h2 className="text-3xl font-bold">Resident Profiling</h2>
-                <div className="border-b bg-gray-100 flex mt-2">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">Resident Profiling</h2>
+                <div className="border-b bg-gray-100 flex flex-wrap mt-2">
                     {tabs.map((tab) => (
                         <div
                             key={tab.key}
                             onClick={() => (profileStatus !== 1 && profileStatus !== 4) && setActiveTab(tab.key)}
-                            className={`cursor-pointer px-6 py-3 text-sm font-medium ${activeTab === tab.key
+                            className={`cursor-pointer px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium flex-shrink-0 ${activeTab === tab.key
                                     ? 'border-b-2 border-blue-700 text-blue-700'
                                     : 'text-gray-600 hover:text-blue-700'
                                 } ${profileStatus === 1 || profileStatus === 4 ? 'pointer-events-none opacity-50' : ''}`}
@@ -735,7 +830,7 @@ const ResidentProfiling = () => {
                         </div>
                     ))}
                 </div>
-                <div className="p-4">
+                <div className="p-2 sm:p-4">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={activeTab}

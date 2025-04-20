@@ -92,20 +92,21 @@ const ResidentManagement = () => {
             const { data, error } = await supabase
                 .from('residents')
                 .select(`
-                id,
-                user_id,
-                household,
-                spouse,
-                household_composition,
-                children_count,
-                number_of_household_members,
-                resident_profile_status (
                     id,
-                    status,
-                    rejection_reason,
-                    updated_at
-                )
-            `);
+                    user_id,
+                    household,
+                    spouse,
+                    household_composition,
+                    census,
+                    children_count,
+                    number_of_household_members,
+                    resident_profile_status (
+                        id,
+                        status,
+                        rejection_reason,
+                        updated_at
+                    )
+                `);
 
             if (error) {
                 throw new Error('Failed to fetch residents');
@@ -156,6 +157,18 @@ const ResidentManagement = () => {
                     householdComposition = [];
                 }
 
+                let census = {};
+                try {
+                    if (resident.census) {
+                        census = typeof resident.census === 'string'
+                            ? JSON.parse(resident.census)
+                            : resident.census;
+                    }
+                } catch (parseError) {
+                    console.error(`Error parsing census for resident ${resident.id}:`, parseError);
+                    census = {};
+                }
+
                 return {
                     id: resident.id,
                     userId: resident.user_id,
@@ -172,6 +185,7 @@ const ResidentManagement = () => {
                     householdData: household,
                     spouseData: spouse,
                     householdComposition: householdComposition,
+                    censusData: census, // Added censusData
                     childrenCount: resident.children_count || 0,
                     numberOfHouseholdMembers: resident.number_of_household_members || 0,
                 };
@@ -934,7 +948,7 @@ const ResidentManagement = () => {
                                         <div className="flex-1 overflow-hidden">
                                             {/* Tabs */}
                                             <div className="border-b bg-gray-100 flex">
-                                                {['Household Head', 'Spouse', 'Household Composition'].map((tab, index) => (
+                                                {['Household Head', 'Spouse', 'Household Composition', 'Census Questions'].map((tab, index) => (
                                                     <button
                                                         key={index}
                                                         className={`flex-1 px-4 py-2 text-sm font-medium transition-all ${activeProfileTab === index
@@ -1132,6 +1146,35 @@ const ResidentManagement = () => {
                                                         )}
                                                         {selectedResident.childrenCount === 0 && selectedResident.numberOfHouseholdMembers === 0 && (
                                                             <p>No household members or children added.</p>
+                                                        )}
+                                                    </fieldset>
+                                                )}
+                                                {/* Census Questions Tab */}
+                                                {activeProfileTab === 3 && (
+                                                    <fieldset className="border p-4 rounded-lg">
+                                                        <legend className="font-semibold">Census Questions</legend>
+                                                        {selectedResident.censusData && Object.keys(selectedResident.censusData).length > 0 ? (
+                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                                {[
+                                                                    { key: 'ownsHouse', label: 'Owns House' },
+                                                                    { key: 'isRenting', label: 'Is Renting' },
+                                                                    { key: 'yearsInBarangay', label: 'Years in Barangay' },
+                                                                    { key: 'isRegisteredVoter', label: 'Registered Voter' },
+                                                                    { key: 'voterPrecinctNo', label: 'Voter Precinct Number' },
+                                                                    { key: 'hasOwnComfortRoom', label: 'Own Comfort Room' },
+                                                                    { key: 'hasOwnWaterSupply', label: 'Own Water Supply' },
+                                                                    { key: 'hasOwnElectricity', label: 'Own Electricity' },
+                                                                ].map(({ key, label }) => (
+                                                                    <div key={key}>
+                                                                        <label className="font-medium">{label}:</label>
+                                                                        <p className="p-2 border rounded capitalize">
+                                                                            {selectedResident.censusData[key] || 'N/A'}
+                                                                        </p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-600">No census data available.</p>
                                                         )}
                                                     </fieldset>
                                                 )}

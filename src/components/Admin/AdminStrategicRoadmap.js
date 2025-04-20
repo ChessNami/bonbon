@@ -711,7 +711,11 @@ const AdminStrategicRoadmap = () => {
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ duration: 0.3, delay: 0.1 }}
                         >
-                            <MapContainer center={centerCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
+                            <MapContainer
+                                center={centerCoords}
+                                zoom={17} // Increased zoom level for closer focus
+                                style={{ height: "100%", width: "100%" }}
+                            >
                                 <LayersControl position="topright">
                                     <LayersControl.BaseLayer checked name="Street Map">
                                         <TileLayer
@@ -1073,7 +1077,7 @@ const AdminStrategicRoadmap = () => {
                                             <div className="mt-4 h-64 rounded-lg overflow-hidden">
                                                 <MapContainer
                                                     center={getRoadCenter(road.coords)}
-                                                    zoom={16}
+                                                    zoom={15}
                                                     style={{ height: "100%", width: "100%" }}
                                                     scrollWheelZoom={false}
                                                 >

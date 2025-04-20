@@ -1119,7 +1119,7 @@ const AdminProMgmt = () => {
                         >
                             <MapContainer
                                 center={bonbonCoords}
-                                zoom={15}
+                                zoom={17} // Increased zoom level for closer focus
                                 maxZoom={19}
                                 style={{ height: "100%", width: "100%", zIndex: 10 }}
                             >
@@ -1732,7 +1732,7 @@ const AdminProMgmt = () => {
                                             <div className="mt-4 h-64 rounded-lg overflow-hidden relative z-10">
                                                 <MapContainer
                                                     center={getPolygonCenter(polygon.coords)}
-                                                    zoom={16}
+                                                    zoom={17} // Increased zoom level for closer focus
                                                     maxZoom={19}
                                                     style={{ height: "100%", width: "100%", zIndex: 10 }}
                                                     scrollWheelZoom={false}
