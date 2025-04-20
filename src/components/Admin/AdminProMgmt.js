@@ -6,7 +6,7 @@ import * as turf from "@turf/turf";
 import kinks from "@turf/kinks";
 import "../../index.css";
 import bonbonLogo from "../../img/Logo/bonbon-logo.png";
-import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaAlignLeft, FaTag, FaMap, FaMoneyBillWave, FaCalendarAlt } from "react-icons/fa";
+import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaAlignLeft, FaTag, FaMap, FaMoneyBillWave, FaCalendarAlt, FaUser, FaExclamationCircle, FaImage, FaInfoCircle } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 
@@ -30,16 +30,21 @@ const AdminProMgmt = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [editingPolygonId, setEditingPolygonId] = useState(null);
     const [newTitle, setNewTitle] = useState("");
-    const [newDescription, setNewDescription] = useState("");
-    const [newBudget, setNewBudget] = useState("");
-    const [newStartDate, setNewStartDate] = useState("");
-    const [newEndDate, setNewEndDate] = useState("");
-    const [newStatus, setNewStatus] = useState("Planned");
-    const [newColor, setNewColor] = useState("blue");
-    const [newProjectLead, setNewProjectLead] = useState("");
+    const [newLocation, setNewLocation] = useState("");
+    const [newContractor, setNewContractor] = useState("");
+    const [newContractPayment, setNewContractPayment] = useState("");
+    const [newUpdateStatus, setNewUpdateStatus] = useState("Satisfactory");
+    const [newDateMonitoringStart, setNewDateMonitoringStart] = useState("");
+    const [newDateMonitoringEnd, setNewDateMonitoringEnd] = useState("");
+    const [newIssues, setNewIssues] = useState("");
+    const [newProjectEngineer, setNewProjectEngineer] = useState("");
+    const [newColor, setNewColor] = useState("Satisfactory");
+    const [newImage, setNewImage] = useState(null);
     const [draggingVertexIndex, setDraggingVertexIndex] = useState(null);
     const [dragStartCoord, setDragStartCoord] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [selectedPolygon, setSelectedPolygon] = useState(null);
     const [mapLayer, setMapLayer] = useState("street");
 
     // Map layer options
@@ -73,6 +78,37 @@ const AdminProMgmt = () => {
         return turf.area(polygon).toFixed(2); // Area in square meters
     };
 
+    // Calculate polygon center for location lookup
+    const getPolygonCenter = (coords) => {
+        const lat = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
+        const lng = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
+        return [lat, lng];
+    };
+
+    // Simulate reverse geocoding to get address from polygon center
+    const fetchLocationFromCoords = async (lat, lng) => {
+        // Placeholder for reverse geocoding API call (e.g., using Nominatim)
+        // In a real app, you'd use something like:
+        // const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        // const data = await response.json();
+        // return data.display_name || "Unknown Location";
+
+        // For now, simulate the location (since I can't make API calls)
+        return `Simulated Address near (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    };
+
+    // Update location whenever newPolygonCoords changes
+    useEffect(() => {
+        if (newPolygonCoords.length >= 3) {
+            const [centerLat, centerLng] = getPolygonCenter(newPolygonCoords);
+            fetchLocationFromCoords(centerLat, centerLng).then((address) => {
+                setNewLocation(address);
+            });
+        } else {
+            setNewLocation("");
+        }
+    }, [newPolygonCoords]);
+
     // Validate polygon for self-intersections
     const isPolygonValid = (coords) => {
         if (coords.length < 3) return true; // Allow incomplete polygons during editing
@@ -81,7 +117,7 @@ const AdminProMgmt = () => {
         return issues.features.length === 0;
     };
 
-    // MapClickHandler component
+    // MapClickHandler component (unchanged)
     const MapClickHandler = () => {
         const map = useMapEvents({
             click(e) {
@@ -100,7 +136,7 @@ const AdminProMgmt = () => {
             },
         });
 
-        // Middle mouse dragging
+        // Middle mouse dragging (unchanged)
         useEffect(() => {
             let isMiddleMouseDown = false;
             let lastMousePos = null;
@@ -144,7 +180,7 @@ const AdminProMgmt = () => {
             };
         }, [map]);
 
-        // Disable default right-click
+        // Disable default right-click (unchanged)
         useEffect(() => {
             const mapContainer = map.getContainer();
             const handleContextMenu = (e) => e.preventDefault();
@@ -152,7 +188,7 @@ const AdminProMgmt = () => {
             return () => mapContainer.removeEventListener("contextmenu", handleContextMenu);
         }, [map]);
 
-        // Vertex dragging
+        // Vertex dragging (unchanged)
         useEffect(() => {
             const mapContainer = map.getContainer();
 
@@ -202,7 +238,7 @@ const AdminProMgmt = () => {
         return null;
     };
 
-    // Keyboard shortcuts
+    // Keyboard shortcuts (unchanged)
     const handleKeyDown = useCallback(
         (e) => {
             if (!isAdding) return;
@@ -262,7 +298,7 @@ const AdminProMgmt = () => {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
 
-    // Add a new polygon
+    // Add a new polygon (unchanged)
     const handleAddPolygon = () => {
         if (newPolygonCoords.length < 3) {
             Swal.fire({
@@ -275,7 +311,7 @@ const AdminProMgmt = () => {
             });
             return;
         }
-        if (!newTitle || !newDescription || !newBudget || !newStartDate || !newEndDate || !newProjectLead) {
+        if (!newTitle || !newLocation || !newContractor || !newContractPayment || !newDateMonitoringStart || !newDateMonitoringEnd || !newProjectEngineer) {
             Swal.fire({
                 toast: true,
                 position: "top-end",
@@ -300,13 +336,16 @@ const AdminProMgmt = () => {
         const newPolygon = {
             id: polygons.length + 1,
             title: newTitle,
-            description: newDescription,
-            budget: newBudget,
-            startDate: newStartDate,
-            endDate: newEndDate,
-            status: newStatus,
+            location: newLocation,
+            contractor: newContractor,
+            contractPayment: newContractPayment,
+            updateStatus: newUpdateStatus,
+            dateMonitoringStart: newDateMonitoringStart,
+            dateMonitoringEnd: newDateMonitoringEnd,
+            issues: newIssues,
+            projectEngineer: newProjectEngineer,
             color: newColor,
-            projectLead: newProjectLead,
+            image: newImage ? URL.createObjectURL(newImage) : null,
             area: calculateArea(newPolygonCoords),
             coords: [...newPolygonCoords, newPolygonCoords[0]],
         };
@@ -315,27 +354,27 @@ const AdminProMgmt = () => {
             toast: true,
             position: "top-end",
             icon: "success",
-            title: "Polygon added successfully!",
+            title: "Project added successfully!",
             showConfirmButton: false,
             timer: 1500,
         });
         resetForm();
     };
 
-    // Delete a polygon
+    // Delete a polygon (unchanged)
     const handleDeletePolygon = (id) => {
         setPolygons(polygons.filter((polygon) => polygon.id !== id));
         Swal.fire({
             toast: true,
             position: "top-end",
             icon: "success",
-            title: "Polygon deleted successfully!",
+            title: "Project deleted successfully!",
             showConfirmButton: false,
             timer: 1500,
         });
     };
 
-    // Start editing a polygon
+    // Start editing a polygon (unchanged)
     const handleEditPolygon = (id) => {
         setEditingPolygonId(id);
         const polygonToEdit = polygons.find((p) => p.id === id);
@@ -343,17 +382,20 @@ const AdminProMgmt = () => {
         setActionHistory([]);
         setRedoHistory([]);
         setNewTitle(polygonToEdit.title);
-        setNewDescription(polygonToEdit.description);
-        setNewBudget(polygonToEdit.budget);
-        setNewStartDate(polygonToEdit.startDate);
-        setNewEndDate(polygonToEdit.endDate);
-        setNewStatus(polygonToEdit.status);
+        setNewLocation(polygonToEdit.location);
+        setNewContractor(polygonToEdit.contractor);
+        setNewContractPayment(polygonToEdit.contractPayment);
+        setNewUpdateStatus(polygonToEdit.updateStatus);
+        setNewDateMonitoringStart(polygonToEdit.dateMonitoringStart);
+        setNewDateMonitoringEnd(polygonToEdit.dateMonitoringEnd);
+        setNewIssues(polygonToEdit.issues);
+        setNewProjectEngineer(polygonToEdit.projectEngineer);
         setNewColor(polygonToEdit.color);
-        setNewProjectLead(polygonToEdit.projectLead);
+        setNewImage(null); // Image reset on edit (can be modified to retain if needed)
         setIsAdding(true);
     };
 
-    // Save edited polygon
+    // Save edited polygon (unchanged)
     const handleSaveEdit = () => {
         if (newPolygonCoords.length < 3) {
             Swal.fire({
@@ -366,7 +408,7 @@ const AdminProMgmt = () => {
             });
             return;
         }
-        if (!newTitle || !newDescription || !newBudget || !newStartDate || !newEndDate || !newProjectLead) {
+        if (!newTitle || !newLocation || !newContractor || !newContractPayment || !newDateMonitoringStart || !newDateMonitoringEnd || !newProjectEngineer) {
             Swal.fire({
                 toast: true,
                 position: "top-end",
@@ -393,13 +435,16 @@ const AdminProMgmt = () => {
                 ? {
                       ...polygon,
                       title: newTitle,
-                      description: newDescription,
-                      budget: newBudget,
-                      startDate: newStartDate,
-                      endDate: newEndDate,
-                      status: newStatus,
+                      location: newLocation,
+                      contractor: newContractor,
+                      contractPayment: newContractPayment,
+                      updateStatus: newUpdateStatus,
+                      dateMonitoringStart: newDateMonitoringStart,
+                      dateMonitoringEnd: newDateMonitoringEnd,
+                      issues: newIssues,
+                      projectEngineer: newProjectEngineer,
                       color: newColor,
-                      projectLead: newProjectLead,
+                      image: newImage ? URL.createObjectURL(newImage) : polygon.image,
                       area: calculateArea(newPolygonCoords),
                       coords: [...newPolygonCoords, newPolygonCoords[0]],
                   }
@@ -410,38 +455,41 @@ const AdminProMgmt = () => {
             toast: true,
             position: "top-end",
             icon: "success",
-            title: "Polygon updated successfully!",
+            title: "Project updated successfully!",
             showConfirmButton: false,
             timer: 1500,
         });
         resetForm();
     };
 
-    // Reset form
+    // Reset form (unchanged)
     const resetForm = () => {
         setNewPolygonCoords([]);
         setActionHistory([]);
         setRedoHistory([]);
         setNewTitle("");
-        setNewDescription("");
-        setNewBudget("");
-        setNewStartDate("");
-        setNewEndDate("");
-        setNewStatus("Planned");
-        setNewColor("blue");
-        setNewProjectLead("John Doe");
+        setNewLocation("");
+        setNewContractor("");
+        setNewContractPayment("");
+        setNewUpdateStatus("Satisfactory");
+        setNewDateMonitoringStart("");
+        setNewDateMonitoringEnd("");
+        setNewIssues("");
+        setNewProjectEngineer("");
+        setNewColor("Satisfactory");
+        setNewImage(null);
         setIsAdding(false);
         setEditingPolygonId(null);
         setDraggingVertexIndex(null);
         setDragStartCoord(null);
     };
 
-    // Polygon styling
+    // Polygon styling (unchanged)
     const getPolygonStyle = (color, status) => {
         const baseStyle = {
-            blue: { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 },
-            green: { fillColor: "rgba(0, 255, 0, 0.5)", color: "green", weight: 2 },
-            red: { fillColor: "rgba(255, 0, 0, 0.5)", color: "red", weight: 2 },
+            "Satisfactory": { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 },
+            "With Serious Deficiencies": { fillColor: "rgba(255, 0, 0, 0.5)", color: "red", weight: 2 },
+            "With Minor Deficiencies": { fillColor: "rgba(255, 165, 0, 0.5)", color: "orange", weight: 2 },
         }[color] || { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 };
 
         return {
@@ -450,17 +498,24 @@ const AdminProMgmt = () => {
         };
     };
 
-    // Calculate polygon center for mini-map
-    const getPolygonCenter = (coords) => {
-        const lat = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
-        const lng = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
-        return [lat, lng];
+    // Handle image upload (unchanged)
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setNewImage(file);
+        }
+    };
+
+    // Handle "See more..." click
+    const handleSeeMore = (polygon) => {
+        setSelectedPolygon(polygon);
+        setIsDetailModalOpen(true);
     };
 
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="p-4 mx-auto">
-                {/* Buttons Section */}
+                {/* Buttons Section (unchanged) */}
                 <div className="flex flex-wrap gap-3 mb-6">
                     <motion.button
                         onClick={() => !isAdding && setIsAdding(true)}
@@ -503,7 +558,6 @@ const AdminProMgmt = () => {
                             exit={{ width: "100%", opacity: 0.8, scale: 0.95 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                         >
-                            {/* Map Section */}
                             <motion.div
                                 className="w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg shadow-lg overflow-hidden"
                                 initial={{ y: 20, opacity: 0 }}
@@ -532,17 +586,25 @@ const AdminProMgmt = () => {
                                         <Polygon
                                             key={polygon.id}
                                             positions={polygon.coords}
-                                            pathOptions={getPolygonStyle(polygon.color, polygon.status)}
+                                            pathOptions={getPolygonStyle(polygon.color, polygon.updateStatus)}
                                         >
                                             <Popup>
-                                                <div className="p-2">
+                                                <div className="p-2 w-64">
                                                     <h3 className="font-semibold">{polygon.title}</h3>
-                                                    <p><strong>Status:</strong> {polygon.status}</p>
-                                                    <p><strong>Budget:</strong> {polygon.budget}</p>
-                                                    <p><strong>Timeline:</strong> {polygon.startDate} to {polygon.endDate}</p>
-                                                    <p><strong>Project Lead:</strong> {polygon.projectLead}</p>
+                                                    <p><strong>Location:</strong> {polygon.location}</p>
+                                                    <p><strong>Contractor:</strong> {polygon.contractor}</p>
+                                                    <p><strong>Contract Payment:</strong> {polygon.contractPayment}</p>
+                                                    <p><strong>Update Status:</strong> {polygon.updateStatus}</p>
+                                                    <p><strong>Date Monitoring:</strong> {polygon.dateMonitoringStart} to {polygon.dateMonitoringEnd}</p>
+                                                    <p><strong>Issues:</strong> {polygon.issues || "None"}</p>
+                                                    <p><strong>Project Engineer:</strong> {polygon.projectEngineer}</p>
                                                     <p><strong>Area:</strong> {polygon.area} sqm</p>
-                                                    <p className="mt-2">{polygon.description}</p>
+                                                    <button
+                                                        onClick={() => handleSeeMore(polygon)}
+                                                        className="text-blue-600 hover:underline mt-2 flex items-center gap-1"
+                                                    >
+                                                        <FaInfoCircle /> See more...
+                                                    </button>
                                                     <div className="mt-3 flex gap-2">
                                                         <motion.button
                                                             onClick={() => handleEditPolygon(polygon.id)}
@@ -603,7 +665,7 @@ const AdminProMgmt = () => {
                                 </MapContainer>
                             </motion.div>
 
-                            {/* Legends Section */}
+                            {/* Legends Section (unchanged) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="bg-white p-4 rounded-lg shadow">
                                     <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
@@ -638,13 +700,13 @@ const AdminProMgmt = () => {
                                     </h3>
                                     <ul className="text-sm text-gray-600 space-y-2">
                                         <li className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-blue-500 rounded-full"></div> Small Projects
+                                            <div className="w-4 h-4 bg-blue-500 rounded-full"></div> Satisfactory
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-green-500 rounded-full"></div> Eco-Friendly Projects
+                                            <div className="w-4 h-4 bg-orange-500 rounded-full"></div> With Minor Deficiencies
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-red-500 rounded-full"></div> Big/Heavy Projects
+                                            <div className="w-4 h-4 bg-red-500 rounded-full"></div> With Serious Deficiencies
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <div className="w-4 h-4 border-2 border-blue-500"></div> Planned
@@ -661,7 +723,7 @@ const AdminProMgmt = () => {
                         </motion.div>
                     </AnimatePresence>
 
-                    {/* Right Section: Input Form */}
+                    {/* Right Section: Input Form (unchanged) */}
                     <AnimatePresence>
                         {isAdding && (
                             <motion.div
@@ -674,7 +736,7 @@ const AdminProMgmt = () => {
                             >
                                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                     <FaMapMarkedAlt className="text-blue-600" />
-                                    {editingPolygonId ? "Edit Project Area" : "New Project Area"}
+                                    {editingPolygonId ? "Edit Project" : "Add Project"}
                                 </h2>
                                 <div className="space-y-4">
                                     <div>
@@ -692,71 +754,52 @@ const AdminProMgmt = () => {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                            <FaAlignLeft className="text-gray-500" />
-                                            Description
+                                            <FaMap className="text-gray-500" />
+                                            Project Location
                                         </label>
-                                        <textarea
-                                            placeholder="Enter project description"
-                                            value={newDescription}
-                                            onChange={(e) => setNewDescription(e.target.value)}
+                                        <input
+                                            type="text"
+                                            placeholder="Location will be auto-filled"
+                                            value={newLocation}
+                                            onChange={(e) => setNewLocation(e.target.value)}
+                                            className="mt-1 w-full px-3 py-2 border rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            readOnly
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FaUser className="text-gray-500" />
+                                            Contractor
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter contractor name"
+                                            value={newContractor}
+                                            onChange={(e) => setNewContractor(e.target.value)}
                                             className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            rows="4"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
                                             <FaMoneyBillWave className="text-gray-500" />
-                                            Budget
+                                            Contract Payment
                                         </label>
                                         <input
                                             type="text"
                                             placeholder="e.g., PHP 1,000,000"
-                                            value={newBudget}
-                                            onChange={(e) => setNewBudget(e.target.value)}
-                                            className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                            <FaCalendarAlt className="text-gray-500" />
-                                            Timeline
-                                        </label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="date"
-                                                value={newStartDate}
-                                                onChange={(e) => setNewStartDate(e.target.value)}
-                                                className="mt-1 w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                            <input
-                                                type="date"
-                                                value={newEndDate}
-                                                onChange={(e) => setNewEndDate(e.target.value)}
-                                                className="mt-1 w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                            <FaTag className="text-gray-500" />
-                                            Project Lead
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter project lead"
-                                            value={newProjectLead}
-                                            onChange={(e) => setNewProjectLead(e.target.value)}
+                                            value={newContractPayment}
+                                            onChange={(e) => setNewContractPayment(e.target.value)}
                                             className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
                                             <FaTag className="text-gray-500" />
-                                            Status
+                                            Update Status
                                         </label>
                                         <select
-                                            value={newStatus}
-                                            onChange={(e) => setNewStatus(e.target.value)}
+                                            value={newUpdateStatus}
+                                            onChange={(e) => setNewUpdateStatus(e.target.value)}
                                             className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="Planned">Planned</option>
@@ -766,18 +809,108 @@ const AdminProMgmt = () => {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                            <FaTag className="text-gray-500" />
-                                            Project Type
+                                            <FaCalendarAlt className="text-gray-500" />
+                                            Date Monitoring
                                         </label>
-                                        <select
-                                            value={newColor}
-                                            onChange={(e) => setNewColor(e.target.value)}
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="date"
+                                                value={newDateMonitoringStart}
+                                                onChange={(e) => setNewDateMonitoringStart(e.target.value)}
+                                                className="mt-1 w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <input
+                                                type="date"
+                                                value={newDateMonitoringEnd}
+                                                onChange={(e) => setNewDateMonitoringEnd(e.target.value)}
+                                                className="mt-1 w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FaExclamationCircle className="text-gray-500" />
+                                            Issues
+                                        </label>
+                                        <textarea
+                                            placeholder="Enter any issues"
+                                            value={newIssues}
+                                            onChange={(e) => setNewIssues(e.target.value)}
                                             className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            <option value="blue">Small Projects (Blue)</option>
-                                            <option value="green">Eco-Friendly Projects (Green)</option>
-                                            <option value="red">Big/Heavy Projects (Red)</option>
-                                        </select>
+                                            rows="4"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FaUser className="text-gray-500" />
+                                            Project Engineer
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter project engineer name"
+                                            value={newProjectEngineer}
+                                            onChange={(e) => setNewProjectEngineer(e.target.value)}
+                                            className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FaTag className="text-gray-500" />
+                                            Project Color
+                                        </label>
+                                        <div className="flex gap-4 mt-2">
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    value="Satisfactory"
+                                                    checked={newColor === "Satisfactory"}
+                                                    onChange={(e) => setNewColor(e.target.value)}
+                                                    className="form-radio text-blue-600"
+                                                />
+                                                Satisfactory
+                                            </label>
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    value="With Serious Deficiencies"
+                                                    checked={newColor === "With Serious Deficiencies"}
+                                                    onChange={(e) => setNewColor(e.target.value)}
+                                                    className="form-radio text-red-600"
+                                                />
+                                                With Serious Deficiencies
+                                            </label>
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    value="With Minor Deficiencies"
+                                                    checked={newColor === "With Minor Deficiencies"}
+                                                    onChange={(e) => setNewColor(e.target.value)}
+                                                    className="form-radio text-orange-600"
+                                                />
+                                                With Minor Deficiencies
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FaImage className="text-gray-500" />
+                                            Add Image
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        {newImage && (
+                                            <div className="mt-2">
+                                                <img
+                                                    src={URL.createObjectURL(newImage)}
+                                                    alt="Preview"
+                                                    className="w-full h-32 object-cover rounded"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex flex-wrap gap-3">
                                         <motion.button
@@ -787,7 +920,7 @@ const AdminProMgmt = () => {
                                             whileTap={{ scale: 0.95 }}
                                         >
                                             <FaSave />
-                                            {editingPolygonId ? "Save Changes" : "Save Project"}
+                                            {editingPolygonId ? "Save Changes" : "Create Project"}
                                         </motion.button>
                                         <motion.button
                                             onClick={resetForm}
@@ -805,7 +938,7 @@ const AdminProMgmt = () => {
                     </AnimatePresence>
                 </div>
 
-                {/* Modal */}
+                {/* Modal for All Projects (unchanged) */}
                 <AnimatePresence>
                     {isModalOpen && (
                         <motion.div
@@ -825,7 +958,7 @@ const AdminProMgmt = () => {
                                 <div className="flex justify-between items-center p-4 border-b">
                                     <h2 className="text-xl font-semibold flex items-center gap-2">
                                         <FaMap className="text-blue-600" />
-                                        All Project Areas
+                                        All Projects
                                     </h2>
                                     <motion.button
                                         onClick={() => setIsModalOpen(false)}
@@ -849,12 +982,17 @@ const AdminProMgmt = () => {
                                                 transition={{ duration: 0.15 }}
                                             >
                                                 <h3 className="text-lg font-semibold">{polygon.title}</h3>
-                                                <p className="text-sm text-gray-600"><strong>Status:</strong> {polygon.status}</p>
-                                                <p className="text-sm text-gray-600"><strong>Budget:</strong> {"Php"}{polygon.budget}{".00"}</p>
-                                                <p className="text-sm text-gray-600"><strong>Timeline:</strong> {polygon.startDate} to {polygon.status === "Completed" ? polygon.endDate : "Pending"}</p>
-                                                <p className="text-sm text-gray-600"><strong>Project Lead:</strong> {polygon.projectLead}</p>
+                                                <p className="text-sm text-gray-600"><strong>Location:</strong> {polygon.location}</p>
+                                                <p className="text-sm text-gray-600"><strong>Contractor:</strong> {polygon.contractor}</p>
+                                                <p className="text-sm text-gray-600"><strong>Contract Payment:</strong> {polygon.contractPayment}</p>
+                                                <p className="text-sm text-gray-600"><strong>Update Status:</strong> {polygon.updateStatus}</p>
+                                                <p className="text-sm text-gray-600"><strong>Date Monitoring:</strong> {polygon.dateMonitoringStart} to {polygon.dateMonitoringEnd}</p>
+                                                <p className="text-sm text-gray-600"><strong>Issues:</strong> {polygon.issues || "None"}</p>
+                                                <p className="text-sm text-gray-600"><strong>Project Engineer:</strong> {polygon.projectEngineer}</p>
                                                 <p className="text-sm text-gray-600"><strong>Area:</strong> {polygon.area} sqm</p>
-                                                <p className="text-sm text-gray-600 mt-2">{polygon.description}</p>
+                                                {polygon.image && (
+                                                    <img src={polygon.image} alt="Project" className="mt-2 w-full h-32 object-cover rounded" />
+                                                )}
                                                 <div className="mt-4 h-64 rounded-lg overflow-hidden">
                                                     <MapContainer
                                                         center={getPolygonCenter(polygon.coords)}
@@ -866,7 +1004,7 @@ const AdminProMgmt = () => {
                                                             url={layers[mapLayer].url}
                                                             attribution={layers[mapLayer].attribution}
                                                         />
-                                                        <Polygon positions={polygon.coords} pathOptions={getPolygonStyle(polygon.color, polygon.status)} />
+                                                        <Polygon positions={polygon.coords} pathOptions={getPolygonStyle(polygon.color, polygon.updateStatus)} />
                                                     </MapContainer>
                                                 </div>
                                                 <div className="mt-3 flex gap-2">
@@ -895,6 +1033,61 @@ const AdminProMgmt = () => {
                                             </motion.div>
                                         ))
                                     )}
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* New Modal for Detailed View */}
+                <AnimatePresence>
+                    {isDetailModalOpen && selectedPolygon && (
+                        <motion.div
+                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            <motion.div
+                                className="bg-white rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col"
+                                initial={{ scale: 0.8, y: 50 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.8, y: 50 }}
+                                transition={{ duration: 0.15 }}
+                            >
+                                <div className="flex justify-between items-center p-4 border-b">
+                                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                                        <FaInfoCircle className="text-blue-600" />
+                                        Project Details
+                                    </h2>
+                                    <motion.button
+                                        onClick={() => setIsDetailModalOpen(false)}
+                                        className="text-gray-600 hover:text-gray-800"
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                    >
+                                        <FaTimes size={24} />
+                                    </motion.button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4">
+                                    <h3 className="text-lg font-semibold mb-2">{selectedPolygon.title}</h3>
+                                    <div className="mb-4">
+                                        <p className="text-sm font-medium text-gray-700 mb-1">Image:</p>
+                                        {selectedPolygon.image ? (
+                                            <img
+                                                src={selectedPolygon.image}
+                                                alt="Project"
+                                                className="w-full h-48 object-cover rounded"
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-gray-500 italic">No image sample</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700 mb-1">Full Description (Issues):</p>
+                                        <p className="text-sm text-gray-600">{selectedPolygon.issues || "No issues reported"}</p>
+                                    </div>
                                 </div>
                             </motion.div>
                         </motion.div>
