@@ -6,10 +6,11 @@ import "../../index.css";
 import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaAlignLeft, FaTag, FaMap } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
+import { supabase } from "../../supabaseClient";
 
 const AdminStrategicRoadmap = () => {
-    const centerCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []); // Center retained for map initialization
-    const [roads, setRoads] = useState([]); // Empty initial roads state
+    const centerCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);
+    const [roads, setRoads] = useState([]);
     const [newRoadCoords, setNewRoadCoords] = useState([]);
     const [actionHistory, setActionHistory] = useState([]);
     const [redoHistory, setRedoHistory] = useState([]);
@@ -22,23 +23,146 @@ const AdminStrategicRoadmap = () => {
     const [draggingVertexIndex, setDraggingVertexIndex] = useState(null);
     const [dragStartCoord, setDragStartCoord] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const maxDistance = 0.001; // ~100 meters in lat/lng degrees (approximate)
+    const [isAdmin, setIsAdmin] = useState(false);
+    const maxDistance = 0.001; // ~100 meters in lat/lng degrees
+
+    // Check if user is admin
+    useEffect(() => {
+        const checkAdmin = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data, error } = await supabase
+                    .from("user_roles")
+                    .select("role_id")
+                    .eq("user_id", user.id)
+                    .single();
+                if (error) {
+                    console.error("Error checking user_roles:", error);
+                    return;
+                }
+                if (data) {
+                    const { data: roleData, error: roleError } = await supabase
+                        .from("roles")
+                        .select("name")
+                        .eq("id", data.role_id)
+                        .eq("name", "admin")
+                        .single();
+                    if (roleError) {
+                        console.error("Error checking roles:", roleError);
+                        return;
+                    }
+                    setIsAdmin(!!roleData);
+                }
+            }
+        };
+        checkAdmin();
+    }, []);
+
+    // Fetch roads from Supabase and set up real-time subscriptions
+    useEffect(() => {
+        // Initial fetch
+        const fetchRoads = async () => {
+            const { data, error } = await supabase.from("roads").select("*");
+            if (error) {
+                console.error("Error fetching roads:", error);
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "error",
+                    title: "Failed to load roads!",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+            } else {
+                setRoads(data);
+            }
+        };
+        fetchRoads();
+
+        // Real-time subscriptions
+        const subscription = supabase
+            .channel("roads")
+            .on(
+                "postgres_changes",
+                { event: "INSERT", schema: "public", table: "roads" },
+                (payload) => {
+                    setRoads((prev) => [...prev, payload.new]);
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "UPDATE", schema: "public", table: "roads" },
+                (payload) => {
+                    setRoads((prev) =>
+                        prev.map((road) => (road.id === payload.new.id ? payload.new : road))
+                    );
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "DELETE", schema: "public", table: "roads" },
+                (payload) => {
+                    setRoads((prev) => prev.filter((road) => road.id !== payload.old.id));
+                }
+            )
+            .subscribe((status, error) => {
+                if (status === "SUBSCRIBED") {
+                    console.log("Subscribed to roads channel");
+                } else if (error) {
+                    console.error("Subscription error:", error);
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "error",
+                        title: "Failed to subscribe to updates!",
+                        showConfirmButton: false,
+                        timer: 1500,
+                    });
+                }
+            });
+
+        // Cleanup subscription on unmount
+        return () => {
+            supabase.removeChannel(subscription).then(() => {
+                console.log("Unsubscribed from roads channel");
+            });
+        };
+    }, []);
+
+    // Fetch address from Nominatim
+    const fetchAddress = async (lat, lng) => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                {
+                    headers: {
+                        "User-Agent": "StrategicRoadmapApp/1.0 (contact: example@example.com)",
+                    },
+                }
+            );
+            const data = await response.json();
+            return data.display_name || "Address not found";
+        } catch (error) {
+            console.error("Error fetching address:", error);
+            return "Failed to fetch address";
+        }
+    };
 
     const MapClickHandler = () => {
         const map = useMapEvents({
             click(e) {
-                if (isAdding && draggingVertexIndex === null) {
+                if (isAdding && draggingVertexIndex === null && isAdmin) {
                     const clickedCoord = [e.latlng.lat, e.latlng.lng];
-                    const newCoord = clickedCoord; // Placeholder for road-snapping logic
+                    const newCoord = clickedCoord;
                     if (newRoadCoords.length > 0) {
                         const lastCoord = newRoadCoords[newRoadCoords.length - 1];
-                        const distance = L.latLng(lastCoord).distanceTo(L.latLng(newCoord)) / 1000; // in km
-                        if (distance > maxDistance * 200) {
+                        const distance = L.latLng(lastCoord).distanceTo(L.latLng(newCoord)) / 1000;
+                        if (distance > maxDistance * 500) {
                             Swal.fire({
                                 toast: true,
                                 position: "top-end",
                                 icon: "error",
-                                title: `Point too far! Max distance is ~${maxDistance * 200000} meters.`,
+                                title: `Point too far! Max distance is ~${maxDistance * 500000} meters.`,
                                 showConfirmButton: false,
                                 timer: 1500,
                             });
@@ -162,7 +286,7 @@ const AdminStrategicRoadmap = () => {
 
     const handleKeyDown = useCallback(
         (e) => {
-            if (!isAdding) return;
+            if (!isAdding || !isAdmin) return;
 
             if (e.ctrlKey && e.key === "z" && actionHistory.length > 0) {
                 e.preventDefault();
@@ -211,7 +335,7 @@ const AdminStrategicRoadmap = () => {
                 });
             }
         },
-        [actionHistory, redoHistory, isAdding, newRoadCoords, editingRoadId]
+        [actionHistory, redoHistory, isAdding, newRoadCoords, editingRoadId, isAdmin]
     );
 
     useEffect(() => {
@@ -219,7 +343,18 @@ const AdminStrategicRoadmap = () => {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
 
-    const handleAddRoad = () => {
+    const handleAddRoad = async () => {
+        if (!isAdmin) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Only admins can add roads!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+            return;
+        }
         if (newRoadCoords.length < 2) {
             Swal.fire({
                 toast: true,
@@ -231,63 +366,143 @@ const AdminStrategicRoadmap = () => {
             });
             return;
         }
-        if (!newTitle || !newDescription || !newType) {
+        if (!newTitle || !newType) {
             Swal.fire({
                 toast: true,
                 position: "top-end",
                 icon: "error",
-                title: "Please provide a title, description, and type!",
+                title: "Please provide a title and type!",
                 showConfirmButton: false,
                 timer: 1500,
             });
             return;
         }
-        const newRoad = {
-            id: roads.length + 1,
-            title: newTitle,
-            description: newDescription,
-            type: newType,
-            color: newColor,
-            coords: [...newRoadCoords],
-        };
-        setRoads([...roads, newRoad]);
+
         Swal.fire({
-            toast: true,
-            position: "top-end",
-            icon: "success",
-            title: "Road added successfully!",
-            showConfirmButton: false,
-            timer: 1500,
+            title: "Saving Road...",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
         });
-        resetForm();
+
+        try {
+            const startCoord = newRoadCoords[0];
+            const endCoord = newRoadCoords[newRoadCoords.length - 1];
+            const [startAddress, endAddress] = await Promise.all([
+                fetchAddress(startCoord[0], startCoord[1]),
+                fetchAddress(endCoord[0], endCoord[1]),
+            ]);
+            const { data, error } = await supabase
+                .from("roads")
+                .insert({
+                    title: newTitle,
+                    description: newDescription || null,
+                    type: newType,
+                    color: newColor,
+                    coords: newRoadCoords,
+                    start_address: startAddress,
+                    end_address: endAddress,
+                })
+                .select()
+                .single();
+            if (error) throw error;
+            setRoads([...roads, data]);
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: "Road added successfully!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+            resetForm();
+        } catch (error) {
+            console.error("Error adding road:", error);
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Failed to save road!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+        }
     };
 
-    const handleDeleteRoad = (id) => {
-        setRoads(roads.filter((road) => road.id !== id));
-        Swal.fire({
-            toast: true,
-            position: "top-end",
-            icon: "success",
-            title: "Road deleted successfully!",
-            showConfirmButton: false,
-            timer: 1500,
-        });
+    const handleDeleteRoad = async (id) => {
+        if (!isAdmin) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Only admins can delete roads!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+            return;
+        }
+        try {
+            const { error } = await supabase.from("roads").delete().eq("id", id);
+            if (error) throw error;
+            setRoads(roads.filter((road) => road.id !== id));
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: "Road deleted successfully!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+        } catch (error) {
+            console.error("Error deleting road:", error);
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Failed to delete road!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+        }
     };
 
     const handleEditRoad = (id) => {
+        if (!isAdmin) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Only admins can edit roads!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+            return;
+        }
         setEditingRoadId(id);
         const roadToEdit = roads.find((r) => r.id === id);
         setNewRoadCoords(roadToEdit.coords);
         setActionHistory([]);
         setRedoHistory([]);
         setNewTitle(roadToEdit.title);
-        setNewDescription(roadToEdit.description);
+        setNewDescription(roadToEdit.description || "");
         setNewType(roadToEdit.type);
         setNewColor(roadToEdit.color);
         setIsAdding(true);
     };
 
-    const handleSaveEdit = () => {
+    const handleSaveEdit = async () => {
+        if (!isAdmin) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Only admins can edit roads!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+            return;
+        }
         if (newRoadCoords.length < 2) {
             Swal.fire({
                 toast: true,
@@ -299,39 +514,69 @@ const AdminStrategicRoadmap = () => {
             });
             return;
         }
-        if (!newTitle || !newDescription || !newType) {
+        if (!newTitle || !newType) {
             Swal.fire({
                 toast: true,
                 position: "top-end",
                 icon: "error",
-                title: "Please provide a title, description, and type!",
+                title: "Please provide a title and type!",
                 showConfirmButton: false,
                 timer: 1500,
             });
             return;
         }
-        const updatedRoads = roads.map((road) =>
-            road.id === editingRoadId
-                ? {
-                    ...road,
+
+        Swal.fire({
+            title: "Saving Road...",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
+
+        try {
+            const startCoord = newRoadCoords[0];
+            const endCoord = newRoadCoords[newRoadCoords.length - 1];
+            const [startAddress, endAddress] = await Promise.all([
+                fetchAddress(startCoord[0], startCoord[1]),
+                fetchAddress(endCoord[0], endCoord[1]),
+            ]);
+            const { data, error } = await supabase
+                .from("roads")
+                .update({
                     title: newTitle,
-                    description: newDescription,
+                    description: newDescription || null,
                     type: newType,
                     color: newColor,
-                    coords: [...newRoadCoords],
-                }
-                : road
-        );
-        setRoads(updatedRoads);
-        Swal.fire({
-            toast: true,
-            position: "top-end",
-            icon: "success",
-            title: "Road updated successfully!",
-            showConfirmButton: false,
-            timer: 1500,
-        });
-        resetForm();
+                    coords: newRoadCoords,
+                    start_address: startAddress,
+                    end_address: endAddress,
+                })
+                .eq("id", editingRoadId)
+                .select()
+                .single();
+            if (error) throw error;
+            setRoads(roads.map((road) => (road.id === editingRoadId ? data : road)));
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: "Road updated successfully!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+            resetForm();
+        } catch (error) {
+            console.error("Error updating road:", error);
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Failed to update road!",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+        }
     };
 
     const resetForm = () => {
@@ -365,15 +610,14 @@ const AdminStrategicRoadmap = () => {
 
     return (
         <div className="p-4 mx-auto">
-            {/* Buttons Section */}
             <div className="flex flex-wrap gap-3 mb-6">
                 <motion.button
-                    onClick={() => !isAdding && setIsAdding(true)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 ${isAdding ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                    onClick={() => !isAdding && isAdmin && setIsAdding(true)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 ${isAdding || !isAdmin ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
                         }`}
-                    disabled={isAdding}
-                    whileHover={{ scale: isAdding ? 1 : 1.05 }}
-                    whileTap={{ scale: isAdding ? 1 : 0.95 }}
+                    disabled={isAdding || !isAdmin}
+                    whileHover={{ scale: isAdding || !isAdmin ? 1 : 1.05 }}
+                    whileTap={{ scale: isAdding || !isAdmin ? 1 : 0.95 }}
                 >
                     <FaMapMarkedAlt />
                     Create Road Marking
@@ -389,9 +633,7 @@ const AdminStrategicRoadmap = () => {
                 </motion.button>
             </div>
 
-            {/* Main Content Section */}
             <div className="flex flex-col lg:flex-row gap-6">
-                {/* Left Section: Map and Legends */}
                 <AnimatePresence>
                     <motion.div
                         key="map-section"
@@ -401,7 +643,6 @@ const AdminStrategicRoadmap = () => {
                         exit={{ width: "100%", opacity: 0.8, scale: 0.95 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
-                        {/* Map Section */}
                         <motion.div
                             className="w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg shadow-lg overflow-hidden"
                             initial={{ y: 20, opacity: 0 }}
@@ -443,27 +684,29 @@ const AdminStrategicRoadmap = () => {
                                                 <p>
                                                     <strong>Status:</strong> {road.type}
                                                 </p>
-                                                <p className="mt-2">{road.description}</p>
-                                                <div className="mt-3 flex gap-2">
-                                                    <motion.button
-                                                        onClick={() => handleEditRoad(road.id)}
-                                                        className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                    >
-                                                        <FaHeading />
-                                                        Edit
-                                                    </motion.button>
-                                                    <motion.button
-                                                        onClick={() => handleDeleteRoad(road.id)}
-                                                        className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                    >
-                                                        <FaTrash />
-                                                        Delete
-                                                    </motion.button>
-                                                </div>
+                                                <p className="mt-2">{road.description || "No description provided"}</p>
+                                                {isAdmin && (
+                                                    <div className="mt-3 flex gap-2">
+                                                        <motion.button
+                                                            onClick={() => handleEditRoad(road.id)}
+                                                            className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                        >
+                                                            <FaHeading />
+                                                            Edit
+                                                        </motion.button>
+                                                        <motion.button
+                                                            onClick={() => handleDeleteRoad(road.id)}
+                                                            className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                        >
+                                                            <FaTrash />
+                                                            Delete
+                                                        </motion.button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </Popup>
                                     </Polyline>
@@ -490,7 +733,7 @@ const AdminStrategicRoadmap = () => {
                                             }}
                                             eventHandlers={{
                                                 mousedown: (e) => {
-                                                    if (e.originalEvent.button === 2) {
+                                                    if (e.originalEvent.button === 2 && isAdmin) {
                                                         L.DomEvent.preventDefault(e);
                                                         setDraggingVertexIndex(index);
                                                         setDragStartCoord(coord);
@@ -503,7 +746,6 @@ const AdminStrategicRoadmap = () => {
                             </MapContainer>
                         </motion.div>
 
-                        {/* Legends Section */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-white p-4 rounded-lg shadow">
                                 <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
@@ -552,9 +794,8 @@ const AdminStrategicRoadmap = () => {
                     </motion.div>
                 </AnimatePresence>
 
-                {/* Right Section: Input Form */}
                 <AnimatePresence>
-                    {isAdding && (
+                    {isAdding && isAdmin && (
                         <motion.div
                             key="form-section"
                             className="w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-lg"
@@ -567,83 +808,93 @@ const AdminStrategicRoadmap = () => {
                                 <FaMapMarkedAlt className="text-blue-600" />
                                 {editingRoadId ? "Edit Road Marking" : "New Road Marking"}
                             </h2>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                        <FaHeading className="text-gray-500" />
-                                        Road Title
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter road title"
-                                        value={newTitle}
-                                        onChange={(e) => setNewTitle(e.target.value)}
-                                        className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                            <form
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        editingRoadId ? handleSaveEdit() : handleAddRoad();
+                                    }
+                                }}
+                            >
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FaHeading className="text-gray-500" />
+                                            Road Title
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter road title"
+                                            value={newTitle}
+                                            onChange={(e) => setNewTitle(e.target.value)}
+                                            className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FaAlignLeft className="text-gray-500" />
+                                            Description
+                                        </label>
+                                        <textarea
+                                            placeholder="Enter road description (optional)"
+                                            value={newDescription}
+                                            onChange={(e) => setNewDescription(e.target.value)}
+                                            className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            rows="4"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FaTag className="text-gray-500" />
+                                            Road Status
+                                        </label>
+                                        <select
+                                            value={newType}
+                                            onChange={(e) => {
+                                                setNewType(e.target.value);
+                                                const colors = {
+                                                    Concrete: "gray",
+                                                    Improvement: "yellow",
+                                                    Widening: "blue",
+                                                };
+                                                setNewColor(colors[e.target.value] || "blue");
+                                            }}
+                                            className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="Concrete">Concrete (Gray)</option>
+                                            <option value="Improvement">Improvement (Yellow)</option>
+                                            <option value="Widening">Widening (Blue)</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3">
+                                        <motion.button
+                                            type="button"
+                                            onClick={editingRoadId ? handleSaveEdit : handleAddRoad}
+                                            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            <FaSave />
+                                            {editingRoadId ? "Save Changes" : "Save Road"}
+                                        </motion.button>
+                                        <motion.button
+                                            type="button"
+                                            onClick={resetForm}
+                                            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all"
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            <FaBan />
+                                            Cancel
+                                        </motion.button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                        <FaAlignLeft className="text-gray-500" />
-                                        Description
-                                    </label>
-                                    <textarea
-                                        placeholder="Enter road description"
-                                        value={newDescription}
-                                        onChange={(e) => setNewDescription(e.target.value)}
-                                        className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        rows园藝 rows="4"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                        <FaTag className="text-gray-500" />
-                                        Road Status
-                                    </label>
-                                    <select
-                                        value={newType}
-                                        onChange={(e) => {
-                                            setNewType(e.target.value);
-                                            const colors = {
-                                                Concrete: "gray",
-                                                Improvement: "yellow",
-                                                Widening: "blue",
-                                            };
-                                            setNewColor(colors[e.target.value] || "blue");
-                                        }}
-                                        className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="Concrete">Concrete (Gray)</option>
-                                        <option value="Improvement">Improvement (Yellow)</option>
-                                        <option value="Widening">Widening (Blue)</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-wrap gap-3">
-                                    <motion.button
-                                        onClick={editingRoadId ? handleSaveEdit : handleAddRoad}
-                                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <FaSave />
-                                        {editingRoadId ? "Save Changes" : "Save Road"}
-                                    </motion.button>
-                                    <motion.button
-                                        onClick={resetForm}
-                                        className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <FaBan />
-                                        Cancel
-                                    </motion.button>
-                                </div>
-                            </div>
+                            </form>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
 
-            {/* Modal */}
             <AnimatePresence>
                 {isModalOpen && (
                     <motion.div
@@ -690,7 +941,15 @@ const AdminStrategicRoadmap = () => {
                                             <p className="text-sm text-gray-600">
                                                 <strong>Status:</strong> {road.type}
                                             </p>
-                                            <p className="text-sm text-gray-600 mt-2">{road.description}</p>
+                                            <p className="text-sm text-gray-600 mt-2">
+                                                <strong>Description:</strong> {road.description || "No description provided"}
+                                            </p>
+                                            <p className="text-sm text-gray-600 mt-2">
+                                                <strong>Start Address:</strong> {road.start_address || "Fetching address..."}
+                                            </p>
+                                            <p className="text-sm text-gray-600 mt-2">
+                                                <strong>End Address:</strong> {road.end_address || "Fetching address..."}
+                                            </p>
                                             <div className="mt-4 h-64 rounded-lg overflow-hidden">
                                                 <MapContainer
                                                     center={getRoadCenter(road.coords)}
@@ -727,29 +986,31 @@ const AdminStrategicRoadmap = () => {
                                                     <Polyline positions={road.coords} pathOptions={getRoadStyle(road.color)} />
                                                 </MapContainer>
                                             </div>
-                                            <div className="mt-3 flex gap-2">
-                                                <motion.button
-                                                    onClick={() => {
-                                                        handleEditRoad(road.id);
-                                                        setIsModalOpen(false);
-                                                    }}
-                                                    className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaHeading />
-                                                    Edit
-                                                </motion.button>
-                                                <motion.button
-                                                    onClick={() => handleDeleteRoad(road.id)}
-                                                    className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaTrash />
-                                                    Delete
-                                                </motion.button>
-                                            </div>
+                                            {isAdmin && (
+                                                <div className="mt-3 flex gap-2">
+                                                    <motion.button
+                                                        onClick={() => {
+                                                            handleEditRoad(road.id);
+                                                            setIsModalOpen(false);
+                                                        }}
+                                                        className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                    >
+                                                        <FaHeading />
+                                                        Edit
+                                                    </motion.button>
+                                                    <motion.button
+                                                        onClick={() => handleDeleteRoad(road.id)}
+                                                        className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                    >
+                                                        <FaTrash />
+                                                        Delete
+                                                    </motion.button>
+                                                </div>
+                                            )}
                                         </motion.div>
                                     ))
                                 )}

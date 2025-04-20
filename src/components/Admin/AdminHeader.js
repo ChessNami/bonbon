@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "../../supabaseClient";
-import { FaCalendarAlt, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/fa";
+import { FaCalendarAlt, FaSignOutAlt, FaSun, FaMoon } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 
@@ -9,11 +9,8 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     const [profilePicture, setProfilePicture] = useState(placeholderImg);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [notifOpen, setNotifOpen] = useState(false);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
-    const notifButtonRef = useRef(null);
-    const notifDropdownRef = useRef(null);
     const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
 
     useEffect(() => {
@@ -76,14 +73,6 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
             ) {
                 setDropdownOpen(false);
             }
-            if (
-                notifDropdownRef.current &&
-                !notifDropdownRef.current.contains(event.target) &&
-                notifButtonRef.current &&
-                !notifButtonRef.current.contains(event.target)
-            ) {
-                setNotifOpen(false);
-            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -115,7 +104,6 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     };
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
-    const toggleNotif = () => setNotifOpen((prev) => !prev);
 
     const handleDropdownClick = (action) => {
         action();
@@ -124,12 +112,6 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
 
     const dropdownItems = [
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
-    ];
-
-    const notifications = [
-        "New order received",
-        "System update available",
-        "Reminder: Inventory check due",
     ];
 
     return (
@@ -183,30 +165,6 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                                         tabIndex={0}
                                     >
                                         {item.icon} {item.label}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                    <div
-                        className="p-2 cursor-pointer rounded-md hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
-                        onClick={toggleNotif}
-                        ref={notifButtonRef}
-                        aria-label="Notifications"
-                        tabIndex={0}
-                    >
-                        <FaBell className="text-white" size={25} />
-                    </div>
-                    {notifOpen && (
-                        <div
-                            ref={notifDropdownRef}
-                            className="absolute right-0 mt-3 w-64 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
-                            style={{ top: "100%" }}
-                        >
-                            <ul className="p-2 space-y-2">
-                                {notifications.map((notif, index) => (
-                                    <li key={index} className="px-4 py-2 hover:bg-gray-100 cursor-pointer rounded-md transition">
-                                        {notif}
                                     </li>
                                 ))}
                             </ul>
