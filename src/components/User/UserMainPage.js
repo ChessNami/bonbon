@@ -4,10 +4,10 @@ import Home from "./Home";
 import Transparency from "./Transparency";
 import Demographics from "./Demographics";
 import ProjectManagement from "./ProjectManagement";
-import StrategicRoad from "./StrategicRoad";
 import MainProfileComponent from "../User/Profile/MainProfileComponent";
 import GeotaggingView from "./GeotaggingView";
 import Feedback from "./Feedback";
+import StrategicRoadMapView from "./StrategicRoadMapView";
 
 const pageVariants = {
     initial: { opacity: 0, x: -25 }, // Start with opacity 0 and slide in from the left
@@ -27,7 +27,7 @@ const UserMainPage = ({ currentPage }) => {
             case "Project Management":
                 return <ProjectManagement />;
             case "Strategic Road":
-                return <StrategicRoad />;
+                return <StrategicRoadMapView />;
             case "Geotagging":
                 return <GeotaggingView />;
             case "Feedback":

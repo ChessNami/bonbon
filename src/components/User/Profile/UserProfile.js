@@ -4,10 +4,11 @@ import Swal from "sweetalert2";
 import placeholderImg from "../../../img/Placeholder/placeholder.png";
 import coverPhotoPlaceholder from "../../../img/Placeholder/coverphoto.png";
 import Compressor from "compressorjs";
-import { FaCamera, FaEye, FaEdit, FaTrash, FaTimes } from "react-icons/fa";
-import { motion } from "framer-motion";
+import { FaCamera, FaEye, FaEdit, FaTrash, FaTimes, FaInfoCircle, FaSyncAlt } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 import Loader from "../../Loader";
-import { fetchUserPhotos } from "../../../utils/supabaseUtils";
+import { fetchUserPhotos, subscribeToUserPhotos } from "../../../utils/supabaseUtils";
+import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBarangaysByMunicipality } from '@aivangogh/ph-address';
 
 const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const [user, setUser] = useState(null);
@@ -23,11 +24,70 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalType, setModalType] = useState("");
     const [modalImage, setModalImage] = useState("");
+    const [showProfileModal, setShowProfileModal] = useState(false);
+    const [residentData, setResidentData] = useState(null);
+    const [addressMappings, setAddressMappings] = useState({
+        region: {},
+        province: {},
+        city: {},
+        barangay: {},
+    });
     const dropdownRef = useRef(null);
     const coverDropdownRef = useRef(null);
     const coverDropdownButtonRef = useRef(null);
+    const profileModalRef = useRef(null);
 
-    // Fetch user data, role, status, and photos
+    // Initialize address mappings
+    useEffect(() => {
+        const fetchAddressMappings = () => {
+            try {
+                const regions = getAllRegions();
+                const regionMap = regions.reduce((map, region) => {
+                    map[region.psgcCode] = region.name;
+                    return map;
+                }, {});
+
+                const provinces = regions.flatMap((region) => getProvincesByRegion(region.psgcCode));
+                const provinceMap = provinces.reduce((map, province) => {
+                    map[province.psgcCode] = province.name;
+                    return map;
+                }, {});
+
+                const cities = provinces.flatMap((province) => getMunicipalitiesByProvince(province.psgcCode));
+                const cityMap = cities.reduce((map, city) => {
+                    map[city.psgcCode] = city.name;
+                    return map;
+                }, {});
+
+                const barangays = cities.flatMap((city) => getBarangaysByMunicipality(city.psgcCode));
+                const barangayMap = barangays.reduce((map, barangay) => {
+                    map[barangay.psgcCode] = barangay.name;
+                    return map;
+                }, {});
+
+                setAddressMappings({
+                    region: regionMap,
+                    province: provinceMap,
+                    city: cityMap,
+                    barangay: barangayMap,
+                });
+            } catch (error) {
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "error",
+                    title: "Failed to load address mappings",
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                });
+            }
+        };
+
+        fetchAddressMappings();
+    }, []);
+
+    // Fetch user data, role, status, photos, and resident data
     const fetchUserAndData = useCallback(async () => {
         const { data: authData, error: authError } = await supabase.auth.getUser();
         if (authError || !authData?.user) {
@@ -54,26 +114,76 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             setUserRoleId(roleData.role_id);
         }
 
-        // Fetch resident profile status
+        // Fetch resident profile status and resident data
         const { data: residentData, error: residentError } = await supabase
             .from("residents")
-            .select("id")
+            .select(`
+                id,
+                household,
+                spouse,
+                household_composition,
+                children_count,
+                number_of_household_members,
+                resident_profile_status (
+                    status,
+                    rejection_reason
+                )
+            `)
             .eq("user_id", userData.id)
             .single();
         if (residentError || !residentData) {
             console.error("Error fetching resident data:", residentError?.message);
         } else {
-            const { data: statusData, error: statusError } = await supabase
-                .from("resident_profile_status")
-                .select("status, rejection_reason")
-                .eq("resident_id", residentData.id)
-                .single();
-            if (statusError || !statusData) {
-                console.error("Error fetching resident profile status:", statusError?.message);
-            } else {
-                setResidentProfileStatus(statusData.status);
-                setRejectionReason(statusData.rejection_reason);
+            const statusData = residentData.resident_profile_status;
+            setResidentProfileStatus(statusData?.status);
+            setRejectionReason(statusData?.rejection_reason);
+
+            // Parse resident data
+            let household;
+            try {
+                household = typeof residentData.household === 'string'
+                    ? JSON.parse(residentData.household)
+                    : residentData.household;
+            } catch (parseError) {
+                console.error(`Error parsing household for user ${userData.id}:`, parseError);
+                household = {};
             }
+
+            let spouse = null;
+            try {
+                if (residentData.spouse) {
+                    spouse = typeof residentData.spouse === 'string'
+                        ? JSON.parse(residentData.spouse)
+                        : residentData.spouse;
+                }
+            } catch (parseError) {
+                console.error(`Error parsing spouse for user ${userData.id}:`, parseError);
+                spouse = null;
+            }
+
+            let householdComposition = [];
+            try {
+                if (residentData.household_composition) {
+                    householdComposition = typeof residentData.household_composition === 'string'
+                        ? JSON.parse(residentData.household_composition)
+                        : residentData.household_composition;
+                    if (!Array.isArray(householdComposition)) {
+                        householdComposition = [];
+                    }
+                }
+            } catch (parseError) {
+                console.error(`Error parsing household_composition for user ${userData.id}:`, parseError);
+                householdComposition = [];
+            }
+
+            setResidentData({
+                id: residentData.id,
+                householdData: household,
+                spouseData: spouse,
+                householdComposition: householdComposition,
+                childrenCount: residentData.children_count || 0,
+                numberOfHouseholdMembers: residentData.number_of_household_members || 0,
+            });
         }
 
         // Fetch photos using utility
@@ -86,11 +196,11 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         onLoadingComplete(true);
     }, [onLoadingComplete]);
 
-    // Set up real-time subscriptions for profile status and photos
+    // Set up real-time subscriptions
     useEffect(() => {
         fetchUserAndData();
 
-        // Real-time subscription for resident profile status
+        // Real-time subscription for resident profile status and resident data
         const setupStatusSubscription = async () => {
             const { data: authData } = await supabase.auth.getUser();
             if (!authData?.user) return null;
@@ -118,6 +228,16 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         setRejectionReason(payload.new.rejection_reason);
                     }
                 )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: "residents",
+                        filter: `user_id=eq.${authData.user.id}`,
+                    },
+                    () => fetchUserAndData() // Refetch resident data on change
+                )
                 .subscribe((status, error) => {
                     if (error) {
                         console.error("Status subscription error:", error);
@@ -135,57 +255,23 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             return channel;
         };
 
-        // Real-time subscription for user photos
-        const setupPhotoSubscription = async () => {
-            const { data: authData } = await supabase.auth.getUser();
-            if (!authData?.user) return null;
-
-            const channel = supabase
-                .channel("user_photos_changes")
-                .on(
-                    "postgres_changes",
-                    {
-                        event: "*",
-                        schema: "public",
-                        table: "user_photos",
-                        filter: `user_id=eq.${authData.user.id}`,
-                    },
-                    async (payload) => {
-                        console.log("User photos change:", payload);
-                        const { profilePic: newProfilePic, coverPhoto: newCoverPhoto } = await fetchUserPhotos(authData.user.id);
-                        setProfilePic(newProfilePic || placeholderImg);
-                        setCoverPhoto(newCoverPhoto || coverPhotoPlaceholder);
-                    }
-                )
-                .subscribe((status, error) => {
-                    if (error) {
-                        console.error("Photo subscription error:", error);
-                        Swal.fire({
-                            toast: true,
-                            position: "top-end",
-                            icon: "error",
-                            title: "Failed to subscribe to photo updates",
-                            timer: 1500,
-                            showConfirmButton: false,
-                            scrollbarPadding: false,
-                        });
-                    }
-                });
-            return channel;
-        };
-
-        let statusChannel, photoChannel;
+        let statusChannel;
         setupStatusSubscription().then((ch) => (statusChannel = ch));
-        setupPhotoSubscription().then((ch) => (photoChannel = ch));
+
+        // Subscribe to user photos changes
+        const photoUnsubscribe = subscribeToUserPhotos(user?.id, (newPhotos) => {
+            setProfilePic(newPhotos.profilePic || placeholderImg);
+            setCoverPhoto(newPhotos.coverPhoto || coverPhotoPlaceholder);
+        });
 
         // Cleanup subscriptions
         return () => {
             if (statusChannel) supabase.removeChannel(statusChannel);
-            if (photoChannel) supabase.removeChannel(photoChannel);
+            if (photoUnsubscribe) photoUnsubscribe();
         };
-    }, [fetchUserAndData]);
+    }, [fetchUserAndData, user?.id]);
 
-    // Handle click outside for dropdowns
+    // Handle click outside for dropdowns and profile modal
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -199,10 +285,13 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             ) {
                 setShowCoverDropdown(false);
             }
+            if (profileModalRef.current && !profileModalRef.current.contains(event.target) && showProfileModal) {
+                setShowProfileModal(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    }, [showProfileModal]);
 
     // Handle file upload
     const handleFileUpload = async (e, type) => {
@@ -263,7 +352,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         if (type === "coverPhoto") setCoverPhotoLoading(true);
 
         new Compressor(file, {
-            quality: 0.8,
+            quality: 0.25,
             success: async (compressedFile) => {
                 const fileExt = compressedFile.name.split(".").pop();
                 const fileName = `${userData.user.id}/${crypto.randomUUID()}.${fileExt}`;
@@ -322,9 +411,9 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     }
                     console.log("Upsert successful:", upsertData);
 
-                    // Fetch updated signed URLs
-                    console.log("Fetching updated photos...");
-                    const { profilePic: newProfilePic, coverPhoto: newCoverPhoto } = await fetchUserPhotos(userData.user.id);
+                    // Refetch photos to get signed URLs
+                    console.log("Refetching photos...");
+                    const { profilePic: newProfilePic, coverPhoto: newCoverPhoto } = await fetchUserPhotos(userData.user.id, true);
                     setProfilePic(newProfilePic || placeholderImg);
                     setCoverPhoto(newCoverPhoto || coverPhotoPlaceholder);
 
@@ -434,6 +523,11 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
             if (type === "profilePic") setProfilePic(placeholderImg);
             else setCoverPhoto(coverPhotoPlaceholder);
 
+            // Refetch photos to ensure cache is updated
+            const { profilePic: newProfilePic, coverPhoto: newCoverPhoto } = await fetchUserPhotos(user.id, true);
+            setProfilePic(newProfilePic || placeholderImg);
+            setCoverPhoto(newCoverPhoto || coverPhotoPlaceholder);
+
             Swal.fire({
                 icon: "success",
                 title: "Photo Deleted",
@@ -454,11 +548,83 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         }
     };
 
+    // Handle request to update profiling
+    const handleRequestUpdate = async () => {
+        if (!user || !residentData) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Error",
+                text: "User or resident data not found.",
+                timer: 1500,
+                showConfirmButton: false,
+                scrollbarPadding: false,
+            });
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: "Request Profile Update",
+            text: "Do you want to request an update to your resident profile? This will require admin approval.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Yes, request update",
+            cancelButtonText: "Cancel",
+            scrollbarPadding: false,
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const { error: statusError } = await supabase
+                    .from("resident_profile_status")
+                    .update({ status: 4, rejection_reason: null })
+                    .eq("resident_id", residentData.id);
+
+                if (statusError) {
+                    console.error("Error requesting profile update:", statusError);
+                    throw statusError;
+                }
+
+                setResidentProfileStatus(4);
+
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "success",
+                    title: "Update Requested",
+                    text: "Your request to update your profile has been submitted. Please wait for admin approval.",
+                    timer: 1500,
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                });
+            } catch (error) {
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "error",
+                    title: "Request Failed",
+                    text: error.message,
+                    timer: 1500,
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                });
+            }
+        }
+    };
+
     // Handle image viewing
     const handleViewImage = (image, type) => {
         setModalImage(image);
         setShowModal(true);
         setModalType(type);
+    };
+
+    // Handle view profile
+    const handleViewProfile = () => {
+        setShowProfileModal(true);
     };
 
     // Handle tab click
@@ -496,6 +662,15 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         }
     };
 
+    // Capitalize words for labels
+    const capitalizeWords = (str) => {
+        return str
+            .replace(/([A-Z])/g, ' $1')
+            .split(' ')
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     const tabs = [
         { key: "myAccount", label: "My Account" },
         { key: "accountSettings", label: "Account Settings" },
@@ -511,9 +686,84 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 return "Rejected";
             case 3:
                 return "Pending";
+            case 4:
+                return "Update Requested";
+            case 5:
+                return "Update Approved";
             default:
                 return "Not yet submitted";
         }
+    };
+
+    const reloadProfileStatus = async () => {
+        try {
+            Swal.fire({
+                title: "Reloading status...",
+                allowOutsideClick: false,
+                scrollbarPadding: false,
+                didOpen: () => Swal.showLoading(),
+            });
+
+            const { data: authData, error: authError } = await supabase.auth.getUser();
+            if (authError || !authData?.user) {
+                throw new Error("No user found");
+            }
+
+            const { data: residentData, error: residentError } = await supabase
+                .from("residents")
+                .select(`
+                    resident_profile_status (
+                        status,
+                        rejection_reason
+                    )
+                `)
+                .eq("user_id", authData.user.id)
+                .single();
+
+            if (residentError || !residentData) {
+                throw new Error("Failed to fetch resident profile status");
+            }
+
+            const statusData = residentData.resident_profile_status;
+            setResidentProfileStatus(statusData?.status || null);
+            setRejectionReason(statusData?.rejection_reason || null);
+
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: "Profile status reloaded",
+                showConfirmButton: false,
+                timer: 1500,
+                scrollbarPadding: false,
+            });
+        } catch (error) {
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: "Failed to reload profile status",
+                text: error.message,
+                showConfirmButton: false,
+                timer: 1500,
+                scrollbarPadding: false,
+            });
+        }
+    };
+
+    // Modal variants for animations
+    const modalVariants = {
+        hidden: { opacity: 0, y: -50 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+        exit: { opacity: 0, y: -50, transition: { duration: 0.2 } },
+    };
+
+    const backdropVariants = {
+        hidden: { opacity: 0 },
+        visible: { opacity: 0.5, transition: { duration: 0.3 } },
+        exit: { opacity: 0, transition: { duration: 0.2 } },
     };
 
     return (
@@ -672,6 +922,252 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 </div>
             )}
 
+            {/* Modal for Viewing Profile */}
+            <AnimatePresence>
+                {showProfileModal && residentData && (
+                    <>
+                        <motion.div
+                            className="fixed inset-0 bg-black"
+                            style={{ zIndex: 40 }}
+                            variants={backdropVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                        />
+                        <motion.div
+                            className="fixed inset-0 flex items-center justify-center p-4"
+                            style={{ zIndex: 50 }}
+                            variants={modalVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                        >
+                            <div
+                                ref={profileModalRef}
+                                className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+                            >
+                                <div className="flex justify-between items-center p-4 border-b">
+                                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">My Resident Profile</h2>
+                                    <motion.button
+                                        onClick={() => setShowProfileModal(false)}
+                                        className="text-gray-600 hover:text-gray-900"
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        aria-label="Close modal"
+                                    >
+                                        <FaTimes size={20} />
+                                    </motion.button>
+                                </div>
+                                <div className="p-4 overflow-y-auto">
+                                    <div className="space-y-6">
+                                        {/* Household Head Section */}
+                                        <fieldset className="border p-4 rounded-lg">
+                                            <legend className="font-semibold text-lg">Household Head</legend>
+                                            {Object.keys(residentData.householdData).length > 0 ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {[
+                                                        'firstName',
+                                                        'middleName',
+                                                        'middleInitial',
+                                                        'lastName',
+                                                        'address',
+                                                        'region',
+                                                        'province',
+                                                        'city',
+                                                        'barangay',
+                                                        'zone',
+                                                        'zipCode',
+                                                        'dob',
+                                                        'age',
+                                                        'gender',
+                                                        'civilStatus',
+                                                        'phoneNumber',
+                                                        'idType',
+                                                        'idNo',
+                                                        'employmentType',
+                                                        'education',
+                                                        'religion',
+                                                        'extension',
+                                                    ].map((key) => {
+                                                        let label = capitalizeWords(key);
+                                                        if (key === 'dob') label = 'Date of Birth';
+                                                        if (key === 'idType') label = 'ID Type';
+                                                        if (key === 'idNo') label = 'ID Number';
+                                                        if (key === 'zone') label = 'Purok/Zone';
+
+                                                        return (
+                                                            <div key={key}>
+                                                                <label className="font-medium">{label}:</label>
+                                                                <p className="p-2 border rounded text-sm">
+                                                                    {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                        ? addressMappings[key][residentData.householdData[key]] ||
+                                                                        residentData.householdData[key] ||
+                                                                        'N/A'
+                                                                        : residentData.householdData[key] || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {residentData.householdData.employmentType === 'employed' && (
+                                                        <>
+                                                            <div>
+                                                                <label className="font-medium">Occupation:</label>
+                                                                <p className="p-2 border rounded text-sm">
+                                                                    {residentData.householdData.occupation || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="font-medium">Skills:</label>
+                                                                <p className="p-2 border rounded text-sm">
+                                                                    {residentData.householdData.skills || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="font-medium">Company Address:</label>
+                                                                <p className="p-2 border rounded text-sm">
+                                                                    {residentData.householdData.companyAddress || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-gray-600">No household head data available.</p>
+                                            )}
+                                        </fieldset>
+
+                                        {/* Spouse Section (if applicable) */}
+                                        {residentData.spouseData ? (
+                                            <fieldset className="border p-4 rounded-lg">
+                                                <legend className="font-semibold text-lg">Spouse</legend>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {[
+                                                        'firstName',
+                                                        'middleName',
+                                                        'middleInitial',
+                                                        'lastName',
+                                                        'address',
+                                                        'region',
+                                                        'province',
+                                                        'city',
+                                                        'barangay',
+                                                        'dob',
+                                                        'age',
+                                                        'gender',
+                                                        'civilStatus',
+                                                        'phoneNumber',
+                                                        'idType',
+                                                        'idNo',
+                                                        'education',
+                                                        'employmentType',
+                                                        'religion',
+                                                        'extension',
+                                                    ].map((key) => {
+                                                        let label = capitalizeWords(key);
+                                                        if (key === 'dob') label = 'Date of Birth';
+                                                        if (key === 'idType') label = 'ID Type';
+                                                        if (key === 'idNo') label = 'ID Number';
+                                                        if (key === 'zone') label = 'Purok/Zone';
+
+                                                        return (
+                                                            <div key={key}>
+                                                                <label className="font-medium">{label}:</label>
+                                                                <p className="p-2 border rounded text-sm">
+                                                                    {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                        ? addressMappings[key][residentData.spouseData[key]] ||
+                                                                        residentData.spouseData[key] ||
+                                                                        'N/A'
+                                                                        : residentData.spouseData[key] || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {residentData.spouseData.employmentType === 'employed' && (
+                                                        <>
+                                                            <div>
+                                                                <label className="font-medium">Occupation:</label>
+                                                                <p className="p-2 border rounded text-sm">
+                                                                    {residentData.spouseData.occupation || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="font-medium">Skills:</label>
+                                                                <p className="p-2 border rounded text-sm">
+                                                                    {residentData.spouseData.skills || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="font-medium">Company Address:</label>
+                                                                <p className="p-2 border rounded text-sm">
+                                                                    {residentData.spouseData.companyAddress || 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </fieldset>
+                                        ) : (
+                                            <fieldset className="border p-4 rounded-lg">
+                                                <legend className="font-semibold text-lg">Spouse</legend>
+                                                <p className="text-sm text-gray-600">No spouse data available.</p>
+                                            </fieldset>
+                                        )}
+
+                                        {/* Household Composition Section */}
+                                        <fieldset className="border p-4 rounded-lg">
+                                            <legend className="font-semibold text-lg">Household Composition</legend>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                                <div>
+                                                    <label className="font-medium">Number of Children:</label>
+                                                    <p className="p-2 border rounded text-sm">{residentData.childrenCount || 0}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="font-medium">Number of Household Members:</label>
+                                                    <p className="p-2 border rounded text-sm">{residentData.numberOfHouseholdMembers || 0}</p>
+                                                </div>
+                                            </div>
+                                            {residentData.householdComposition.length > 0 ? (
+                                                residentData.householdComposition.map((member, index) => (
+                                                    <div key={index} className="border-t pt-4">
+                                                        <h3 className="font-semibold text-md">Member {index + 1}</h3>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            {[
+                                                                'firstName',
+                                                                'middleName',
+                                                                'middleInitial',
+                                                                'lastName',
+                                                                'relation',
+                                                                'gender',
+                                                                'age',
+                                                                'dob',
+                                                                'education',
+                                                                'occupation',
+                                                            ].map((key) => {
+                                                                let label = capitalizeWords(key);
+                                                                if (key === 'dob') label = 'Date of Birth';
+
+                                                                return (
+                                                                    <div key={key}>
+                                                                        <label className="font-medium">{label}:</label>
+                                                                        <p className="p-2 border rounded text-sm">{member[key] || 'N/A'}</p>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-sm text-gray-600">No household members added.</p>
+                                            )}
+                                        </fieldset>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* Tabs */}
             <div className="border-b bg-gray-100 flex flex-wrap justify-center sm:justify-start relative overflow-hidden px-1 mb-4">
                 {tabs.map((tab) => (
@@ -696,21 +1192,61 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
             {/* Resident Profile Status */}
             {userRoleId !== 1 && (
-                <div className="py-2 px-4 text-center bg-white sm:text-left shadow-lg rounded">
-                    <h3 className="text-lg font-bold">Resident Profile Status</h3>
-                    <p
-                        className={`mt-2 ${residentProfileStatus === 1
-                                ? "text-green-600"
-                                : residentProfileStatus === 2
-                                    ? "text-red-600"
-                                    : residentProfileStatus === 3
-                                        ? "text-yellow-600"
-                                        : "text-gray-600"
-                            }`}
-                    >
-                        {getStatusText()}
-                    </p>
-                    {residentProfileStatus === 2 && rejectionReason && (
+                <div className="py-2 px-4 text-center sm:text-left bg-white shadow-lg rounded">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-bold">Resident Profile Status</h3>
+                        <motion.button
+                            onClick={reloadProfileStatus}
+                            className="text-gray-600 hover:text-blue-700 transition-colors duration-200"
+                            whileHover={{ scale: 1.1, rotate: 180 }}
+                            whileTap={{ scale: 0.9 }}
+                            title="Reload profile status"
+                            aria-label="Reload profile status"
+                        >
+                            <FaSyncAlt size={20} />
+                        </motion.button>
+                    </div>
+                    <div className="flex items-center justify-center sm:justify-start mt-2 flex-wrap gap-2">
+                        <p
+                            className={`${residentProfileStatus === 1
+                                    ? "text-green-600"
+                                    : residentProfileStatus === 2
+                                        ? "text-red-600"
+                                        : residentProfileStatus === 3
+                                            ? "text-yellow-600"
+                                            : residentProfileStatus === 4
+                                                ? "text-blue-600"
+                                                : residentProfileStatus === 5
+                                                    ? "text-purple-600"
+                                                    : "text-gray-600"
+                                }`}
+                        >
+                            {getStatusText()}
+                        </p>
+                        {residentProfileStatus === 1 && (
+                            <>
+                                <motion.button
+                                    onClick={handleViewProfile}
+                                    className="ml-2 bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <FaInfoCircle />
+                                    View
+                                </motion.button>
+                                <motion.button
+                                    onClick={handleRequestUpdate}
+                                    className="ml-2 bg-orange-600 text-white px-2 py-1 rounded-md hover:bg-orange-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <FaEdit />
+                                    Request to Update Profiling
+                                </motion.button>
+                            </>
+                        )}
+                    </div>
+                    {(residentProfileStatus === 2 || residentProfileStatus === 4) && rejectionReason && (
                         <p className="mt-2 text-sm text-gray-600 italic">
                             <span className="font-semibold">Reason:</span> {rejectionReason}
                         </p>

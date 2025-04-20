@@ -298,12 +298,15 @@ const ResidentProfiling = () => {
                 return;
             }
 
+            // Determine the status based on current profileStatus
+            const newStatus = profileStatus === 4 ? 5 : 3;
+
             const { error: statusError } = await supabase
                 .from('resident_profile_status')
                 .upsert(
                     {
                         resident_id: residentData.id,
-                        status: 3,
+                        status: newStatus,
                     },
                     { onConflict: 'resident_id' }
                 );
@@ -322,16 +325,19 @@ const ResidentProfiling = () => {
                 return;
             }
 
-            await axios.post('http://localhost:5000/api/email/send-pending', {
-                userId,
-            });
+            // Only send email notification if the status is Pending (3)
+            if (newStatus === 3) {
+                await axios.post('http://localhost:5000/api/email/send-pending', {
+                    userId,
+                });
+            }
 
             await loadingSwal.close();
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Form submitted successfully with status: Pending',
+                title: `Form submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
                 timer: 1500,
                 showConfirmButton: false,
             });
@@ -386,6 +392,19 @@ const ResidentProfiling = () => {
             );
         }
 
+        if (profileStatus === 4) {
+            return (
+                <div className="relative flex items-center justify-center min-h-[50vh]">
+                    <div className="absolute inset-0 bg-blue-100 opacity-50 rounded-lg"></div>
+                    <div className="relative z-10 text-center">
+                        <h2 className="text-4xl font-bold text-blue-600">Update Request Pending</h2>
+                        <p className="mt-4 text-lg text-gray-600">Your request to update your resident profile is pending admin approval.</p>
+                    </div>
+                </div>
+            );
+        }
+
+        // Allow form access for status 5 (Update Approved) or other statuses
         const currentIndex = tabs.findIndex((tab) => tab.key === activeTab);
         switch (activeTab) {
             case "householdForm":
@@ -517,8 +536,8 @@ const ResidentProfiling = () => {
                     {tabs.map((tab) => (
                         <div
                             key={tab.key}
-                            onClick={() => profileStatus !== 1 && setActiveTab(tab.key)}
-                            className={`cursor-pointer px-6 py-3 text-sm font-medium ${activeTab === tab.key ? "border-b-2 border-blue-700 text-blue-700" : "text-gray-600 hover:text-blue-700"} ${profileStatus === 1 ? "pointer-events-none opacity-50" : ""}`}
+                            onClick={() => (profileStatus !== 1 && profileStatus !== 4) && setActiveTab(tab.key)}
+                            className={`cursor-pointer px-6 py-3 text-sm font-medium ${activeTab === tab.key ? "border-b-2 border-blue-700 text-blue-700" : "text-gray-600 hover:text-blue-700"} ${profileStatus === 1 || profileStatus === 4 ? "pointer-events-none opacity-50" : ""}`}
                         >
                             {tab.label}
                         </div>

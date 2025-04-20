@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaSyncAlt, FaTrashAlt } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBarangaysByMunicipality } from '@aivangogh/ph-address';
@@ -11,19 +11,13 @@ const ResidentManagement = () => {
     const [residents, setResidents] = useState([]);
     const [pendingCount, setPendingCount] = useState(0);
     const [rejectedCount, setRejectedCount] = useState(0);
+    const [requestsCount, setRequestsCount] = useState(0);
     const [viewModalOpen, setViewModalOpen] = useState(false);
-    const [editModalOpen, setEditModalOpen] = useState(false);
     const [pendingModalOpen, setPendingModalOpen] = useState(false);
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
+    const [requestsModalOpen, setRequestsModalOpen] = useState(false);
+    const [updateModalOpen, setUpdateModalOpen] = useState(false);
     const [selectedResident, setSelectedResident] = useState(null);
-    const [editForm, setEditForm] = useState({
-        firstName: '',
-        lastName: '',
-        gender: '',
-        dob: '',
-        address: '',
-        purok: '',
-    });
     const [rejectionReason, setRejectionReason] = useState('');
     const [showRejectionForm, setShowRejectionForm] = useState(null);
     const [addressMappings, setAddressMappings] = useState({
@@ -36,9 +30,10 @@ const ResidentManagement = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     const viewModalRef = useRef(null);
-    const editModalRef = useRef(null);
     const pendingModalRef = useRef(null);
     const rejectModalRef = useRef(null);
+    const requestsModalRef = useRef(null);
+    const updateModalRef = useRef(null);
 
     // Initialize address mappings
     useEffect(() => {
@@ -97,6 +92,7 @@ const ResidentManagement = () => {
                 .from('residents')
                 .select(`
                 id,
+                user_id,
                 household,
                 spouse,
                 household_composition,
@@ -161,6 +157,7 @@ const ResidentManagement = () => {
 
                 return {
                     id: resident.id,
+                    userId: resident.user_id,
                     firstName: household.firstName || 'Unknown',
                     lastName: household.lastName || 'Unknown',
                     gender: household.gender || 'Unknown',
@@ -182,6 +179,7 @@ const ResidentManagement = () => {
             setResidents(formattedResidents);
             setPendingCount(formattedResidents.filter((r) => r.status === 3).length);
             setRejectedCount(formattedResidents.filter((r) => r.status === 2).length);
+            setRequestsCount(formattedResidents.filter((r) => r.status === 4).length);
         } catch (error) {
             Swal.fire({
                 toast: true,
@@ -234,7 +232,7 @@ const ResidentManagement = () => {
 
     // Disable scroll on body when any modal is open
     useEffect(() => {
-        if (viewModalOpen || editModalOpen || pendingModalOpen || rejectModalOpen) {
+        if (viewModalOpen || pendingModalOpen || rejectModalOpen || requestsModalOpen || updateModalOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'auto';
@@ -242,17 +240,18 @@ const ResidentManagement = () => {
         return () => {
             document.body.style.overflow = 'auto';
         };
-    }, [viewModalOpen, editModalOpen, pendingModalOpen, rejectModalOpen]);
+    }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
 
     // Update modal stack when modals open/close
     useEffect(() => {
         const stack = [];
         if (pendingModalOpen) stack.push('pending');
         if (rejectModalOpen) stack.push('reject');
+        if (requestsModalOpen) stack.push('requests');
+        if (updateModalOpen) stack.push('update');
         if (viewModalOpen) stack.push('view');
-        if (editModalOpen) stack.push('edit');
         setModalStack(stack);
-    }, [viewModalOpen, editModalOpen, pendingModalOpen, rejectModalOpen]);
+    }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
 
     // Handle clicks outside modal to close only the topmost modal
     useEffect(() => {
@@ -262,95 +261,106 @@ const ResidentManagement = () => {
             if (topModal === 'view' && viewModalOpen && viewModalRef.current && !viewModalRef.current.contains(event.target)) {
                 setViewModalOpen(false);
                 setSelectedResident(null);
-            } else if (topModal === 'edit' && editModalOpen && editModalRef.current && !editModalRef.current.contains(event.target)) {
-                setEditModalOpen(false);
-                setSelectedResident(null);
             } else if (topModal === 'pending' && pendingModalOpen && pendingModalRef.current && !pendingModalRef.current.contains(event.target)) {
                 setPendingModalOpen(false);
                 setShowRejectionForm(null);
                 setRejectionReason('');
             } else if (topModal === 'reject' && rejectModalOpen && rejectModalRef.current && !rejectModalRef.current.contains(event.target)) {
                 setRejectModalOpen(false);
+            } else if (topModal === 'requests' && requestsModalOpen && requestsModalRef.current && !requestsModalRef.current.contains(event.target)) {
+                setRequestsModalOpen(false);
+            } else if (topModal === 'update' && updateModalOpen && updateModalRef.current && !updateModalRef.current.contains(event.target)) {
+                setUpdateModalOpen(false);
+                setSelectedResident(null);
+                setRejectionReason('');
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [modalStack, viewModalOpen, editModalOpen, pendingModalOpen, rejectModalOpen]);
+    }, [modalStack, viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
 
     const handleView = (resident) => {
         setSelectedResident(resident);
         setViewModalOpen(true);
     };
 
-    const handleEdit = (resident) => {
-        setSelectedResident(resident);
-        setEditForm({
-            firstName: resident.firstName,
-            lastName: resident.lastName,
-            gender: resident.gender,
-            dob: resident.dob,
-            address: resident.address,
-            purok: resident.purok,
-        });
-        setEditModalOpen(true);
-    };
-
-    const handleEditSubmit = async (e) => {
-        e.preventDefault();
+    const handleUpdateStatus = async (resident, reason) => {
         try {
-            const { data, error } = await supabase
-                .from('residents')
-                .select('household')
-                .eq('id', selectedResident.id)
-                .single();
+            Swal.fire({
+                title: 'Updating status...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
 
-            if (error) {
-                throw new Error('Failed to fetch resident data for editing');
+            const { error: statusError } = await supabase
+                .from('resident_profile_status')
+                .update({
+                    status: 4,
+                    rejection_reason: reason,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('resident_id', resident.id);
+
+            if (statusError) {
+                throw new Error('Failed to update profile status to Update Requested');
             }
 
-            let household = typeof data.household === 'string'
-                ? JSON.parse(data.household)
-                : data.household;
+            await axios.post('http://localhost:5000/api/email/send-update-request', {
+                userId: resident.userId,
+                updateReason: reason,
+            });
 
-            household.firstName = editForm.firstName;
-            household.lastName = editForm.lastName;
-            household.gender = editForm.gender;
-            household.dob = editForm.dob;
-            household.address = editForm.address;
-            household.zone = editForm.purok;
-
-            const { error: updateError } = await supabase
-                .from('residents')
-                .update({ household, updated_at: new Date().toISOString() })
-                .eq('id', selectedResident.id);
-
-            if (updateError) {
-                throw new Error('Failed to update resident');
-            }
-
-            setEditModalOpen(false);
-            setSelectedResident(null);
+            Swal.close();
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Resident updated successfully',
+                title: 'Profile status updated to Update Requested',
                 showConfirmButton: false,
                 timer: 1500,
                 timerProgressBar: true
             });
+            await fetchResidents();
         } catch (error) {
+            Swal.close();
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
-                title: error.message || 'Failed to update resident',
+                title: error.message || 'Failed to update profile status',
                 showConfirmButton: false,
                 timer: 1500,
                 timerProgressBar: true
             });
         }
+    };
+
+    const handleOpenUpdateModal = (resident) => {
+        setSelectedResident(resident);
+        setRejectionReason('');
+        setUpdateModalOpen(true);
+    };
+
+    const handleSubmitUpdate = () => {
+        if (!rejectionReason.trim()) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Please provide a reason for the update request',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+            return;
+        }
+        handleUpdateStatus(selectedResident, rejectionReason);
+        setUpdateModalOpen(false);
+        setSelectedResident(null);
+        setRejectionReason('');
     };
 
     const handleDelete = async (id) => {
@@ -401,6 +411,10 @@ const ResidentManagement = () => {
 
     const handleRejected = () => {
         setRejectModalOpen(true);
+    };
+
+    const handleRequests = () => {
+        setRequestsModalOpen(true);
     };
 
     const handleViewProfile = (resident) => {
@@ -544,6 +558,162 @@ const ResidentManagement = () => {
         }
     };
 
+    const handleAcceptRequest = async (resident) => {
+        try {
+            Swal.fire({
+                title: 'Approving update request...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const { error: statusError } = await supabase
+                .from('resident_profile_status')
+                .update({
+                    status: 5,
+                    rejection_reason: null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('resident_id', resident.id);
+
+            if (statusError) {
+                throw new Error('Failed to accept update request');
+            }
+
+            await axios.post('http://localhost:5000/api/email/send-update-approval', {
+                userId: resident.userId,
+            });
+
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Update request approved successfully',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+            await fetchResidents();
+        } catch (error) {
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: error.message || 'Failed to approve update request',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+        }
+    };
+
+    const handleDeclineRequest = async (resident) => {
+        if (!rejectionReason.trim()) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Please provide a reason for declining the request',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+            return;
+        }
+
+        try {
+            Swal.fire({
+                title: 'Declining update request...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const { error: statusError } = await supabase
+                .from('resident_profile_status')
+                .update({
+                    status: 1,
+                    rejection_reason: rejectionReason,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('resident_id', resident.id);
+
+            if (statusError) {
+                throw new Error('Failed to decline update request');
+            }
+
+            await axios.post('http://localhost:5000/api/email/send-update-rejection', {
+                userId: resident.userId,
+                rejectionReason,
+            });
+
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Update request declined successfully',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+            setShowRejectionForm(null);
+            setRejectionReason('');
+            await fetchResidents();
+        } catch (error) {
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: error.message || 'Failed to decline update request',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+        }
+    };
+
+    const handleReload = async () => {
+        try {
+            Swal.fire({
+                title: 'Reloading residents...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            await fetchResidents();
+
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Residents reloaded successfully',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+        } catch (error) {
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: error.message || 'Failed to reload residents',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+        }
+    };
+
     const capitalizeWords = (str) => {
         return str
             .replace(/([A-Z])/g, ' $1')
@@ -576,39 +746,73 @@ const ResidentManagement = () => {
             </AnimatePresence>
             <div className={isLoading ? 'opacity-0' : 'opacity-100'}>
                 <div className="min-h-screen p-2 sm:p-4">
-                    <div className="flex justify-start items-center mb-4 sm:mb-6 space-x-4">
-                        <motion.button
-                            onClick={handlePending}
-                            className="relative bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            <div className="flex items-center">
-                                <FaCheck className="mr-2" />
-                                <span>Pending</span>
-                            </div>
-                            {pendingCount > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
-                                    {pendingCount}
-                                </span>
-                            )}
-                        </motion.button>
+                    <div className="flex justify-between items-center mb-4 sm:mb-6">
+                        <div className="flex items-center space-x-4">
+                            <motion.button
+                                onClick={handlePending}
+                                className="relative bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                aria-label="View pending residents"
+                            >
+                                <div className="flex items-center">
+                                    <FaCheck className="mr-2" />
+                                    <span>Pending</span>
+                                </div>
+                                {pendingCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
+                                        {pendingCount}
+                                    </span>
+                                )}
+                            </motion.button>
+
+                            <motion.button
+                                onClick={handleRejected}
+                                className="relative bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                aria-label="View rejected residents"
+                            >
+                                <div className="flex items-center">
+                                    <FaBan className="mr-2" />
+                                    <span>Rejected</span>
+                                </div>
+                                {rejectedCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
+                                        {rejectedCount}
+                                    </span>
+                                )}
+                            </motion.button>
+
+                            <motion.button
+                                onClick={handleRequests}
+                                className="relative bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                aria-label="View update requests"
+                            >
+                                <div className="flex items-center">
+                                    <FaSyncAlt className="mr-2" />
+                                    <span>Requests</span>
+                                </div>
+                                {requestsCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
+                                        {requestsCount}
+                                    </span>
+                                )}
+                            </motion.button>
+                        </div>
 
                         <motion.button
-                            onClick={handleRejected}
-                            className="relative bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
+                            onClick={handleReload}
+                            className="relative bg-gray-600 text-white p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
+                            aria-label="Reload residents"
                         >
                             <div className="flex items-center">
-                                <FaBan className="mr-2" />
-                                <span>Rejected</span>
+                                <FaSyncAlt />
                             </div>
-                            {rejectedCount > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
-                                    {rejectedCount}
-                                </span>
-                            )}
                         </motion.button>
                     </div>
                     <div className="bg-white shadow-lg rounded-lg overflow-hidden">
@@ -654,13 +858,13 @@ const ResidentManagement = () => {
                                                             View
                                                         </motion.button>
                                                         <motion.button
-                                                            onClick={() => handleEdit(resident)}
+                                                            onClick={() => handleOpenUpdateModal(resident)}
                                                             className="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
                                                         >
-                                                            <FaEdit />
-                                                            Edit
+                                                            <FaSyncAlt />
+                                                            Update
                                                         </motion.button>
                                                         <motion.button
                                                             onClick={() => handleDelete(resident.id)}
@@ -936,144 +1140,6 @@ const ResidentManagement = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Edit Modal */}
-                    <AnimatePresence>
-                        {editModalOpen && selectedResident && (
-                            <>
-                                <motion.div
-                                    className="fixed inset-0 bg-black"
-                                    style={{ zIndex: getModalZIndex('edit') - 10 }}
-                                    variants={backdropVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                />
-                                <motion.div
-                                    className="fixed inset-0 flex items-center justify-center p-4"
-                                    style={{ zIndex: getModalZIndex('edit') }}
-                                    variants={modalVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                >
-                                    <div
-                                        ref={editModalRef}
-                                        className="bg-white rounded-lg w-full max-w-md sm:max-w-lg max-h-[90vh] flex flex-col"
-                                    >
-                                        <div className="flex justify-between items-center p-4 border-b">
-                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Edit Resident</h2>
-                                            <motion.button
-                                                onClick={() => {
-                                                    setEditModalOpen(false);
-                                                    setSelectedResident(null);
-                                                }}
-                                                className="text-gray-600 hover:text-gray-900"
-                                                whileHover={{ scale: 1.1 }}
-                                                whileTap={{ scale: 0.9 }}
-                                                aria-label="Close modal"
-                                            >
-                                                <FaTimes size={20} />
-                                            </motion.button>
-                                        </div>
-                                        <form onSubmit={handleEditSubmit} className="flex-1 flex flex-col">
-                                            <div className="p-4 overflow-y-auto">
-                                                <div className="space-y-4 text-sm sm:text-base">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">First Name</label>
-                                                        <input
-                                                            type="text"
-                                                            value={editForm.firstName}
-                                                            onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
-                                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                                                        <input
-                                                            type="text"
-                                                            value={editForm.lastName}
-                                                            onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
-                                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Gender</label>
-                                                        <select
-                                                            value={editForm.gender}
-                                                            onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-                                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            required
-                                                        >
-                                                            <option value="Male">Male</option>
-                                                            <option value="Female">Female</option>
-                                                            <option value="Other">Other</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-                                                        <input
-                                                            type="date"
-                                                            value={editForm.dob}
-                                                            onChange={(e) => setEditForm({ ...editForm, dob: e.target.value })}
-                                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Address</label>
-                                                        <input
-                                                            type="text"
-                                                            value={editForm.address}
-                                                            onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Purok/Zone</label>
-                                                        <input
-                                                            type="text"
-                                                            value={editForm.purok}
-                                                            onChange={(e) => setEditForm({ ...editForm, purok: e.target.value })}
-                                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            required
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="p-4 border-t flex justify-end space-x-3">
-                                                <motion.button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setEditModalOpen(false);
-                                                        setSelectedResident(null);
-                                                    }}
-                                                    className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors duration-200 text-sm sm:text-base flex items-center gap-1"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaTimes />
-                                                    Cancel
-                                                </motion.button>
-                                                <motion.button
-                                                    type="submit"
-                                                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors duration-200 text-sm sm:text-base flex items-center gap-1"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaCheck />
-                                                    Save
-                                                </motion.button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </motion.div>
-                            </>
-                        )}
-                    </AnimatePresence>
-
                     {/* Pending Modal */}
                     <AnimatePresence>
                         {pendingModalOpen && (
@@ -1209,6 +1275,235 @@ const ResidentManagement = () => {
                                                         )}
                                                     </tbody>
                                                 </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Requests Modal */}
+                    <AnimatePresence>
+                        {requestsModalOpen && (
+                            <>
+                                <motion.div
+                                    className="fixed inset-0 bg-black"
+                                    style={{ zIndex: getModalZIndex('requests') - 10 }}
+                                    variants={backdropVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                />
+                                <motion.div
+                                    className="fixed inset-0 flex items-center justify-center p-4"
+                                    style={{ zIndex: getModalZIndex('requests') }}
+                                    variants={modalVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                >
+                                    <div
+                                        ref={requestsModalRef}
+                                        className="bg-white rounded-lg w-full max-w-md sm:max-w-2xl max-h-[90vh] flex flex-col"
+                                    >
+                                        <div className="flex justify-between items-center p-4 border-b">
+                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Update Requests</h2>
+                                            <motion.button
+                                                onClick={() => {
+                                                    setRequestsModalOpen(false);
+                                                    setShowRejectionForm(null);
+                                                    setRejectionReason('');
+                                                }}
+                                                className="text-gray-600 hover:text-gray-900"
+                                                whileHover={{ scale: 1.1 }}
+                                                whileTap={{ scale: 0.9 }}
+                                                aria-label="Close modal"
+                                            >
+                                                <FaTimes size={20} />
+                                            </motion.button>
+                                        </div>
+                                        <div className="p-4 overflow-y-auto">
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-gray-100 text-gray-700 text-xs sm:text-sm">
+                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">First Name</th>
+                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Last Name</th>
+                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {residents.filter((r) => r.status === 4).length > 0 ? (
+                                                            residents.filter((r) => r.status === 4).map((resident) => (
+                                                                <tr
+                                                                    key={resident.id}
+                                                                    className="hover:bg-gray-50 transition-colors duration-150 text-xs sm:text-sm"
+                                                                >
+                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.firstName}</td>
+                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.lastName}</td>
+                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b">
+                                                                        {showRejectionForm === resident.id ? (
+                                                                            <div className="space-y-2">
+                                                                                <textarea
+                                                                                    value={rejectionReason}
+                                                                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                                                                    placeholder="Enter reason for declining the update request"
+                                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                                                                                    rows="3"
+                                                                                    required
+                                                                                />
+                                                                                <div className="flex space-x-2">
+                                                                                    <motion.button
+                                                                                        onClick={() => handleDeclineRequest(resident)}
+                                                                                        className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                                                                        whileHover={{ scale: 1.05 }}
+                                                                                        whileTap={{ scale: 0.95 }}
+                                                                                        disabled={!rejectionReason.trim()}
+                                                                                    >
+                                                                                        <FaBan />
+                                                                                        Submit Decline
+                                                                                    </motion.button>
+                                                                                    <motion.button
+                                                                                        onClick={() => setShowRejectionForm(null)}
+                                                                                        className="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                                                                        whileHover={{ scale: 1.05 }}
+                                                                                        whileTap={{ scale: 0.95 }}
+                                                                                    >
+                                                                                        <FaTimes />
+                                                                                        Cancel
+                                                                                    </motion.button>
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+                                                                                <motion.button
+                                                                                    onClick={() => handleViewProfile(resident)}
+                                                                                    className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                                                                    whileHover={{ scale: 1.05 }}
+                                                                                    whileTap={{ scale: 0.95 }}
+                                                                                >
+                                                                                    <FaEye />
+                                                                                    View
+                                                                                </motion.button>
+                                                                                <motion.button
+                                                                                    onClick={() => handleAcceptRequest(resident)}
+                                                                                    className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                                                                    whileHover={{ scale: 1.05 }}
+                                                                                    whileTap={{ scale: 0.95 }}
+                                                                                >
+                                                                                    <FaCheck />
+                                                                                    Accept
+                                                                                </motion.button>
+                                                                                <motion.button
+                                                                                    onClick={() => setShowRejectionForm(resident.id)}
+                                                                                    className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                                                                    whileHover={{ scale: 1.05 }}
+                                                                                    whileTap={{ scale: 0.95 }}
+                                                                                >
+                                                                                    <FaBan />
+                                                                                    Decline
+                                                                                </motion.button>
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan="3" className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 text-center">
+                                                                    <p className="text-sm text-gray-600">No update requests found.</p>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Update Modal */}
+                    <AnimatePresence>
+                        {updateModalOpen && (
+                            <>
+                                <motion.div
+                                    className="fixed inset-0 bg-black"
+                                    style={{ zIndex: getModalZIndex('update') - 10 }}
+                                    variants={backdropVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                />
+                                <motion.div
+                                    className="fixed inset-0 flex items-center justify-center p-4"
+                                    style={{ zIndex: getModalZIndex('update') }}
+                                    variants={modalVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                >
+                                    <div
+                                        ref={updateModalRef}
+                                        className="bg-white rounded-lg w-full max-w-md sm:max-w-lg max-h-[90vh] flex flex-col"
+                                    >
+                                        <div className="flex justify-between items-center p-4 border-b">
+                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Request Profile Update</h2>
+                                            <motion.button
+                                                onClick={() => {
+                                                    setUpdateModalOpen(false);
+                                                    setSelectedResident(null);
+                                                    setRejectionReason('');
+                                                }}
+                                                className="text-gray-600 hover:text-gray-900"
+                                                whileHover={{ scale: 1.1 }}
+                                                whileTap={{ scale: 0.9 }}
+                                                aria-label="Close modal"
+                                            >
+                                                <FaTimes size={20} />
+                                            </motion.button>
+                                        </div>
+                                        <div className="p-4">
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="font-medium">Reason for Update Request:</label>
+                                                    <textarea
+                                                        value={rejectionReason}
+                                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                                        placeholder="Enter reason for requesting profile update"
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                                                        rows="4"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="flex justify-end space-x-2">
+                                                    <motion.button
+                                                        onClick={handleSubmitUpdate}
+                                                        className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors duration-200 text-sm flex items-center gap-1"
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        disabled={!rejectionReason.trim()}
+                                                    >
+                                                        <FaSyncAlt />
+                                                        Submit
+                                                    </motion.button>
+                                                    <motion.button
+                                                        onClick={() => {
+                                                            setUpdateModalOpen(false);
+                                                            setSelectedResident(null);
+                                                            setRejectionReason('');
+                                                        }}
+                                                        className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors duration-200 text-sm flex items-center gap-1"
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                    >
+                                                        <FaTimes />
+                                                        Cancel
+                                                    </motion.button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

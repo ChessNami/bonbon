@@ -6,7 +6,7 @@ import { useUser } from "../contexts/UserContext";
 import { FaSignOutAlt, FaCog, FaCommentDots } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 import { supabase } from "../../supabaseClient";
-import { fetchUserPhotos } from "../../utils/supabaseUtils";
+import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 
 const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     const { displayName } = useUser();
@@ -42,6 +42,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     }, []);
 
     useEffect(() => {
+        let unsubscribe;
         const fetchProfilePic = async () => {
             const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -53,9 +54,18 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
 
             const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
             setProfilePic(profilePicUrl || placeholderImg);
+
+            // Subscribe to photo changes
+            unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
+                setProfilePic(newPhotos.profilePic || placeholderImg);
+            });
         };
 
         fetchProfilePic();
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);

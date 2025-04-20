@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaStar, FaCommentAlt } from "react-icons/fa";
 import { supabase } from "../../supabaseClient";
-import { fetchUserPhotos } from "../../utils/supabaseUtils";
-import Loader from "../Loader"; // Import the Loader component
+import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
+import Loader from "../Loader";
 
 const UserFeedback = () => {
     const [feedbacks, setFeedbacks] = useState([]);
@@ -72,7 +72,34 @@ const UserFeedback = () => {
         };
 
         fetchFeedbacks();
+
+        // Cleanup function (though no subscriptions are set up here yet)
+        return () => { };
     }, []);
+
+    // Set up subscriptions for profile pictures
+    useEffect(() => {
+        const subscriptions = [];
+
+        // Subscribe to photo changes for each user
+        feedbacks.forEach((feedback) => {
+            const unsubscribe = subscribeToUserPhotos(feedback.user_id, (newPhotos) => {
+                setFeedbacks((prevFeedbacks) =>
+                    prevFeedbacks.map((f) =>
+                        f.user_id === feedback.user_id
+                            ? { ...f, profilePic: newPhotos.profilePic }
+                            : f
+                    )
+                );
+            });
+            subscriptions.push(unsubscribe);
+        });
+
+        // Cleanup subscriptions
+        return () => {
+            subscriptions.forEach((unsubscribe) => unsubscribe());
+        };
+    }, [feedbacks]);
 
     return (
         <section className="min-h-screen bg-blue-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -130,8 +157,7 @@ const UserFeedback = () => {
                                         <div className="w-12 h-12 rounded-full bg-blue-200 mr-3 flex items-center justify-center">
                                             <span className="text-blue-800 font-semibold text-lg">
                                                 {feedback.displayName &&
-                                                    typeof feedback.displayName ===
-                                                    "string"
+                                                    typeof feedback.displayName === "string"
                                                     ? feedback.displayName[0]?.toUpperCase()
                                                     : "A"}
                                             </span>
@@ -164,10 +190,7 @@ const UserFeedback = () => {
 
                                 {/* Timestamp */}
                                 <p className="text-xs sm:text-sm text-gray-500">
-                                    Submitted:{" "}
-                                    {new Date(
-                                        feedback.created_at
-                                    ).toLocaleString()}
+                                    Submitted: {new Date(feedback.created_at).toLocaleString()}
                                 </p>
                             </motion.div>
                         ))}

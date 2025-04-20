@@ -233,7 +233,7 @@ const AdminProMgmt = () => {
                 mapContainer.removeEventListener("mouseup", handleMouseUp);
                 mapContainer.removeEventListener("mouseleave", handleMouseUp);
             };
-        }, [map, draggingVertexIndex, newPolygonCoords]);
+        }, [map]);
 
         return null;
     };
