@@ -34,6 +34,7 @@ const ResidentManagement = () => {
     const rejectModalRef = useRef(null);
     const requestsModalRef = useRef(null);
     const updateModalRef = useRef(null);
+    const [activeProfileTab, setActiveProfileTab] = useState(0);
 
     // Initialize address mappings
     useEffect(() => {
@@ -930,17 +931,31 @@ const ResidentManagement = () => {
                                                 <FaTimes size={20} />
                                             </motion.button>
                                         </div>
-                                        <div className="p-4 overflow-y-auto">
-                                            <div className="space-y-6">
-                                                {/* Household Head Section */}
-                                                <fieldset className="border p-4 rounded-lg">
-                                                    <legend className="font-semibold text-lg">Household Head</legend>
-                                                    {Object.keys(selectedResident.householdData).length > 0 ? (
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="flex-1 overflow-hidden">
+                                            {/* Tabs */}
+                                            <div className="border-b bg-gray-100 flex">
+                                                {['Household Head', 'Spouse', 'Household Composition'].map((tab, index) => (
+                                                    <button
+                                                        key={index}
+                                                        className={`flex-1 px-4 py-2 text-sm font-medium transition-all ${activeProfileTab === index
+                                                                ? 'text-blue-700 border-b-2 border-blue-700'
+                                                                : 'text-gray-600 hover:text-blue-700'
+                                                            }`}
+                                                        onClick={() => setActiveProfileTab(index)}
+                                                    >
+                                                        {tab}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div className="p-4 overflow-y-auto h-[calc(90vh-120px)]">
+                                                {/* Household Head Tab */}
+                                                {activeProfileTab === 0 && (
+                                                    <fieldset className="border p-4 rounded-lg">
+                                                        <legend className="font-semibold">Household Head</legend>
+                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                                             {[
                                                                 'firstName',
                                                                 'middleName',
-                                                                'middleInitial',
                                                                 'lastName',
                                                                 'address',
                                                                 'region',
@@ -958,180 +973,168 @@ const ResidentManagement = () => {
                                                                 'idNo',
                                                                 'employmentType',
                                                                 'education',
-                                                                'religion',
-                                                                'extension',
                                                             ].map((key) => {
                                                                 let label = capitalizeWords(key);
                                                                 if (key === 'dob') label = 'Date of Birth';
                                                                 if (key === 'idType') label = 'ID Type';
                                                                 if (key === 'idNo') label = 'ID Number';
-                                                                if (key === 'zone') label = 'Purok/Zone';
-
                                                                 return (
                                                                     <div key={key}>
                                                                         <label className="font-medium">{label}:</label>
-                                                                        <p className="p-2 border rounded text-sm">
+                                                                        <p className="p-2 border rounded capitalize">
                                                                             {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                                ? addressMappings[key][selectedResident.householdData[key]] ||
-                                                                                selectedResident.householdData[key] ||
-                                                                                'N/A'
+                                                                                ? addressMappings[key][selectedResident.householdData[key]] || 'N/A'
                                                                                 : selectedResident.householdData[key] || 'N/A'}
                                                                         </p>
                                                                     </div>
                                                                 );
                                                             })}
-                                                            {selectedResident.householdData.employmentType === 'employed' && (
-                                                                <>
-                                                                    <div>
-                                                                        <label className="font-medium">Occupation:</label>
-                                                                        <p className="p-2 border rounded text-sm">
-                                                                            {selectedResident.householdData.occupation || 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="font-medium">Skills:</label>
-                                                                        <p className="p-2 border rounded text-sm">
-                                                                            {selectedResident.householdData.skills || 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="font-medium">Company Address:</label>
-                                                                        <p className="p-2 border rounded text-sm">
-                                                                            {selectedResident.householdData.companyAddress || 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                </>
-                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <p className="text-sm text-gray-600">No household head data available.</p>
-                                                    )}
-                                                </fieldset>
-
-                                                {/* Spouse Section (if applicable) */}
-                                                {selectedResident.spouseData ? (
-                                                    <fieldset className="border p-4 rounded-lg">
-                                                        <legend className="font-semibold text-lg">Spouse</legend>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            {[
-                                                                'firstName',
-                                                                'middleName',
-                                                                'middleInitial',
-                                                                'lastName',
-                                                                'address',
-                                                                'region',
-                                                                'province',
-                                                                'city',
-                                                                'barangay',
-                                                                'dob',
-                                                                'age',
-                                                                'gender',
-                                                                'civilStatus',
-                                                                'phoneNumber',
-                                                                'idType',
-                                                                'idNo',
-                                                                'education',
-                                                                'employmentType',
-                                                                'religion',
-                                                                'extension',
-                                                            ].map((key) => {
-                                                                let label = capitalizeWords(key);
-                                                                if (key === 'dob') label = 'Date of Birth';
-                                                                if (key === 'idType') label = 'ID Type';
-                                                                if (key === 'idNo') label = 'ID Number';
-                                                                if (key === 'zone') label = 'Purok/Zone';
-
-                                                                return (
-                                                                    <div key={key}>
-                                                                        <label className="font-medium">{label}:</label>
-                                                                        <p className="p-2 border rounded text-sm">
-                                                                            {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                                ? addressMappings[key][selectedResident.spouseData[key]] ||
-                                                                                selectedResident.spouseData[key] ||
-                                                                                'N/A'
-                                                                                : selectedResident.spouseData[key] || 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                            {selectedResident.spouseData.employmentType === 'employed' && (
-                                                                <>
-                                                                    <div>
-                                                                        <label className="font-medium">Occupation:</label>
-                                                                        <p className="p-2 border rounded text-sm">
-                                                                            {selectedResident.spouseData.occupation || 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="font-medium">Skills:</label>
-                                                                        <p className="p-2 border rounded text-sm">
-                                                                            {selectedResident.spouseData.skills || 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="font-medium">Company Address:</label>
-                                                                        <p className="p-2 border rounded text-sm">
-                                                                            {selectedResident.spouseData.companyAddress || 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </fieldset>
-                                                ) : (
-                                                    <fieldset className="border p-4 rounded-lg">
-                                                        <legend className="font-semibold text-lg">Spouse</legend>
-                                                        <p className="text-sm text-gray-600">No spouse data available.</p>
                                                     </fieldset>
                                                 )}
-
-                                                {/* Household Composition Section */}
-                                                <fieldset className="border p-4 rounded-lg">
-                                                    <legend className="font-semibold text-lg">Household Composition</legend>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                                        <div>
-                                                            <label className="font-medium">Number of Children:</label>
-                                                            <p className="p-2 border rounded text-sm">{selectedResident.childrenCount || 0}</p>
-                                                        </div>
-                                                        <div>
-                                                            <label className="font-medium">Number of Household Members:</label>
-                                                            <p className="p-2 border rounded text-sm">{selectedResident.numberOfHouseholdMembers || 0}</p>
-                                                        </div>
-                                                    </div>
-                                                    {selectedResident.householdComposition.length > 0 ? (
-                                                        selectedResident.householdComposition.map((member, index) => (
-                                                            <div key={index} className="border-t pt-4">
-                                                                <h3 className="font-semibold text-md">Member {index + 1}</h3>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                                    {[
-                                                                        'firstName',
-                                                                        'middleName',
-                                                                        'middleInitial',
-                                                                        'lastName',
-                                                                        'relation',
-                                                                        'gender',
-                                                                        'age',
-                                                                        'dob',
-                                                                        'education',
-                                                                        'occupation',
-                                                                    ].map((key) => {
-                                                                        let label = capitalizeWords(key);
-                                                                        if (key === 'dob') label = 'Date of Birth';
-
-                                                                        return (
-                                                                            <div key={key}>
-                                                                                <label className="font-medium">{label}:</label>
-                                                                                <p className="p-2 border rounded text-sm">{member[key] || 'N/A'}</p>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
+                                                {/* Spouse Tab */}
+                                                {activeProfileTab === 1 && (
+                                                    <fieldset className="border p-4 rounded-lg">
+                                                        <legend className="font-semibold">Spouse</legend>
+                                                        {selectedResident.spouseData ? (
+                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                                {[
+                                                                    'firstName',
+                                                                    'middleName',
+                                                                    'lastName',
+                                                                    'address',
+                                                                    'region',
+                                                                    'province',
+                                                                    'city',
+                                                                    'barangay',
+                                                                    'dob',
+                                                                    'age',
+                                                                    'gender',
+                                                                    'civilStatus',
+                                                                    'phoneNumber',
+                                                                    'idType',
+                                                                    'idNo',
+                                                                    'education',
+                                                                    'employmentType',
+                                                                ].map((key) => {
+                                                                    let label = capitalizeWords(key);
+                                                                    if (key === 'dob') label = 'Date of Birth';
+                                                                    if (key === 'idType') label = 'ID Type';
+                                                                    if (key === 'idNo') label = 'ID Number';
+                                                                    return (
+                                                                        <div key={key}>
+                                                                            <label className="font-medium">{label}:</label>
+                                                                            <p className="p-2 border rounded capitalize">
+                                                                                {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                                    ? addressMappings[key][selectedResident.spouseData[key]] || 'N/A'
+                                                                                    : selectedResident.spouseData[key] || 'N/A'}
+                                                                            </p>
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
-                                                        ))
-                                                    ) : (
-                                                        <p className="text-sm text-gray-600">No household members added.</p>
-                                                    )}
-                                                </fieldset>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-600">No spouse data available.</p>
+                                                        )}
+                                                    </fieldset>
+                                                )}
+                                                {/* Household Composition Tab */}
+                                                {activeProfileTab === 2 && (
+                                                    <fieldset className="border p-4 rounded-lg">
+                                                        <legend className="font-semibold">Household Composition</legend>
+                                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                                            <div>
+                                                                <label className="font-medium">Number of Children:</label>
+                                                                <p className="p-2 border rounded">{selectedResident.childrenCount || 0}</p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="font-medium">Number of Other Household Members:</label>
+                                                                <p className="p-2 border rounded">{selectedResident.numberOfHouseholdMembers || 0}</p>
+                                                            </div>
+                                                        </div>
+                                                        {selectedResident.childrenCount > 0 && (
+                                                            <div className="border-t pt-4">
+                                                                <h3 className="font-semibold text-lg mb-2">Children</h3>
+                                                                {selectedResident.householdComposition
+                                                                    .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
+                                                                    .map((member, index) => (
+                                                                        <div key={`child-${index}`} className="border p-4 rounded-lg mb-4">
+                                                                            <h4 className="font-semibold">Child {index + 1}</h4>
+                                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                                                {[
+                                                                                    'firstName',
+                                                                                    'middleName',
+                                                                                    'middleInitial',
+                                                                                    'lastName',
+                                                                                    'relation',
+                                                                                    'gender',
+                                                                                    'customGender',
+                                                                                    'age',
+                                                                                    'dob',
+                                                                                    'education',
+                                                                                    'occupation',
+                                                                                ].map((key) => {
+                                                                                    let label = capitalizeWords(key);
+                                                                                    if (key === 'dob') label = 'Date of Birth';
+                                                                                    if (key === 'customGender') label = 'Custom Gender';
+                                                                                    return (
+                                                                                        <div key={key}>
+                                                                                            <label className="font-medium">{label}:</label>
+                                                                                            <p className="p-2 border rounded capitalize">
+                                                                                                {member[key] || 'N/A'}
+                                                                                            </p>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        )}
+                                                        {selectedResident.numberOfHouseholdMembers > 0 && (
+                                                            <div className="border-t pt-4">
+                                                                <h3 className="font-semibold text-lg mb-2">Other Household Members</h3>
+                                                                {selectedResident.householdComposition
+                                                                    .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
+                                                                    .map((member, index) => (
+                                                                        <div key={`member-${index}`} className="border p-4 rounded-lg mb-4">
+                                                                            <h4 className="font-semibold">Member {index + 1}</h4>
+                                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                                                {[
+                                                                                    'firstName',
+                                                                                    'middleName',
+                                                                                    'middleInitial',
+                                                                                    'lastName',
+                                                                                    'relation',
+                                                                                    'gender',
+                                                                                    'customGender',
+                                                                                    'age',
+                                                                                    'dob',
+                                                                                    'education',
+                                                                                    'occupation',
+                                                                                ].map((key) => {
+                                                                                    let label = capitalizeWords(key);
+                                                                                    if (key === 'dob') label = 'Date of Birth';
+                                                                                    if (key === 'customGender') label = 'Custom Gender';
+                                                                                    return (
+                                                                                        <div key={key}>
+                                                                                            <label className="font-medium">{label}:</label>
+                                                                                            <p className="p-2 border rounded capitalize">
+                                                                                                {member[key] || 'N/A'}
+                                                                                            </p>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        )}
+                                                        {selectedResident.childrenCount === 0 && selectedResident.numberOfHouseholdMembers === 0 && (
+                                                            <p>No household members or children added.</p>
+                                                        )}
+                                                    </fieldset>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Calendar from "./Home/Calendar";
 import TotalResident from "./Home/TotalResident";
 import ApprovedProfile from "./Home/ApprovedProfile";
@@ -12,26 +12,48 @@ const AdminHome = () => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [events, setEvents] = useState({});
     const [selectedDates, setSelectedDates] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const prefetchData = async () => {
+            try {
+                // Simulate prefetching data for child components
+                await Promise.all([
+                    import('./Home/ApprovedProfile'),
+                    import('./Home/RejectedProfile'),
+                    import('./Home/PendingProfile')
+                ]);
+            } catch (error) {
+                console.error('Error prefetching components:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        prefetchData();
+    }, []);
 
     return (
         <div className="flex flex-col min-h-screen bg-background">
+            <Suspense fallback={<div>Loading stats...</div>}>
+                {isLoading ? (
+                    <div>Loading...</div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 py-4 px-4">
+                        <TotalResident />
+                        <ApprovedProfile />
+                        <RejectedProfile />
+                        <PendingProfile />
+                    </div>
+                )}
+            </Suspense>
 
-            {/* Stats Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 py-4 px-4">
-                <TotalResident />
-                <ApprovedProfile />
-                <RejectedProfile />
-                <PendingProfile />
-            </div>
-
-            {/* Zone Population Table */}
             <section className="p-4">
                 <div className="rounded-lg shadow overflow-x-auto">
                     <ZonePopulationTable />
                 </div>
             </section>
 
-            {/* Calendar, Event Form & Barangay Council */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 px-4 pb-4">
                 <div className="lg:col-span-3 flex flex-col gap-4">
                     <Calendar
