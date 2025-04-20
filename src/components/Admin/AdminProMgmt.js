@@ -36,7 +36,7 @@ const AdminProMgmt = () => {
     const [newEndDate, setNewEndDate] = useState("");
     const [newStatus, setNewStatus] = useState("Planned");
     const [newColor, setNewColor] = useState("blue");
-    const [newProjectLead, setNewProjectLead] = useState("John Doe");
+    const [newProjectLead, setNewProjectLead] = useState("");
     const [draggingVertexIndex, setDraggingVertexIndex] = useState(null);
     const [dragStartCoord, setDragStartCoord] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -459,10 +459,6 @@ const AdminProMgmt = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <h1 className="text-2xl font-bold bg-[#dee5f8] p-4 flex items-center gap-2">
-                <FaMap className="text-[#172554]" size={30} />
-                Project Management
-            </h1>
             <div className="p-4 mx-auto">
                 {/* Buttons Section */}
                 <div className="flex flex-wrap gap-3 mb-6">
