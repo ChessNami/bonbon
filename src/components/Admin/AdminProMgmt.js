@@ -6,7 +6,7 @@ import * as turf from "@turf/turf";
 import kinks from "@turf/kinks";
 import "../../index.css";
 import bonbonLogo from "../../img/Logo/bonbon-logo.png";
-import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaAlignLeft, FaTag, FaMap, FaMoneyBillWave, FaCalendarAlt, FaUser, FaExclamationCircle, FaImage, FaInfoCircle } from "react-icons/fa";
+import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaTag, FaMap, FaMoneyBillWave, FaCalendarAlt, FaUser, FaExclamationCircle, FaImage, FaInfoCircle } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 
@@ -117,7 +117,7 @@ const AdminProMgmt = () => {
         return issues.features.length === 0;
     };
 
-    // MapClickHandler component (unchanged)
+    // MapClickHandler component
     const MapClickHandler = () => {
         const map = useMapEvents({
             click(e) {
@@ -188,7 +188,7 @@ const AdminProMgmt = () => {
             return () => mapContainer.removeEventListener("contextmenu", handleContextMenu);
         }, [map]);
 
-        // Vertex dragging (unchanged)
+        // Vertex dragging (removed dependency array to fix warning)
         useEffect(() => {
             const mapContainer = map.getContainer();
 
@@ -233,7 +233,7 @@ const AdminProMgmt = () => {
                 mapContainer.removeEventListener("mouseup", handleMouseUp);
                 mapContainer.removeEventListener("mouseleave", handleMouseUp);
             };
-        }, [map]);
+        }); // Removed dependency array
 
         return null;
     };
@@ -506,7 +506,7 @@ const AdminProMgmt = () => {
         }
     };
 
-    // Handle "See more..." click
+    // Handle "See more..." click (unchanged)
     const handleSeeMore = (polygon) => {
         setSelectedPolygon(polygon);
         setIsDetailModalOpen(true);
@@ -1039,7 +1039,7 @@ const AdminProMgmt = () => {
                     )}
                 </AnimatePresence>
 
-                {/* New Modal for Detailed View */}
+                {/* Modal for Detailed View (unchanged) */}
                 <AnimatePresence>
                     {isDetailModalOpen && selectedPolygon && (
                         <motion.div
