@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { MapContainer, TileLayer, Popup, Polyline, useMapEvents, CircleMarker, LayersControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -25,6 +25,7 @@ const AdminStrategicRoadmap = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const maxDistance = 0.001; // ~100 meters in lat/lng degrees
+    const modalRef = useRef(null);
 
     // Check if user is admin
     useEffect(() => {
@@ -58,6 +59,17 @@ const AdminStrategicRoadmap = () => {
         checkAdmin();
     }, []);
 
+    // Close modal on outside click
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                setIsModalOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     // Fetch roads from Supabase and set up real-time subscriptions
     useEffect(() => {
         // Initial fetch
@@ -72,6 +84,7 @@ const AdminStrategicRoadmap = () => {
                     title: "Failed to load roads!",
                     showConfirmButton: false,
                     timer: 1500,
+                    scrollbarPadding: false,
                 });
             } else {
                 setRoads(data);
@@ -117,6 +130,7 @@ const AdminStrategicRoadmap = () => {
                         title: "Failed to subscribe to updates!",
                         showConfirmButton: false,
                         timer: 1500,
+                        scrollbarPadding: false,
                     });
                 }
             });
@@ -164,6 +178,7 @@ const AdminStrategicRoadmap = () => {
                                 icon: "error",
                                 title: `Point too far! Max distance is ~${maxDistance * 500000} meters.`,
                                 showConfirmButton: false,
+                                scrollbarPadding: false,
                                 timer: 1500,
                             });
                             return;
@@ -351,6 +366,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "Only admins can add roads!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             return;
@@ -362,6 +378,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "A road must have at least 2 points!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             return;
@@ -373,6 +390,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "Please provide a title and type!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             return;
@@ -380,6 +398,7 @@ const AdminStrategicRoadmap = () => {
 
         Swal.fire({
             title: "Saving Road...",
+            scrollbarPadding: false,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -414,6 +433,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "success",
                 title: "Road added successfully!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             resetForm();
@@ -425,6 +445,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "Failed to save road!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
         }
@@ -438,32 +459,51 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "Only admins can delete roads!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             return;
         }
-        try {
-            const { error } = await supabase.from("roads").delete().eq("id", id);
-            if (error) throw error;
-            setRoads(roads.filter((road) => road.id !== id));
-            Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "success",
-                title: "Road deleted successfully!",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-        } catch (error) {
-            console.error("Error deleting road:", error);
-            Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "error",
-                title: "Failed to delete road!",
-                showConfirmButton: false,
-                timer: 1500,
-            });
+
+        // Show confirmation dialog
+        const result = await Swal.fire({
+            title: "Are you sure?",
+            text: "Do you really want to delete this road? This action cannot be undone.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#3085d6",
+            confirmButtonText: "Yes, delete it!",
+            cancelButtonText: "Cancel",
+            scrollbarPadding: false,
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const { error } = await supabase.from("roads").delete().eq("id", id);
+                if (error) throw error;
+                setRoads(roads.filter((road) => road.id !== id));
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "success",
+                    title: "Road deleted successfully!",
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                    timer: 1500,
+                });
+            } catch (error) {
+                console.error("Error deleting road:", error);
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "error",
+                    title: "Failed to delete road!",
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                    timer: 1500,
+                });
+            }
         }
     };
 
@@ -475,6 +515,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "Only admins can edit roads!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             return;
@@ -499,6 +540,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "Only admins can edit roads!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             return;
@@ -510,6 +552,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "A road must have at least 2 points!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             return;
@@ -521,6 +564,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "Please provide a title and type!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             return;
@@ -528,6 +572,7 @@ const AdminStrategicRoadmap = () => {
 
         Swal.fire({
             title: "Saving Road...",
+            scrollbarPadding: false,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -563,6 +608,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "success",
                 title: "Road updated successfully!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
             resetForm();
@@ -574,6 +620,7 @@ const AdminStrategicRoadmap = () => {
                 icon: "error",
                 title: "Failed to update road!",
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
         }
@@ -905,6 +952,7 @@ const AdminStrategicRoadmap = () => {
                         transition={{ duration: 0.15 }}
                     >
                         <motion.div
+                            ref={modalRef}
                             className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col"
                             initial={{ scale: 0.8, y: 50 }}
                             animate={{ scale: 1, y: 0 }}

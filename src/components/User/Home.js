@@ -32,7 +32,7 @@ const Home = () => {
             const { data, error } = await supabase
                 .from("events")
                 .select("*")
-                .order("created_at", { ascending: false }); // Sort by updated_at descending (latest first)
+                .order("created_at", { ascending: false }); // Sort by created_at descending (latest first)
 
             if (error) throw error;
 
@@ -153,14 +153,44 @@ const Home = () => {
         };
     }, [isModalOpen]);
 
-    // Filter only upcoming events for mini cards
-    const upcomingEvents = allEvents.filter(event => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Set to start of today
-        const eventDate = new Date(event.dates[0]); // Assuming dates is an array, take first date
-        eventDate.setHours(0, 0, 0, 0); // Normalize event date
-        return eventDate > today; // Only show events after today
-    });
+    // Filter upcoming events and determine the earliest future date for display
+    const upcomingEvents = allEvents
+        .map((event) => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set to start of today
+
+            // Find the earliest future date from event.dates
+            const futureDates = event.dates
+                .map((date) => new Date(date))
+                .filter((date) => {
+                    date.setHours(0, 0, 0, 0); // Normalize date
+                    return date >= today;
+                })
+                .sort((a, b) => a - b);
+
+            // If there are future dates, return the event with the earliest future date
+            if (futureDates.length > 0) {
+                return { ...event, displayDate: futureDates[0] };
+            }
+            return null;
+        })
+        .filter((event) => event !== null); // Remove events with no future dates
+
+    const handleEventClick = (e, facebookLink) => {
+        if (!facebookLink) {
+            e.preventDefault();
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "info",
+                title: "No Facebook Link",
+                text: "This event does not have a Facebook post link.",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+        }
+        // If facebookLink exists, the <a> tag's href will handle the navigation
+    };
 
     return (
         <div className="relative w-full mx-auto p-2 sm:p-4 md:p-6 lg:p-8 min-h-screen">
@@ -177,7 +207,7 @@ const Home = () => {
                         </div>
                     ) : (
                         <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 md:p-6">
-                            {allEvents.map((item) => ( // Removed reverse() since we sort in the query
+                            {allEvents.map((item) => (
                                 <motion.div
                                     key={item.id}
                                     className="bg-[#dee5f8] p-2 sm:p-4 rounded shadow-md border border-gray-200 flex flex-col sm:flex-row gap-4"
@@ -235,9 +265,10 @@ const Home = () => {
                             {upcomingEvents.slice(0, 4).map((item) => (
                                 <a
                                     key={item.id}
-                                    href={`https://example.com/event/${item.id}`}
+                                    href={item.facebook_link || "#"}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={(e) => handleEventClick(e, item.facebook_link)}
                                     className="bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition-all duration-200"
                                 >
                                     <div className="overflow-hidden rounded-t-lg aspect-video w-full">
@@ -255,7 +286,7 @@ const Home = () => {
                                             {item.title}
                                         </h3>
                                         <p className="text-[10px] sm:text-xs text-gray-500">
-                                            {new Date(item.dates[0]).toLocaleDateString()}
+                                            {item.displayDate.toLocaleDateString()}
                                         </p>
                                     </div>
                                 </a>

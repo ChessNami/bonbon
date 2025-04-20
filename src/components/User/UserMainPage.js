@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from "framer-motion"; // Import Framer Motion
 import Home from "./Home";
 import Transparency from "./Transparency";
 import Demographics from "./Demographics";
-import ProjectManagement from "./ProjectManagement";
 import MainProfileComponent from "../User/Profile/MainProfileComponent";
 import GeotaggingView from "./GeotaggingView";
 import Feedback from "./Feedback";
 import StrategicRoadMapView from "./StrategicRoadMapView";
+import ProjectManagementView from "./ProjectManagementView";
 
 const pageVariants = {
     initial: { opacity: 0, x: -25 }, // Start with opacity 0 and slide in from the left
@@ -25,7 +25,7 @@ const UserMainPage = ({ currentPage }) => {
             case "Demographics":
                 return <Demographics />;
             case "Project Management":
-                return <ProjectManagement />;
+                return <ProjectManagementView />;
             case "Strategic Road":
                 return <StrategicRoadMapView />;
             case "Geotagging":

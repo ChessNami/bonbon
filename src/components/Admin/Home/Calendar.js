@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaChevronLeft, FaChevronRight, FaTimes, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaTimes, FaPlus, FaEdit, FaTrash, FaEraser } from "react-icons/fa";
 import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import Compressor from "compressorjs";
@@ -56,8 +56,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     if (event.image_url) {
                         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                             .from("event-photos")
-                            .createSignedUrl(event.image_url, 3600); // 1 hour expiry
-
+                            .createSignedUrl(event.image_url, 3600);
                         if (signedUrlError) {
                             console.error(`Error generating signed URL for event ${event.id}:`, signedUrlError);
                         } else {
@@ -171,7 +170,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         exit: { opacity: 0, scale: 0.8 },
     };
 
-    // Event Modal State (Create)
     const [eventDetails, setEventDetails] = useState({
         title: "",
         date: selectedDates.length > 0 ? selectedDates[0] : "",
@@ -183,6 +181,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         endPeriod: "AM",
         location: "",
         description: "",
+        facebook_link: "",
         image: null,
         image_preview: "",
         croppedImage: null,
@@ -315,6 +314,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                         end_time: endTime,
                         location: eventDetails.location,
                         description: eventDetails.description,
+                        facebook_link: eventDetails.facebook_link,
                         whole_day: eventDetails.wholeDay,
                     }])
                     .select("id");
@@ -351,6 +351,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                         end_time: endTime,
                         location: eventDetails.location,
                         description: eventDetails.description,
+                        facebook_link: eventDetails.facebook_link,
                         whole_day: eventDetails.wholeDay,
                     }]);
 
@@ -364,6 +365,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 end_time: endTime,
                 location: eventDetails.location,
                 description: eventDetails.description,
+                facebook_link: eventDetails.facebook_link,
                 image_url: imageUrl,
                 whole_day: eventDetails.wholeDay,
             };
@@ -384,6 +386,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 endPeriod: "AM",
                 location: "",
                 description: "",
+                facebook_link: "",
                 image: null,
                 image_preview: "",
                 croppedImage: null,
@@ -401,7 +404,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 timer: 1500,
             });
 
-            fetchUserEvents(); // Refresh events after creation
+            fetchUserEvents();
         } catch (error) {
             Swal.close();
             console.error("Error in handleCreateEvent:", error);
@@ -417,6 +420,18 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         }
     };
 
+    const clearSelectedDates = () => {
+        setSelectedDates([]);
+        Swal.fire({
+            toast: true,
+            position: "top-end",
+            icon: "success",
+            title: "Selected dates cleared",
+            showConfirmButton: false,
+            timer: 1500,
+        });
+    };
+
     const handleEditEvent = (event) => {
         setCurrentEvent(event);
         setEventDetails({
@@ -430,6 +445,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             endPeriod: event.end_time.split(" ")[1],
             location: event.location,
             description: event.description,
+            facebook_link: event.facebook_link || "",
             wholeDay: event.whole_day,
         });
         setSelectedDates(event.dates);
@@ -475,6 +491,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     end_time: endTime,
                     location: eventDetails.location,
                     description: eventDetails.description,
+                    facebook_link: eventDetails.facebook_link,
                     whole_day: eventDetails.wholeDay,
                 })
                 .eq("id", currentEvent.id);
@@ -489,6 +506,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 end_time: endTime,
                 location: eventDetails.location,
                 description: eventDetails.description,
+                facebook_link: eventDetails.facebook_link,
                 whole_day: eventDetails.wholeDay,
             };
             const updatedEvents = { ...userEvents };
@@ -508,6 +526,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 endPeriod: "AM",
                 location: "",
                 description: "",
+                facebook_link: "",
                 image: null,
                 image_preview: "",
                 croppedImage: null,
@@ -525,7 +544,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 timer: 1500,
             });
 
-            fetchUserEvents(); // Refresh events after update
+            fetchUserEvents();
         } catch (error) {
             Swal.close();
             console.error("Error in handleUpdateEvent:", error);
@@ -582,8 +601,8 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                         timer: 1500,
                     });
 
-                    fetchUserEvents(); // Refresh events after deletion
-                    setModalData(null); // Close the modal after deletion
+                    fetchUserEvents();
+                    setModalData(null);
                 }
             });
         } catch (error) {
@@ -612,7 +631,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             initial="hidden"
             animate="visible"
         >
-            {/* Controls */}
             <motion.div
                 className="flex flex-col md:flex-row md:justify-between items-center mb-4 gap-2"
                 variants={itemVariants}
@@ -659,8 +677,18 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     >
                         <FaPlus size={20} />
                     </motion.button>
+                    <motion.button
+                        onClick={clearSelectedDates}
+                        className={`p-2 rounded transition ${selectedDates.length > 0
+                            ? "bg-green-200 hover:bg-green-300 active:bg-green-400"
+                            : "bg-gray-300 cursor-not-allowed opacity-50"
+                            }`}
+                        whileHover={selectedDates.length > 0 ? { scale: 1.1 } : {}}
+                        whileTap={selectedDates.length > 0 ? { scale: 0.9 } : {}}
+                    >
+                        <FaEraser size={20} />
+                    </motion.button>
                 </div>
-
                 <motion.div
                     className="font-bold text-lg sm:text-xl md:text-2xl uppercase underline underline-offset-4 text-center"
                     variants={itemVariants}
@@ -701,7 +729,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
 
             <div className="border-b border-gray-300 my-4"></div>
 
-            {/* Weekdays */}
             <motion.div
                 className="grid grid-cols-7 text-center font-semibold text-sm sm:text-base"
                 variants={containerVariants}
@@ -719,7 +746,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 ))}
             </motion.div>
 
-            {/* Calendar Grid */}
             <motion.div
                 className="grid grid-cols-7 gap-1"
                 variants={containerVariants}
@@ -751,17 +777,17 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                         today.getFullYear() === selectedYear &&
                         today.getMonth() + 1 === selectedMonth &&
                         today.getDate() === day;
-                    const hasEvents = userEvents[dateKey]?.length > 0; // Check if there are events
+                    const hasEvents = userEvents[dateKey]?.length > 0;
 
                     return (
                         <motion.div
                             key={day}
                             className={`relative p-2 border rounded-lg h-12 sm:h-16 md:h-24 cursor-pointer text-xs sm:text-sm md:text-base 
-            flex flex-col items-center justify-center group
-            ${isSunday ? "text-red-500 bg-red-100" : ""}
-            ${holiday ? "bg-green-100" : ""}
-            ${isSelected ? "bg-blue-200 border-blue-500" : ""}
-            ${isToday ? "bg-yellow-200 border-yellow-500" : ""}`}
+                            flex flex-col items-center justify-center group
+                            ${isSunday ? "text-red-500 bg-red-100" : ""}
+                            ${holiday ? "bg-green-100" : ""}
+                            ${isSelected ? "bg-blue-200 border-blue-500" : ""}
+                            ${isToday ? "bg-yellow-200 border-yellow-500" : ""}`}
                             onClick={() => handleDateClick(dateKey)}
                             onContextMenu={(e) => {
                                 e.preventDefault();
@@ -804,7 +830,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 ))}
             </motion.div>
 
-            {/* Legend Section */}
             <motion.div
                 className="mt-4 border-t pt-4"
                 variants={itemVariants}
@@ -835,7 +860,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 </motion.div>
             </motion.div>
 
-            {/* Existing Modal for Events */}
             <AnimatePresence>
                 {modalData && (
                     <motion.div
@@ -863,7 +887,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                     <FaTimes size={20} />
                                 </motion.button>
                             </div>
-                            <div className="p-4"> {/* Added padding-top to offset sticky header */}
+                            <div className="p-4">
                                 {modalData.holiday && (
                                     <div className="mb-4">
                                         <span className="font-bold">Holiday:</span> {modalData.holiday.localName}
@@ -892,6 +916,14 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                             <p>
                                                 <span className="font-bold">Description:</span> {event.description || "N/A"}
                                             </p>
+                                            {event.facebook_link && (
+                                                <p>
+                                                    <span className="font-bold">Facebook Post:</span>{" "}
+                                                    <a href={event.facebook_link} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+                                                        View Post
+                                                    </a>
+                                                </p>
+                                            )}
                                             {event.signedImageUrl && (
                                                 <img
                                                     src={event.signedImageUrl}
@@ -929,7 +961,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 )}
             </AnimatePresence>
 
-            {/* New Event Creation Modal */}
             <AnimatePresence>
                 {isEventModalOpen && (
                     <motion.div
@@ -1102,6 +1133,17 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                         />
                                     </div>
                                     <div>
+                                        <label className="block text-sm font-medium mb-1">Facebook Post Link</label>
+                                        <input
+                                            type="url"
+                                            name="facebook_link"
+                                            value={eventDetails.facebook_link}
+                                            onChange={handleEventInputChange}
+                                            className="w-full p-2 border rounded"
+                                            placeholder="https://www.facebook.com/..."
+                                        />
+                                    </div>
+                                    <div>
                                         <label className="block text-sm font-medium mb-1">Upload Image (JPEG/PNG)</label>
                                         <input
                                             type="file"
@@ -1142,7 +1184,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 )}
             </AnimatePresence>
 
-            {/* Edit Event Modal */}
             <AnimatePresence>
                 {isEditModalOpen && (
                     <motion.div
@@ -1312,6 +1353,17 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                             onChange={handleEventInputChange}
                                             className="w-full p-2 border rounded"
                                             rows="3"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Facebook Post Link</label>
+                                        <input
+                                            type="url"
+                                            name="facebook_link"
+                                            value={eventDetails.facebook_link}
+                                            onChange={handleEventInputChange}
+                                            className="w-full p-2 border rounded"
+                                            placeholder="https://www.facebook.com/..."
                                         />
                                     </div>
                                     <motion.button
