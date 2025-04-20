@@ -1,40 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, CircleMarker } from "react-leaflet";
+import { MapContainer, TileLayer, Popup, Polyline, useMapEvents, CircleMarker, LayersControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../../index.css";
-import bonbonLogo from "../../img/Logo/bonbon-logo.png";
 import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaAlignLeft, FaTag, FaMap } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 
-// Custom DivIcon for Animation
-const customIcon = L.divIcon({
-    className: "animated-marker",
-    html: `<div class="pin-icon">
-                <img src="https://cdn-icons-png.flaticon.com/512/447/447031.png" alt="Pin" />
-           </div>`,
-    iconSize: [38, 38],
-    iconAnchor: [19, 38],
-    popupAnchor: [0, -38],
-});
-
 const AdminStrategicRoadmap = () => {
-    const bonbonCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);
-    const [roads, setRoads] = useState([
-        {
-            id: 1,
-            title: "Main Road Plan",
-            description: "This road is designated for widening.",
-            type: "Widening",
-            color: "blue",
-            coords: [
-                [8.5095, 124.6480],
-                [8.5100, 124.6490],
-                [8.5105, 124.6500],
-            ],
-        },
-    ]);
+    const centerCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []); // Center retained for map initialization
+    const [roads, setRoads] = useState([]); // Empty initial roads state
     const [newRoadCoords, setNewRoadCoords] = useState([]);
     const [actionHistory, setActionHistory] = useState([]);
     const [redoHistory, setRedoHistory] = useState([]);
@@ -54,21 +29,11 @@ const AdminStrategicRoadmap = () => {
             click(e) {
                 if (isAdding && draggingVertexIndex === null) {
                     const clickedCoord = [e.latlng.lat, e.latlng.lng];
-                    // Placeholder for road-snapping logic
-                    // Use an API like Overpass API or OSRM to snap to nearest road
-                    // Example: fetch road geometry within maxDistance
-                    /*
-                    async function snapToRoad(coord) {
-                        const response = await fetch(`OSRM_API_ENDPOINT/nearest?coordinates=${coord[1]},${coord[0]}`);
-                        const data = await response.json();
-                        return data.waypoints[0].location; // [lng, lat]
-                    }
-                    */
-                    const newCoord = clickedCoord; // Replace with snapped coord from API
+                    const newCoord = clickedCoord; // Placeholder for road-snapping logic
                     if (newRoadCoords.length > 0) {
                         const lastCoord = newRoadCoords[newRoadCoords.length - 1];
                         const distance = L.latLng(lastCoord).distanceTo(L.latLng(newCoord)) / 1000; // in km
-                        if (distance > maxDistance * 200) { // Convert degrees to km approximately
+                        if (distance > maxDistance * 200) {
                             Swal.fire({
                                 toast: true,
                                 position: "top-end",
@@ -152,8 +117,6 @@ const AdminStrategicRoadmap = () => {
             const handleMouseMove = (e) => {
                 if (draggingVertexIndex !== null) {
                     const latlng = map.mouseEventToLatLng(e);
-                    // Placeholder for snapping dragged point to road
-                    // Use API to snap latlng to nearest road point
                     const newCoord = [latlng.lat, latlng.lng];
                     setNewRoadCoords((prev) => {
                         const updatedCoords = [...prev];
@@ -445,24 +408,33 @@ const AdminStrategicRoadmap = () => {
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ duration: 0.3, delay: 0.1 }}
                         >
-                            <MapContainer center={bonbonCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
-                                <TileLayer
-                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                />
-                                <Marker position={bonbonCoords} icon={customIcon}>
-                                    <Popup>
-                                        <div className="flex flex-col items-center text-center">
-                                            <img
-                                                src={bonbonLogo}
-                                                alt="Bonbon Barangay Hall Logo"
-                                                className="w-24 h-auto mb-2 rounded"
-                                            />
-                                            <strong>Bonbon Barangay Hall</strong>
-                                            <div>Barangay Bonbon, Cagayan de Oro City</div>
-                                        </div>
-                                    </Popup>
-                                </Marker>
+                            <MapContainer center={centerCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
+                                <LayersControl position="topright">
+                                    <LayersControl.BaseLayer checked name="Street Map">
+                                        <TileLayer
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                        />
+                                    </LayersControl.BaseLayer>
+                                    <LayersControl.BaseLayer name="Satellite">
+                                        <TileLayer
+                                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                            attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                        />
+                                    </LayersControl.BaseLayer>
+                                    <LayersControl.BaseLayer name="Terrain">
+                                        <TileLayer
+                                            url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                                            attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+                                        />
+                                    </LayersControl.BaseLayer>
+                                    <LayersControl.BaseLayer name="Grayscale">
+                                        <TileLayer
+                                            url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
+                                            attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                        />
+                                    </LayersControl.BaseLayer>
+                                </LayersControl>
                                 {roads.map((road) => (
                                     <Polyline key={road.id} positions={road.coords} pathOptions={getRoadStyle(road.color)}>
                                         <Popup>
@@ -619,7 +591,7 @@ const AdminStrategicRoadmap = () => {
                                         value={newDescription}
                                         onChange={(e) => setNewDescription(e.target.value)}
                                         className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        rows="4"
+                                        rows园藝 rows="4"
                                     />
                                 </div>
                                 <div>
@@ -726,10 +698,32 @@ const AdminStrategicRoadmap = () => {
                                                     style={{ height: "100%", width: "100%" }}
                                                     scrollWheelZoom={false}
                                                 >
-                                                    <TileLayer
-                                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                        attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                    />
+                                                    <LayersControl position="topright">
+                                                        <LayersControl.BaseLayer checked name="Street Map">
+                                                            <TileLayer
+                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                                attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                            />
+                                                        </LayersControl.BaseLayer>
+                                                        <LayersControl.BaseLayer name="Satellite">
+                                                            <TileLayer
+                                                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                                attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                            />
+                                                        </LayersControl.BaseLayer>
+                                                        <LayersControl.BaseLayer name="Terrain">
+                                                            <TileLayer
+                                                                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                                                                attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+                                                            />
+                                                        </LayersControl.BaseLayer>
+                                                        <LayersControl.BaseLayer name="Grayscale">
+                                                            <TileLayer
+                                                                url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
+                                                                attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                            />
+                                                        </LayersControl.BaseLayer>
+                                                    </LayersControl>
                                                     <Polyline positions={road.coords} pathOptions={getRoadStyle(road.color)} />
                                                 </MapContainer>
                                             </div>

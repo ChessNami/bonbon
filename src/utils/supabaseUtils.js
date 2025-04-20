@@ -1,13 +1,14 @@
 import { supabase } from "../supabaseClient";
+import Swal from "sweetalert2";
 
 // Cache for signed URLs to avoid repeated requests
 const signedUrlCache = new Map();
 
-export const fetchUserPhotos = async (userId) => {
+export const fetchUserPhotos = async (userId, forceRefresh = false) => {
     try {
-        // Check cache first
+        // Check cache first unless forceRefresh is true
         const cacheKey = `photos_${userId}`;
-        if (signedUrlCache.has(cacheKey)) {
+        if (!forceRefresh && signedUrlCache.has(cacheKey)) {
             return signedUrlCache.get(cacheKey);
         }
 
@@ -57,4 +58,44 @@ export const fetchUserPhotos = async (userId) => {
         console.error("Error in fetchUserPhotos:", err.message);
         return { profilePic: null, coverPhoto: null };
     }
+};
+
+export const subscribeToUserPhotos = (userId, callback) => {
+    if (!userId) {
+        console.error("No userId provided for photo subscription");
+        return () => { };
+    }
+
+    const channel = supabase
+        .channel(`user_photos_changes_${userId}`)
+        .on(
+            "postgres_changes",
+            {
+                event: "*",
+                schema: "public",
+                table: "user_photos",
+                filter: `user_id=eq.${userId}`,
+            },
+            async (payload) => {
+                console.log("User photos change detected:", payload);
+                const newPhotos = await fetchUserPhotos(userId, true); // Force refresh on change
+                callback(newPhotos);
+            }
+        )
+        .subscribe((status, error) => {
+            if (error) {
+                console.error("Photo subscription error:", error);
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "error",
+                    title: "Failed to subscribe to photo updates",
+                    timer: 1500,
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                });
+            }
+        });
+
+    return () => supabase.removeChannel(channel);
 };

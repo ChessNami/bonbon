@@ -6,7 +6,7 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     useEffect(() => {
-        const handleResize = () => setIsCollapsed(window.innerWidth < 768);
+        const handleResize = () => setIsCollapsed(window.innerWidth < 1000);
         window.addEventListener("resize", handleResize);
         handleResize();
         return () => window.removeEventListener("resize", handleResize);

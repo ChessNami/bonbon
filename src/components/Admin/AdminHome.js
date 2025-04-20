@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { FaHome } from "react-icons/fa";
 import Calendar from "./Home/Calendar";
 import TotalResident from "./Home/TotalResident";
 import ApprovedProfile from "./Home/ApprovedProfile";
@@ -16,11 +15,6 @@ const AdminHome = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-background">
-            {/* Header */}
-            <h1 className="text-xl sm:text-2xl font-bold bg-[#dee5f8] p-4 flex items-center gap-2">
-                <FaHome className="text-primary" size={30} />
-                Dashboard
-            </h1>
 
             {/* Stats Section */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 py-4 px-4">

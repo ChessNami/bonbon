@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaSignOutAlt, FaSun, FaMoon, FaBell } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
-import { fetchUserPhotos } from "../../utils/supabaseUtils";
+import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 
 const AdminHeader = ({ onLogout, setCurrentPage }) => {
     const [displayName, setDisplayName] = useState();
@@ -27,6 +27,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     }, []);
 
     useEffect(() => {
+        let unsubscribe;
         const fetchUserData = async () => {
             const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -41,9 +42,18 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
 
             const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
             setProfilePicture(profilePicUrl || placeholderImg);
+
+            // Subscribe to photo changes
+            unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
+                setProfilePicture(newPhotos.profilePic || placeholderImg);
+            });
         };
 
         fetchUserData();
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     useEffect(() => {
