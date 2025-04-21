@@ -1138,20 +1138,6 @@ const AdminProMgmt = () => {
                                             maxZoom={20}
                                         />
                                     </LayersControl.BaseLayer>
-                                    <LayersControl.BaseLayer name="Terrain">
-                                        <TileLayer
-                                            url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                                            attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-                                            maxZoom={17}
-                                        />
-                                    </LayersControl.BaseLayer>
-                                    <LayersControl.BaseLayer name="Grayscale">
-                                        <TileLayer
-                                            url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                            attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                            maxZoom={20}
-                                        />
-                                    </LayersControl.BaseLayer>
                                 </LayersControl>
                                 {polygons.map((polygon) => (
                                     <Polygon
