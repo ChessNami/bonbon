@@ -40,7 +40,6 @@ const AdminProMgmt = () => {
     const [selectedPolygon, setSelectedPolygon] = useState(null);
     const [selectedPolygonId, setSelectedPolygonId] = useState(null);
     const [completionRate, setCompletionRate] = useState(0);
-    const [expandedImages, setExpandedImages] = useState({});
     const [isAdmin, setIsAdmin] = useState(false);
     const modalRef = useRef(null);
     const imageModalRef = useRef(null);
@@ -53,6 +52,9 @@ const AdminProMgmt = () => {
     const [filterCompletionMax, setFilterCompletionMax] = useState("");
     const [filterDateStart, setFilterDateStart] = useState("");
     const [filterDateEnd, setFilterDateEnd] = useState("");
+    const fullDetailsModalRef = useRef(null);
+    const [isFullDetailsModalOpen, setIsFullDetailsModalOpen] = useState(false);
+    const [selectedFullDetailsPolygon, setSelectedFullDetailsPolygon] = useState(null);
 
 
 
@@ -210,10 +212,14 @@ const AdminProMgmt = () => {
             if (completionModalRef.current && completionModalRef.current.contains(event.target)) {
                 return;
             }
+            if (fullDetailsModalRef.current && fullDetailsModalRef.current.contains(event.target)) {
+                return;
+            }
             if (modalRef.current && !modalRef.current.contains(event.target)) {
                 setIsModalOpen(false);
                 setIsImageModalOpen(false);
                 setIsCompletionModalOpen(false);
+                setIsFullDetailsModalOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -452,6 +458,19 @@ const AdminProMgmt = () => {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
+
+    // Add to useEffect for modal open/close handling
+    useEffect(() => {
+        if (isModalOpen || isFullDetailsModalOpen || isDetailModalOpen || isImageModalOpen || isCompletionModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+
+        return () => {
+            document.body.style.overflow = 'auto';
+        };
+    }, [isModalOpen, isFullDetailsModalOpen, isDetailModalOpen, isImageModalOpen, isCompletionModalOpen]);
 
     // Handle image selection and preview
     const handleImageSelect = (e) => {
@@ -1066,14 +1085,6 @@ const AdminProMgmt = () => {
         setIsImageModalOpen(true);
     };
 
-    // Toggle images expansion
-    const toggleImages = (polygonId) => {
-        setExpandedImages((prev) => ({
-            ...prev,
-            [polygonId]: !prev[polygonId],
-        }));
-    };
-
     return (
         <div className="p-4 mx-auto">
             {/* Buttons Section */}
@@ -1522,7 +1533,7 @@ const AdminProMgmt = () => {
                     >
                         <motion.div
                             ref={modalRef}
-                            className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col z-50"
+                            className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col z-50"
                             initial={{ scale: 0.8, y: 50 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.8, y: 50 }}
@@ -1642,166 +1653,280 @@ const AdminProMgmt = () => {
                                     </div>
                                 </div>
                             </div>
-                            {/* Projects List */}
+                            {/* Projects Grid */}
                             <div className="flex-1 overflow-y-auto p-4">
                                 {filteredPolygons.length === 0 ? (
                                     <p className="text-gray-500 text-center">No projects match the filters.</p>
                                 ) : (
-                                    filteredPolygons.map((polygon) => (
-                                        <motion.div
-                                            key={polygon.id}
-                                            className="mb-6 p-4 bg-gray-50 rounded-lg shadow"
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.15 }}
-                                        >
-                                            <h3 className="text-lg font-semibold">{polygon.title}</h3>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Location:</strong> {polygon.location}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Contractor:</strong> {polygon.contractor}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Contract Payment:</strong> ₱{formatNumberWithCommas(polygon.contract_payment)}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Update Status:</strong> {polygon.update_status}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Completion:</strong> {polygon.completion_rate || 0}%
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Date Monitoring:</strong> {polygon.date_monitoring_start} to{" "}
-                                                {polygon.date_monitoring_end}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Issues:</strong> {polygon.issues || "None"}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Project Engineer:</strong> {polygon.project_engineer}
-                                            </p>
-                                            <div className="mt-2">
-                                                <motion.button
-                                                    onClick={() => toggleImages(polygon.id)}
-                                                    className="text-blue-600 hover:underline flex items-center gap-1"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaImage />
-                                                    {expandedImages[polygon.id]
-                                                        ? "Hide Images"
-                                                        : `Show Images (${polygon.images?.length || 0})`}
-                                                </motion.button>
-                                                <AnimatePresence>
-                                                    {expandedImages[polygon.id] && polygon.images?.length > 0 && (
-                                                        <motion.div
-                                                            className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2"
-                                                            initial={{ height: 0, opacity: 0 }}
-                                                            animate={{ height: "auto", opacity: 1 }}
-                                                            exit={{ height: 0, opacity: 0 }}
-                                                            transition={{ duration: 0.3 }}
-                                                        >
-                                                            {polygon.images.map((image, index) => (
-                                                                <img
-                                                                    key={index}
-                                                                    src={image}
-                                                                    alt={`Project ${index}`}
-                                                                    className="w-full h-32 object-cover rounded cursor-pointer"
-                                                                    onClick={() => handleImageClick(image)}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {filteredPolygons.map((polygon) => (
+                                            <motion.div
+                                                key={polygon.id}
+                                                className="bg-gray-50 rounded-lg shadow hover:shadow-lg transition-shadow duration-200"
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.15 }}
+                                            >
+                                                <div className="h-48 rounded-t-lg overflow-hidden">
+                                                    <MapContainer
+                                                        center={getPolygonCenter(polygon.coords)}
+                                                        zoom={17}
+                                                        maxZoom={19}
+                                                        style={{ height: "100%", width: "100%", zIndex: 10 }}
+                                                        scrollWheelZoom={false}
+                                                    >
+                                                        <LayersControl position="topright">
+                                                            <LayersControl.BaseLayer checked name="Street Map">
+                                                                <TileLayer
+                                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                                    maxZoom={19}
                                                                 />
-                                                            ))}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                            <div className="mt-4 h-64 rounded-lg overflow-hidden relative z-10">
-                                                <MapContainer
-                                                    center={getPolygonCenter(polygon.coords)}
-                                                    zoom={17} // Increased zoom level for closer focus
-                                                    maxZoom={19}
-                                                    style={{ height: "100%", width: "100%", zIndex: 10 }}
-                                                    scrollWheelZoom={false}
-                                                >
-                                                    <LayersControl position="topright">
-                                                        <LayersControl.BaseLayer checked name="Street Map">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                                attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                                maxZoom={19}
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Satellite">
-                                                            <TileLayer
-                                                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                                                                attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                                                                maxZoom={20}
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Terrain">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                                                                attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-                                                                maxZoom={17}
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Grayscale">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                                                attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                                maxZoom={20}
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                    </LayersControl>
-                                                    <Polygon
-                                                        positions={polygon.coords}
-                                                        pathOptions={getPolygonStyle(polygon.color, polygon.update_status)}
-                                                    />
-                                                    <TileErrorHandler />
-                                                </MapContainer>
-                                            </div>
-                                            {isAdmin && (
-                                                <div className="mt-3 flex gap-2 flex-wrap">
-                                                    <motion.button
-                                                        onClick={() => {
-                                                            handleEditPolygon(polygon.id);
-                                                            setIsModalOpen(false);
-                                                        }}
-                                                        className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 text-sm"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                    >
-                                                        <FaHeading />
-                                                        Edit
-                                                    </motion.button>
-                                                    <motion.button
-                                                        onClick={() => handleDeletePolygon(polygon.id)}
-                                                        className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                    >
-                                                        <FaTrash />
-                                                        Delete
-                                                    </motion.button>
-                                                    <motion.button
-                                                        onClick={() => {
-                                                            setSelectedPolygonId(polygon.id);
-                                                            setCompletionRate(polygon.completion_rate || 0);
-                                                            setIsCompletionModalOpen(true);
-                                                        }}
-                                                        className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                    >
-                                                        <FaPercent />
-                                                        Update Completion
-                                                    </motion.button>
+                                                            </LayersControl.BaseLayer>
+                                                            <LayersControl.BaseLayer name="Satellite">
+                                                                <TileLayer
+                                                                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                                    attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                                    maxZoom={20}
+                                                                />
+                                                            </LayersControl.BaseLayer>
+                                                        </LayersControl>
+                                                        <Polygon
+                                                            positions={polygon.coords}
+                                                            pathOptions={getPolygonStyle(polygon.color, polygon.update_status)}
+                                                        />
+                                                        <TileErrorHandler />
+                                                    </MapContainer>
                                                 </div>
-                                            )}
-                                        </motion.div>
-                                    ))
+                                                <div className="p-4">
+                                                    <h3 className="text-lg font-semibold truncate">{polygon.title}</h3>
+                                                    <p className="text-sm text-gray-600 truncate">
+                                                        <strong>Status:</strong> {polygon.update_status}
+                                                    </p>
+                                                    <p className="text-sm text-gray-600 truncate">
+                                                        <strong>Completion:</strong> {polygon.completion_rate || 0}%
+                                                    </p>
+                                                    <div className="mt-3 flex gap-2 flex-wrap">
+                                                        <motion.button
+                                                            onClick={() => {
+                                                                setSelectedFullDetailsPolygon(polygon);
+                                                                setIsFullDetailsModalOpen(true);
+                                                            }}
+                                                            className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                        >
+                                                            <FaInfoCircle />
+                                                            View Details
+                                                        </motion.button>
+                                                        {isAdmin && (
+                                                            <>
+                                                                <motion.button
+                                                                    onClick={() => {
+                                                                        handleEditPolygon(polygon.id);
+                                                                        setIsModalOpen(false);
+                                                                    }}
+                                                                    className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 text-sm"
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                >
+                                                                    <FaHeading />
+                                                                    Edit
+                                                                </motion.button>
+                                                                <motion.button
+                                                                    onClick={() => handleDeletePolygon(polygon.id)}
+                                                                    className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                >
+                                                                    <FaTrash />
+                                                                    Delete
+                                                                </motion.button>
+                                                                <motion.button
+                                                                    onClick={() => {
+                                                                        setSelectedPolygonId(polygon.id);
+                                                                        setCompletionRate(polygon.completion_rate || 0);
+                                                                        setIsCompletionModalOpen(true);
+                                                                    }}
+                                                                    className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                >
+                                                                    <FaPercent />
+                                                                    Update Completion
+                                                                </motion.button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {isFullDetailsModalOpen && selectedFullDetailsPolygon && (
+                    <motion.div
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                    >
+                        <motion.div
+                            ref={fullDetailsModalRef}
+                            className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col z-[60]"
+                            initial={{ scale: 0.8, y: 50 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.8, y: 50 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            <div className="flex justify-between items-center p-4 border-b">
+                                <h2 className="text-xl font-semibold flex items-center gap-2">
+                                    <FaInfoCircle className="text-blue-600" />
+                                    {selectedFullDetailsPolygon.title}
+                                </h2>
+                                <motion.button
+                                    onClick={() => setIsFullDetailsModalOpen(false)}
+                                    className="text-gray-600 hover:text-gray-800"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                >
+                                    <FaTimes size={24} />
+                                </motion.button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4">
+                                <div className="mb-4">
+                                    <h3 className="text-lg font-semibold mb-2">Project Map</h3>
+                                    <div className="h-64 rounded-lg overflow-hidden">
+                                        <MapContainer
+                                            center={getPolygonCenter(selectedFullDetailsPolygon.coords)}
+                                            zoom={17}
+                                            maxZoom={19}
+                                            style={{ height: "100%", width: "100%", zIndex: 10 }}
+                                            scrollWheelZoom={false}
+                                        >
+                                            <LayersControl position="topright">
+                                                <LayersControl.BaseLayer checked name="Street Map">
+                                                    <TileLayer
+                                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                        attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                        maxZoom={19}
+                                                    />
+                                                </LayersControl.BaseLayer>
+                                                <LayersControl.BaseLayer name="Satellite">
+                                                    <TileLayer
+                                                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                        attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                        maxZoom={20}
+                                                    />
+                                                </LayersControl.BaseLayer>
+                                            </LayersControl>
+                                            <Polygon
+                                                positions={selectedFullDetailsPolygon.coords}
+                                                pathOptions={getPolygonStyle(selectedFullDetailsPolygon.color, selectedFullDetailsPolygon.update_status)}
+                                            />
+                                            <TileErrorHandler />
+                                        </MapContainer>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Location:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsPolygon.location}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Contractor:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsPolygon.contractor}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Contract Payment:</p>
+                                        <p className="text-sm text-gray-600">₱{formatNumberWithCommas(selectedFullDetailsPolygon.contract_payment)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Update Status:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsPolygon.update_status}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Completion:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsPolygon.completion_rate || 0}%</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Date Monitoring:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsPolygon.date_monitoring_start} to {selectedFullDetailsPolygon.date_monitoring_end}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Project Engineer:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsPolygon.project_engineer}</p>
+                                    </div>
+                                </div>
+                                <div className="mb-4">
+                                    <p className="text-sm font-medium text-gray-700 mb-1">Issues:</p>
+                                    <p className="text-sm text-gray-600">{selectedFullDetailsPolygon.issues || "None"}</p>
+                                </div>
+                                <div className="mb-4">
+                                    <p className="text-sm font-medium text-gray-700 mb-1">Images:</p>
+                                    {selectedFullDetailsPolygon.images?.length > 0 ? (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {selectedFullDetailsPolygon.images.map((image, index) => (
+                                                <img
+                                                    key={index}
+                                                    src={image}
+                                                    alt={`Project ${index}`}
+                                                    className="w-full h-24 object-cover rounded cursor-pointer"
+                                                    onClick={() => handleImageClick(image)}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 italic">No images available</p>
+                                    )}
+                                </div>
+                            </div>
+                            {isAdmin && (
+                                <div className="p-4 border-t flex gap-2 flex-wrap">
+                                    <motion.button
+                                        onClick={() => {
+                                            handleEditPolygon(selectedFullDetailsPolygon.id);
+                                            setIsModalOpen(false);
+                                            setIsFullDetailsModalOpen(false);
+                                        }}
+                                        className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 text-sm"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <FaHeading />
+                                        Edit
+                                    </motion.button>
+                                    <motion.button
+                                        onClick={() => handleDeletePolygon(selectedFullDetailsPolygon.id)}
+                                        className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <FaTrash />
+                                        Delete
+                                    </motion.button>
+                                    <motion.button
+                                        onClick={() => {
+                                            setSelectedPolygonId(selectedFullDetailsPolygon.id);
+                                            setCompletionRate(selectedFullDetailsPolygon.completion_rate || 0);
+                                            setIsCompletionModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <FaPercent />
+                                        Update Completion
+                                    </motion.button>
+                                </div>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}

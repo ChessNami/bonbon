@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
-import { FaPlus, FaEdit, FaTrash, FaTimes } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaTimes, FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from '../../supabaseClient';
 import Compressor from 'compressorjs';
@@ -25,6 +25,11 @@ const SKOfficials = () => {
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const cropperRef = useRef(null);
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(8);
+    const itemsPerPageOptions = [4, 8, 12, 16];
 
     useEffect(() => {
         fetchOfficials();
@@ -58,7 +63,14 @@ const SKOfficials = () => {
                 })
             );
 
-            setOfficials(officialsWithSignedUrls);
+            // Sort officials with SK Chairperson first
+            const sortedOfficials = officialsWithSignedUrls.sort((a, b) => {
+                if (a.position === "SK Chairperson") return -1;
+                if (b.position === "SK Chairperson") return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            setOfficials(sortedOfficials);
         } catch (error) {
             console.error('Error fetching SK officials:', error);
             Swal.fire({
@@ -112,7 +124,7 @@ const SKOfficials = () => {
         setModalMode("create");
         setFormData({
             name: "",
-            position: "SK Member",
+            position: "SK Kagawad",
             official_type: "",
             image: null,
             image_preview: "",
@@ -316,7 +328,7 @@ const SKOfficials = () => {
         setCurrentOfficial(null);
         setFormData({
             name: "",
-            position: "SK Member",
+            position: "SK Kagawad",
             official_type: "",
             image: null,
             image_preview: "",
@@ -325,106 +337,172 @@ const SKOfficials = () => {
         setErrors({});
     };
 
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = officials.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(officials.length / itemsPerPage);
+
+    const paginate = (pageNumber) => {
+        setCurrentPage(pageNumber);
+    };
+
+    const handleItemsPerPageChange = (e) => {
+        setItemsPerPage(Number(e.target.value));
+        setCurrentPage(1); // Reset to first page when items per page changes
+    };
+
     const modalVariants = {
         hidden: { opacity: 0, scale: 0.8 },
         visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 30 } },
         exit: { opacity: 0, scale: 0.8 },
     };
 
+    const cardVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+    };
+
     return (
-        <div className="min-h-screen bg-gray-100 p-4">
-            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+        <div className="p-4 mx-auto">
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                 <button
                     onClick={handleCreate}
-                    className="px-3 py-2 sm:px-4 sm:py-2 md:px-6 md:py-3 bg-green-500 text-white rounded hover:bg-green-600 flex items-center shadow-md text-sm sm:text-base"
+                    className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-md"
                 >
                     <FaPlus className="mr-2" /> Add SK Official
                 </button>
+                <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-gray-700">Items per page:</label>
+                    <select
+                        value={itemsPerPage}
+                        onChange={handleItemsPerPageChange}
+                        className="p-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                        {itemsPerPageOptions.map((option) => (
+                            <option key={option} value={option}>
+                                {option}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
-            <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse border border-gray-300 bg-white rounded-lg shadow-md">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Name</th>
-                            <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Position</th>
-                            <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-left text-xs sm:text-sm md:text-base">Official Type</th>
-                            <th className="border border-gray-300 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-3 text-center text-xs sm:text-sm md:text-base">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {isLoading ? (
-                            <tr>
-                                <td colSpan="4" className="text-center py-4">
-                                    <div className="inline-block">
-                                        <Loader />
+
+            {isLoading ? (
+                <div className="flex justify-center py-12">
+                    <Loader />
+                </div>
+            ) : officials.length === 0 ? (
+                <div className="text-center py-12 text-gray-500 text-lg">
+                    No SK officials available. Add a new SK official to get started.
+                </div>
+            ) : (
+                <>
+                    <motion.div
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                            visible: { transition: { staggerChildren: 0.1 } },
+                        }}
+                    >
+                        {currentItems.map((official) => (
+                            <motion.div
+                                key={official.id}
+                                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                                variants={cardVariants}
+                            >
+                                <div className="relative w-full pt-[100%]">
+                                    <img
+                                        src={official.signedImageUrl || placeholderImage}
+                                        alt={official.name}
+                                        className="absolute top-0 left-0 w-full h-full object-cover rounded-t-lg"
+                                        onError={(e) => {
+                                            console.error(`Failed to load signed image for ${official.name}:`, official.signedImageUrl);
+                                            e.target.src = placeholderImage;
+                                        }}
+                                    />
+                                    <div className="absolute top-2 right-2 flex space-x-2">
+                                        <button
+                                            onClick={() => handleEdit(official)}
+                                            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition"
+                                        >
+                                            <FaEdit size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(official)}
+                                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                                        >
+                                            <FaTrash size={14} />
+                                        </button>
                                     </div>
-                                </td>
-                            </tr>
-                        ) : officials.length === 0 ? (
-                            <tr>
-                                <td colSpan="4" className="text-center py-4 text-gray-500 text-sm sm:text-base">
-                                    No data available.
-                                </td>
-                            </tr>
-                        ) : (
-                            officials.map((official) => (
-                                <tr key={official.id} className="hover:bg-gray-50">
-                                    <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4">
-                                        <div className="flex items-center gap-2">
-                                            <img
-                                                src={official.signedImageUrl || placeholderImage}
-                                                alt={official.name}
-                                                className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded object-cover mr-2"
-                                                onError={(e) => {
-                                                    console.error(`Failed to load signed image for ${official.name}:`, official.signedImageUrl);
-                                                    e.target.src = placeholderImage;
-                                                }}
-                                            />
-                                            <span className="text-xs sm:text-sm md:text-base">{official.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-xs sm:text-sm md:text-base">{official.position}</td>
-                                    <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-xs sm:text-sm md:text-base">{official.official_type}</td>
-                                    <td className="border border-gray-300 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-4 text-center">
-                                        <div className="flex justify-center space-x-2 flex-wrap gap-2">
-                                            <button
-                                                onClick={() => handleEdit(official)}
-                                                className="px-2 py-1 sm:px-3 sm:py-2 md:px-3 md:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm"
-                                            >
-                                                <FaEdit className="mr-1" /> Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(official)}
-                                                className="px-2 py-1 sm:px-3 sm:py-2 md:px-3 md:py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center text-xs sm:text-sm"
-                                            >
-                                                <FaTrash className="mr-1" /> Delete
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                                </div>
+                                <div className="p-4">
+                                    <h3 className="text-lg font-semibold text-gray-800">{official.name}</h3>
+                                    <p className="text-sm text-gray-600">{official.position}</p>
+                                    <p className="text-sm text-gray-500">{official.official_type}</p>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </motion.div>
+
+                    {/* Pagination Controls */}
+                    <div className="flex justify-center items-center mt-8 space-x-4">
+                        <button
+                            onClick={() => paginate(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className={`p-2 rounded-full transition-all duration-200 ${currentPage === 1
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                                }`}
+                        >
+                            <FaArrowLeft size={16} />
+                        </button>
+                        <div className="flex space-x-2">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                    key={page}
+                                    onClick={() => paginate(page)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${currentPage === page
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => paginate(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className={`p-2 rounded-full transition-all duration-200 ${currentPage === totalPages
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                                }`}
+                        >
+                            <FaArrowRight size={16} />
+                        </button>
+                    </div>
+                </>
+            )}
 
             <AnimatePresence>
                 {isModalOpen && (
                     <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                     >
                         <motion.div
-                            className="bg-white p-4 rounded-lg shadow-lg w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto"
+                            className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto"
                             variants={modalVariants}
                             initial="hidden"
                             animate="visible"
                             exit="exit"
                         >
-                            <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10">
-                                <h2 className="text-base sm:text-lg md:text-xl font-bold">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold">
                                     {modalMode === "create" && "Add New SK Official"}
                                     {modalMode === "edit" && "Edit SK Official"}
                                     {modalMode === "delete" && "Confirm Delete"}
@@ -433,56 +511,56 @@ const SKOfficials = () => {
                                     onClick={closeModal}
                                     className="text-gray-500 hover:text-gray-700 transition"
                                 >
-                                    <FaTimes size={16} />
+                                    <FaTimes size={20} />
                                 </button>
                             </div>
 
                             {modalMode === "create" && (
                                 <form onSubmit={handleSubmit} className="space-y-4">
-                                    <div className="grid grid-cols-1 gap-4">
+                                    <div className="space-y-4">
                                         <div>
-                                            <label className="block text-xs sm:text-sm font-medium mb-1">Name</label>
+                                            <label className="block text-sm font-medium mb-1">Name</label>
                                             <input
                                                 type="text"
                                                 name="name"
                                                 value={formData.name}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs sm:text-sm font-medium mb-1">Position</label>
+                                            <label className="block text-sm font-medium mb-1">Position</label>
                                             <input
                                                 type="text"
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs sm:text-sm font-medium mb-1">Official Type</label>
+                                            <label className="block text-sm font-medium mb-1">Official Type</label>
                                             <input
                                                 type="text"
                                                 name="official_type"
                                                 value={formData.official_type}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs sm:text-sm font-medium mb-1">Image (PNG/JPEG)</label>
+                                            <label className="block text-sm font-medium mb-1">Image (PNG/JPEG)</label>
                                             <input
                                                 type="file"
                                                 accept="image/png, image/jpeg"
                                                 onChange={handleImageChange}
-                                                className={`w-full p-2 border rounded ${errors.image ? "border-red-500" : ""} text-xs sm:text-sm`}
+                                                className={`w-full p-2 border rounded ${errors.image ? "border-red-500" : "border-gray-300"}`}
                                             />
                                             {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
                                         </div>
@@ -499,34 +577,26 @@ const SKOfficials = () => {
                                                     cropBoxResizable={true}
                                                     zoomable={true}
                                                     scalable={true}
-                                                    viewMode={1} // Ensures the crop box stays within the image
+                                                    viewMode={1}
                                                     className="w-full"
                                                 />
-                                                {formData.croppedImage && (
-                                                    <img
-                                                        src={formData.image_preview}
-                                                        alt="Cropped Preview"
-                                                        className="mt-2 w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 object-cover rounded mx-auto"
-                                                    />
-                                                )}
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="flex justify-end space-x-2 flex-wrap gap-2 mt-4">
+                                    <div className="flex justify-end space-x-2 mt-6">
                                         <button
                                             type="button"
                                             onClick={closeModal}
-                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
+                                            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
                                         >
-                                            <FaTimes className="mr-2" /> Cancel
+                                            Cancel
                                         </button>
                                         <button
                                             type="submit"
-                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm md:text-base"
+                                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
                                         >
-                                            <FaPlus className={modalMode === "edit" ? "hidden" : "mr-2"} />
-                                            <FaEdit className={modalMode === "edit" ? "mr-2" : "hidden"} /> Save
+                                            Save
                                         </button>
                                     </div>
                                 </form>
@@ -534,58 +604,58 @@ const SKOfficials = () => {
 
                             {modalMode === "edit" && (
                                 <form onSubmit={handleSubmit} className="space-y-4">
-                                    <div className="grid grid-cols-1 gap-4">
+                                    <div className="space-y-4">
                                         <div>
-                                            <label className="block text-xs sm:text-sm font-medium mb-1">Name</label>
+                                            <label className="block text-sm font-medium mb-1">Name</label>
                                             <input
                                                 type="text"
                                                 name="name"
                                                 value={formData.name}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs sm:text-sm font-medium mb-1">Position</label>
+                                            <label className="block text-sm font-medium mb-1">Position</label>
                                             <input
                                                 type="text"
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs sm:text-sm font-medium mb-1">Official Type</label>
+                                            <label className="block text-sm font-medium mb-1">Official Type</label>
                                             <input
                                                 type="text"
                                                 name="official_type"
                                                 value={formData.official_type}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : ""} text-xs sm:text-sm md:text-base`}
+                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-end space-x-2 flex-wrap gap-2 mt-4">
+                                    <div className="flex justify-end space-x-2 mt-6">
                                         <button
                                             type="button"
                                             onClick={closeModal}
-                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
+                                            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
                                         >
-                                            <FaTimes className="mr-2" /> Cancel
+                                            Cancel
                                         </button>
                                         <button
                                             type="submit"
-                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center text-xs sm:text-sm md:text-base"
+                                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
                                         >
-                                            <FaEdit className="mr-2" /> Save
+                                            Save
                                         </button>
                                     </div>
                                 </form>
@@ -593,19 +663,19 @@ const SKOfficials = () => {
 
                             {modalMode === "delete" && currentOfficial && (
                                 <div className="space-y-4">
-                                    <p className="text-xs sm:text-sm md:text-base">Are you sure you want to月初 delete {currentOfficial.name}?</p>
-                                    <div className="flex justify-end space-x-2 flex-wrap gap-2">
+                                    <p className="text-sm">Are you sure you want to delete {currentOfficial.name}?</p>
+                                    <div className="flex justify-end space-x-2">
                                         <button
                                             onClick={closeModal}
-                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center text-xs sm:text-sm md:text-base"
+                                            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
                                         >
-                                            <FaTimes className="mr-2" /> Cancel
+                                            Cancel
                                         </button>
                                         <button
                                             onClick={handleDeleteConfirm}
-                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center text-xs sm:text-sm md:text-base"
+                                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
                                         >
-                                            <FaTrash className="mr-2" /> Delete
+                                            Delete
                                         </button>
                                     </div>
                                 </div>

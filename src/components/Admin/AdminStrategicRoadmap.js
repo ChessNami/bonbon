@@ -30,6 +30,9 @@ const AdminStrategicRoadmap = () => {
     const [filterTitle, setFilterTitle] = useState("");
     const [filterType, setFilterType] = useState("");
     const [filterColor, setFilterColor] = useState("");
+    const fullDetailsModalRef = useRef(null);
+    const [isFullDetailsModalOpen, setIsFullDetailsModalOpen] = useState(false);
+    const [selectedFullDetailsRoad, setSelectedFullDetailsRoad] = useState(null);
 
 
 
@@ -68,8 +71,12 @@ const AdminStrategicRoadmap = () => {
     // Close modal on outside click
     useEffect(() => {
         const handleClickOutside = (event) => {
+            if (fullDetailsModalRef.current && fullDetailsModalRef.current.contains(event.target)) {
+                return;
+            }
             if (modalRef.current && !modalRef.current.contains(event.target)) {
                 setIsModalOpen(false);
+                setIsFullDetailsModalOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -372,6 +379,19 @@ const AdminStrategicRoadmap = () => {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
+
+    // Add to useEffect for modal open/close handling in AdminStrategicRoadmap.js
+    useEffect(() => {
+        if (isModalOpen || isFullDetailsModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+
+        return () => {
+            document.body.style.overflow = 'auto';
+        };
+    }, [isModalOpen, isFullDetailsModalOpen]);
 
     const handleAddRoad = async () => {
         if (!isAdmin) {
@@ -960,7 +980,7 @@ const AdminStrategicRoadmap = () => {
                     >
                         <motion.div
                             ref={modalRef}
-                            className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col"
+                            className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col"
                             initial={{ scale: 0.8, y: 50 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.8, y: 50 }}
@@ -1036,97 +1056,204 @@ const AdminStrategicRoadmap = () => {
                                     </div>
                                 </div>
                             </div>
-                            {/* Roads List */}
+                            {/* Roads Grid */}
                             <div className="flex-1 overflow-y-auto p-4">
                                 {filteredRoads.length === 0 ? (
                                     <p className="text-gray-500 text-center">No roads match the filters.</p>
                                 ) : (
-                                    filteredRoads.map((road) => (
-                                        <motion.div
-                                            key={road.id}
-                                            className="mb-6 p-4 bg-gray-50 rounded-lg shadow"
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.15 }}
-                                        >
-                                            <h3 className="text-lg font-semibold">{road.title}</h3>
-                                            <p className="text-sm text-gray-600">
-                                                <strong>Status:</strong> {road.type}
-                                            </p>
-                                            <p className="text-sm text-gray-600 mt-2">
-                                                <strong>Description:</strong> {road.description || "No description provided"}
-                                            </p>
-                                            <p className="text-sm text-gray-600 mt-2">
-                                                <strong>Start Address:</strong> {road.start_address || "Fetching address..."}
-                                            </p>
-                                            <p className="text-sm text-gray-600 mt-2">
-                                                <strong>End Address:</strong> {road.end_address || "Fetching address..."}
-                                            </p>
-                                            <div className="mt-4 h-64 rounded-lg overflow-hidden">
-                                                <MapContainer
-                                                    center={getRoadCenter(road.coords)}
-                                                    zoom={15}
-                                                    style={{ height: "100%", width: "100%" }}
-                                                    scrollWheelZoom={false}
-                                                >
-                                                    <LayersControl position="topright">
-                                                        <LayersControl.BaseLayer checked name="Street Map">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                                attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Satellite">
-                                                            <TileLayer
-                                                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                                                                attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Terrain">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                                                                attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Grayscale">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                                                attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                    </LayersControl>
-                                                    <Polyline positions={road.coords} pathOptions={getRoadStyle(road.color)} />
-                                                </MapContainer>
-                                            </div>
-                                            {isAdmin && (
-                                                <div className="mt-3 flex gap-2">
-                                                    <motion.button
-                                                        onClick={() => {
-                                                            handleEditRoad(road.id);
-                                                            setIsModalOpen(false);
-                                                        }}
-                                                        className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {filteredRoads.map((road) => (
+                                            <motion.div
+                                                key={road.id}
+                                                className="bg-gray-50 rounded-lg shadow hover:shadow-lg transition-shadow duration-200"
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.15 }}
+                                            >
+                                                <div className="h-48 rounded-t-lg overflow-hidden">
+                                                    <MapContainer
+                                                        center={getRoadCenter(road.coords)}
+                                                        zoom={15}
+                                                        style={{ height: "100%", width: "100%" }}
+                                                        scrollWheelZoom={false}
+                                                        dragging={false}
                                                     >
-                                                        <FaHeading />
-                                                        Edit
-                                                    </motion.button>
-                                                    <motion.button
-                                                        onClick={() => handleDeleteRoad(road.id)}
-                                                        className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                    >
-                                                        <FaTrash />
-                                                        Delete
-                                                    </motion.button>
+                                                        <LayersControl position="topright">
+                                                            <LayersControl.BaseLayer checked name="Street Map">
+                                                                <TileLayer
+                                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                                />
+                                                            </LayersControl.BaseLayer>
+                                                            <LayersControl.BaseLayer name="Satellite">
+                                                                <TileLayer
+                                                                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                                    attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                                />
+                                                            </LayersControl.BaseLayer>
+                                                        </LayersControl>
+                                                        <Polyline positions={road.coords} pathOptions={getRoadStyle(road.color)} />
+                                                    </MapContainer>
                                                 </div>
-                                            )}
-                                        </motion.div>
-                                    ))
+                                                <div className="p-4">
+                                                    <h3 className="text-lg font-semibold truncate">{road.title}</h3>
+                                                    <p className="text-sm text-gray-600 truncate">
+                                                        <strong>Type:</strong> {road.type}
+                                                    </p>
+                                                    <div className="mt-3 flex gap-2 flex-wrap">
+                                                        <motion.button
+                                                            onClick={() => {
+                                                                setSelectedFullDetailsRoad(road);
+                                                                setIsFullDetailsModalOpen(true);
+                                                            }}
+                                                            className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                        >
+                                                            <FaMap />
+                                                            View Details
+                                                        </motion.button>
+                                                        {isAdmin && (
+                                                            <>
+                                                                <motion.button
+                                                                    onClick={() => {
+                                                                        handleEditRoad(road.id);
+                                                                        setIsModalOpen(false);
+                                                                    }}
+                                                                    className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 text-sm"
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                >
+                                                                    <FaHeading />
+                                                                    Edit
+                                                                </motion.button>
+                                                                <motion.button
+                                                                    onClick={() => handleDeleteRoad(road.id)}
+                                                                    className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                >
+                                                                    <FaTrash />
+                                                                    Delete
+                                                                </motion.button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {isFullDetailsModalOpen && selectedFullDetailsRoad && (
+                    <motion.div
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                    >
+                        <motion.div
+                            ref={fullDetailsModalRef}
+                            className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col z-[60]"
+                            initial={{ scale: 0.8, y: 50 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.8, y: 50 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            <div className="flex justify-between items-center p-4 border-b">
+                                <h2 className="text-xl font-semibold flex items-center gap-2">
+                                    <FaMap className="text-blue-600" />
+                                    {selectedFullDetailsRoad.title}
+                                </h2>
+                                <motion.button
+                                    onClick={() => setIsFullDetailsModalOpen(false)}
+                                    className="text-gray-600 hover:text-gray-800"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                >
+                                    <FaTimes size={24} />
+                                </motion.button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4">
+                                <div className="mb-4">
+                                    <h3 className="text-lg font-semibold mb-2">Road Map</h3>
+                                    <div className="h-64 rounded-lg overflow-hidden">
+                                        <MapContainer
+                                            center={getRoadCenter(selectedFullDetailsRoad.coords)}
+                                            zoom={15}
+                                            style={{ height: "100%", width: "100%" }}
+                                            scrollWheelZoom={false}
+                                        >
+                                            <LayersControl position="topright">
+                                                <LayersControl.BaseLayer checked name="Street Map">
+                                                    <TileLayer
+                                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                        attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                    />
+                                                </LayersControl.BaseLayer>
+                                                <LayersControl.BaseLayer name="Satellite">
+                                                    <TileLayer
+                                                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                        attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                    />
+                                                </LayersControl.BaseLayer>
+                                            </LayersControl>
+                                            <Polyline positions={selectedFullDetailsRoad.coords} pathOptions={getRoadStyle(selectedFullDetailsRoad.color)} />
+                                        </MapContainer>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Type:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsRoad.type}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Start Address:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsRoad.start_address || "Fetching address..."}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">End Address:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsRoad.end_address || "Fetching address..."}</p>
+                                    </div>
+                                </div>
+                                <div className="mb-4">
+                                    <p className="text-sm font-medium text-gray-700 mb-1">Description:</p>
+                                    <p className="text-sm text-gray-600">{selectedFullDetailsRoad.description || "No description provided"}</p>
+                                </div>
+                            </div>
+                            {isAdmin && (
+                                <div className="p-4 border-t flex gap-2 flex-wrap">
+                                    <motion.button
+                                        onClick={() => {
+                                            handleEditRoad(selectedFullDetailsRoad.id);
+                                            setIsModalOpen(false);
+                                            setIsFullDetailsModalOpen(false);
+                                        }}
+                                        className="flex items-center gap-1 bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 text-sm"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <FaHeading />
+                                        Edit
+                                    </motion.button>
+                                    <motion.button
+                                        onClick={() => handleDeleteRoad(selectedFullDetailsRoad.id)}
+                                        className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <FaTrash />
+                                        Delete
+                                    </motion.button>
+                                </div>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}
