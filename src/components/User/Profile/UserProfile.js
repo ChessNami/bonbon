@@ -980,8 +980,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                             <button
                                                 key={index}
                                                 className={`flex-1 px-4 py-2 text-sm font-medium transition-all ${activeProfileTab === index
-                                                        ? 'text-blue-700 border-b-2 border-blue-700'
-                                                        : 'text-gray-600 hover:text-blue-700'
+                                                    ? 'text-blue-700 border-b-2 border-blue-700'
+                                                    : 'text-gray-600 hover:text-blue-700'
                                                     }`}
                                                 onClick={() => setActiveProfileTab(index)}
                                             >
@@ -1133,7 +1133,6 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                 )}
                                             </fieldset>
                                         )}
-                                        {/* Household Composition Tab */}
                                         {activeProfileTab === 2 && (
                                             <fieldset className="border p-4 rounded-lg">
                                                 <legend className="font-semibold">Household Composition</legend>
@@ -1168,15 +1167,22 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                                             'dob',
                                                                             'education',
                                                                             'occupation',
+                                                                            'isLivingWithParents',
+                                                                            ...(member.isLivingWithParents === 'No'
+                                                                                ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
+                                                                                : []),
                                                                         ].map((key) => {
                                                                             let label = capitalizeWords(key);
                                                                             if (key === 'dob') label = 'Date of Birth';
                                                                             if (key === 'customGender') label = 'Custom Gender';
+                                                                            if (key === 'isLivingWithParents') label = 'Is Living with Parents';
                                                                             return (
                                                                                 <div key={key}>
                                                                                     <label className="font-medium">{label}:</label>
                                                                                     <p className="p-2 border rounded capitalize">
-                                                                                        {member[key] || 'N/A'}
+                                                                                        {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                                            ? addressMappings[key][member[key]] || 'N/A'
+                                                                                            : member[key] || 'N/A'}
                                                                                     </p>
                                                                                 </div>
                                                                             );

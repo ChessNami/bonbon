@@ -234,7 +234,6 @@ const ResidentProfiling = () => {
                 'province',
                 'city',
                 'barangay',
-                'zone',
                 'zipCode',
                 'dob',
                 'age',
@@ -321,6 +320,12 @@ const ResidentProfiling = () => {
                         'dob',
                         'education',
                     ];
+                    if (member.relation === 'Son' || member.relation === 'Daughter') {
+                        requiredMemberFields.push('isLivingWithParents');
+                        if (member.isLivingWithParents === 'No') {
+                            requiredMemberFields.push('address', 'region', 'province', 'city', 'barangay', 'zipCode');
+                        }
+                    }
                     for (let field of requiredMemberFields) {
                         if (!member[field]) {
                             await loadingSwal.close();
@@ -696,17 +701,24 @@ const ResidentProfiling = () => {
                                                                 'dob',
                                                                 'education',
                                                                 'occupation',
+                                                                'isLivingWithParents',
+                                                                ...(member.isLivingWithParents === 'No'
+                                                                    ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
+                                                                    : []),
                                                             ].map((key) => {
                                                                 let label = capitalizeWords(key);
                                                                 if (key === 'dob') label = 'Date of Birth';
                                                                 if (key === 'customGender') label = 'Custom Gender';
                                                                 if (key === 'age') label = 'Age';
+                                                                if (key === 'isLivingWithParents') label = 'Is Living with Parents';
 
                                                                 return (
                                                                     <div key={key}>
                                                                         <label className="font-medium text-xs sm:text-sm">{label}:</label>
                                                                         <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
-                                                                            {member[key] || 'N/A'}
+                                                                            {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                                ? addressMappings[key][member[key]] || 'N/A'
+                                                                                : member[key] || 'N/A'}
                                                                         </p>
                                                                     </div>
                                                                 );

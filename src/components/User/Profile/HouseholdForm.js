@@ -154,7 +154,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             'province',
             'city',
             'barangay',
-            'zone',
             'zipCode',
             'dob',
             'age',
@@ -373,25 +372,27 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <label>
-                                Zone# <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                name="zone"
-                                className="input-style"
-                                value={formData.zone || ''}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Select</option>
-                                {[...Array(9)].map((_, i) => (
-                                    <option key={i + 1} value={`Zone ${i + 1}`}>
-                                        Zone {i + 1}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {formData.region === '100000000' &&
+                            formData.province === '104300000' &&
+                            formData.city === '104305000' &&
+                            formData.barangay === '104305040' && (
+                                <div>
+                                    <label>Zone#</label>
+                                    <select
+                                        name="zone"
+                                        className="input-style"
+                                        value={formData.zone || ''}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="">Select</option>
+                                        {[...Array(9)].map((_, i) => (
+                                            <option key={i + 1} value={`Zone ${i + 1}`}>
+                                                Zone {i + 1}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         <div>
                             <label>
                                 Zip Code <span className="text-red-500">*</span>

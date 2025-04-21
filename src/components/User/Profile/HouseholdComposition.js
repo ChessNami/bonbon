@@ -2,6 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
 import { supabase } from '../../../supabaseClient';
+import {
+    getAllRegions,
+    getProvincesByRegion,
+    getMunicipalitiesByProvince,
+    getBarangaysByMunicipality,
+} from '@aivangogh/ph-address';
 
 // Utility function to calculate age as a string with appropriate unit
 const calculateAge = (dob) => {
@@ -47,52 +53,88 @@ const HouseholdComposition = ({
     const [localNumberOfhouseholdMembers, setLocalNumberOfhouseholdMembers] = useState(
         numberOfhouseholdMembers || 0
     );
+    const [householdHeadAddress, setHouseholdHeadAddress] = useState({});
+    const [regions, setRegions] = useState([]);
+    const [provinces, setProvinces] = useState({});
+    const [cities, setCities] = useState({});
+    const [barangays, setBarangays] = useState({});
 
-    // Fetch household composition data from Supabase
+    // Fetch household composition and household head address from Supabase
     const fetchUserData = useCallback(async () => {
         if (!userId) {
             console.log('No userId provided, skipping fetch.');
             return;
         }
 
-        const { data, error } = await supabase
-            .from('residents')
-            .select('household_composition, children_count, number_of_household_members')
-            .eq('user_id', userId)
-            .single();
+        try {
+            const { data, error } = await supabase
+                .from('residents')
+                .select('household_composition, children_count, number_of_household_members, household')
+                .eq('user_id', userId)
+                .single();
 
-        if (data && !error) {
-            const composition = Array.isArray(data.household_composition)
-                ? data.household_composition
-                : [];
-            const childMembers = composition
-                .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
-                .map((member) => ({
-                    ...member,
-                    age: member.dob ? calculateAge(member.dob) : member.age || '',
-                }));
-            const otherMembers = composition
-                .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
-                .map((member) => ({
-                    ...member,
-                    age: member.dob ? calculateAge(member.dob) : member.age || '',
-                }));
-            setChildren(childMembers);
-            setHouseholdMembers(otherMembers);
-            setLocalChildrenCount(data.children_count || 0);
-            setLocalNumberOfhouseholdMembers(data.number_of_household_members || 0);
-        } else if (error) {
-            console.error('Error fetching household composition:', error);
-            setChildren([]);
-            setHouseholdMembers([]);
-            setLocalChildrenCount(0);
-            setLocalNumberOfhouseholdMembers(0);
+            if (data && !error) {
+                const composition = Array.isArray(data.household_composition)
+                    ? data.household_composition
+                    : [];
+                const childMembers = composition
+                    .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
+                    .map((member) => ({
+                        ...member,
+                        age: member.dob ? calculateAge(member.dob) : member.age || '',
+                        isLivingWithParents: member.isLivingWithParents || 'Yes',
+                    }));
+                const otherMembers = composition
+                    .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
+                    .map((member) => ({
+                        ...member,
+                        age: member.dob ? calculateAge(member.dob) : member.age || '',
+                    }));
+                setChildren(childMembers);
+                setHouseholdMembers(otherMembers);
+                setLocalChildrenCount(data.children_count || 0);
+                setLocalNumberOfhouseholdMembers(data.number_of_household_members || 0);
+                setHouseholdHeadAddress(data.household || {});
+            } else if (error) {
+                console.error('Error fetching household composition:', error);
+                setChildren([]);
+                setHouseholdMembers([]);
+                setLocalChildrenCount(0);
+                setLocalNumberOfhouseholdMembers(0);
+                setHouseholdHeadAddress({});
+            }
+        } catch (error) {
+            console.error('Unexpected error fetching data:', error);
         }
     }, [userId]);
 
     useEffect(() => {
+        setRegions(getAllRegions());
         fetchUserData();
     }, [fetchUserData]);
+
+    // Update address dropdowns for each child
+    useEffect(() => {
+        const updatedProvinces = {};
+        const updatedCities = {};
+        const updatedBarangays = {};
+
+        children.forEach((child, index) => {
+            if (child.isLivingWithParents === 'No' && child.region) {
+                updatedProvinces[index] = getProvincesByRegion(child.region);
+            }
+            if (child.isLivingWithParents === 'No' && child.province) {
+                updatedCities[index] = getMunicipalitiesByProvince(child.province);
+            }
+            if (child.isLivingWithParents === 'No' && child.city) {
+                updatedBarangays[index] = getBarangaysByMunicipality(child.city);
+            }
+        });
+
+        setProvinces(updatedProvinces);
+        setCities(updatedCities);
+        setBarangays(updatedBarangays);
+    }, [children]);
 
     // Update children list based on localChildrenCount
     useEffect(() => {
@@ -113,17 +155,32 @@ const HouseholdComposition = ({
                         dob: '',
                         education: '',
                         occupation: '',
+                        isLivingWithParents: 'Yes',
+                        address: householdHeadAddress.address || '',
+                        region: householdHeadAddress.region || '',
+                        province: householdHeadAddress.province || '',
+                        city: householdHeadAddress.city || '',
+                        barangay: householdHeadAddress.barangay || '',
+                        zipCode: householdHeadAddress.zipCode || '',
+                        zone: householdHeadAddress.zone || '',
                     });
                 }
                 return newChildren.slice(0, localChildrenCount).map((child) => ({
                     ...child,
                     age: child.dob ? calculateAge(child.dob) : child.age || '',
+                    address: child.isLivingWithParents === 'Yes' ? householdHeadAddress.address || '' : child.address || '',
+                    region: child.isLivingWithParents === 'Yes' ? householdHeadAddress.region || '' : child.region || '',
+                    province: child.isLivingWithParents === 'Yes' ? householdHeadAddress.province || '' : child.province || '',
+                    city: child.isLivingWithParents === 'Yes' ? householdHeadAddress.city || '' : child.city || '',
+                    barangay: child.isLivingWithParents === 'Yes' ? householdHeadAddress.barangay || '' : child.barangay || '',
+                    zipCode: child.isLivingWithParents === 'Yes' ? householdHeadAddress.zipCode || '' : child.zipCode || '',
+                    zone: child.isLivingWithParents === 'Yes' ? householdHeadAddress.zone || '' : child.zone || '',
                 }));
             });
         } else {
             setChildren([]);
         }
-    }, [localChildrenCount]);
+    }, [localChildrenCount, householdHeadAddress]);
 
     // Update household members list based on localNumberOfhouseholdMembers
     useEffect(() => {
@@ -181,6 +238,43 @@ const HouseholdComposition = ({
             if (name === 'dob') {
                 updatedChildren[index].age = calculateAge(value);
             }
+            if (name === 'isLivingWithParents') {
+                if (value === 'Yes') {
+                    updatedChildren[index].address = householdHeadAddress.address || '';
+                    updatedChildren[index].region = householdHeadAddress.region || '';
+                    updatedChildren[index].province = householdHeadAddress.province || '';
+                    updatedChildren[index].city = householdHeadAddress.city || '';
+                    updatedChildren[index].barangay = householdHeadAddress.barangay || '';
+                    updatedChildren[index].zipCode = householdHeadAddress.zipCode || '';
+                    updatedChildren[index].zone = householdHeadAddress.zone || '';
+                } else {
+                    updatedChildren[index].address = '';
+                    updatedChildren[index].region = '';
+                    updatedChildren[index].province = '';
+                    updatedChildren[index].city = '';
+                    updatedChildren[index].barangay = '';
+                    updatedChildren[index].zipCode = '';
+                    updatedChildren[index].zone = '';
+                }
+            }
+            if (name === 'region') {
+                setProvinces((prev) => ({ ...prev, [index]: getProvincesByRegion(value) }));
+                updatedChildren[index].province = '';
+                updatedChildren[index].city = '';
+                updatedChildren[index].barangay = '';
+                setCities((prev) => ({ ...prev, [index]: [] }));
+                setBarangays((prev) => ({ ...prev, [index]: [] }));
+            }
+            if (name === 'province') {
+                setCities((prev) => ({ ...prev, [index]: getMunicipalitiesByProvince(value) }));
+                updatedChildren[index].city = '';
+                updatedChildren[index].barangay = '';
+                setBarangays((prev) => ({ ...prev, [index]: [] }));
+            }
+            if (name === 'city') {
+                setBarangays((prev) => ({ ...prev, [index]: getBarangaysByMunicipality(value) }));
+                updatedChildren[index].barangay = '';
+            }
             return updatedChildren;
         });
     };
@@ -226,13 +320,19 @@ const HouseholdComposition = ({
         if (allMembers.length > 0) {
             for (let member of allMembers) {
                 const requiredFields = ['firstName', 'lastName', 'relation', 'gender', 'age', 'dob', 'education'];
+                if (member.relation === 'Son' || member.relation === 'Daughter') {
+                    requiredFields.push('isLivingWithParents');
+                    if (member.isLivingWithParents === 'No') {
+                        requiredFields.push('address', 'region', 'province', 'city', 'barangay', 'zipCode');
+                    }
+                }
                 for (let field of requiredFields) {
                     if (!member[field]) {
                         Swal.fire({
                             toast: true,
                             position: 'top-end',
                             icon: 'error',
-                            title: `Please fill in the required field: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`,
+                            title: `Please fill in the required field: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} for ${member.firstName} ${member.lastName}`,
                             timer: 1500,
                             showConfirmButton: false,
                         });
@@ -471,6 +571,148 @@ const HouseholdComposition = ({
                                             onChange={(e) => handleChildChange(index, e)}
                                         />
                                     </div>
+                                    <div>
+                                        <label>
+                                            Is Living with Parent/s? <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            name="isLivingWithParents"
+                                            className="input-style"
+                                            value={child.isLivingWithParents || 'Yes'}
+                                            onChange={(e) => handleChildChange(index, e)}
+                                            required
+                                        >
+                                            <option value="Yes">Yes</option>
+                                            <option value="No">No</option>
+                                        </select>
+                                    </div>
+                                    {child.isLivingWithParents === 'No' && (
+                                        <>
+                                            <div className="col-span-2">
+                                                <label>
+                                                    Address <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="address"
+                                                    className="input-style"
+                                                    value={child.address || ''}
+                                                    onChange={(e) => handleChildChange(index, e)}
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label>
+                                                    Region <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    name="region"
+                                                    className="input-style"
+                                                    value={child.region || ''}
+                                                    onChange={(e) => handleChildChange(index, e)}
+                                                    required
+                                                >
+                                                    <option value="">Select</option>
+                                                    {regions.map((region) => (
+                                                        <option key={region.psgcCode} value={region.psgcCode}>
+                                                            {region.designation} - {region.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label>
+                                                    Province <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    name="province"
+                                                    className="input-style"
+                                                    value={child.province || ''}
+                                                    onChange={(e) => handleChildChange(index, e)}
+                                                    required
+                                                >
+                                                    <option value="">Select</option>
+                                                    {(provinces[index] || []).map((province) => (
+                                                        <option key={province.psgcCode} value={province.psgcCode}>
+                                                            {province.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label>
+                                                    City <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    name="city"
+                                                    className="input-style"
+                                                    value={child.city || ''}
+                                                    onChange={(e) => handleChildChange(index, e)}
+                                                    required
+                                                >
+                                                    <option value="">Select</option>
+                                                    {(cities[index] || []).map((city) => (
+                                                        <option key={city.psgcCode} value={city.psgcCode}>
+                                                            {city.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label>
+                                                    Barangay <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    name="barangay"
+                                                    className="input-style"
+                                                    value={child.barangay || ''}
+                                                    onChange={(e) => handleChildChange(index, e)}
+                                                    required
+                                                >
+                                                    <option value="">Select</option>
+                                                    {(barangays[index] || []).map((barangay) => (
+                                                        <option key={barangay.psgcCode} value={barangay.psgcCode}>
+                                                            {barangay.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label>
+                                                    Zip Code <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="zipCode"
+                                                    className="input-style"
+                                                    value={child.zipCode || ''}
+                                                    onChange={(e) => handleChildChange(index, e)}
+                                                    required
+                                                />
+                                            </div>
+                                            {child.region === '100000000' &&
+                                                child.province === '104300000' &&
+                                                child.city === '104305000' &&
+                                                child.barangay === '104305040' && (
+                                                    <div>
+                                                        <label>Zone#</label>
+                                                        <select
+                                                            name="zone"
+                                                            className="input-style"
+                                                            value={child.zone || ''}
+                                                            onChange={(e) => handleChildChange(index, e)}
+                                                        >
+                                                            <option value="">Select</option>
+                                                            {[...Array(9)].map((_, i) => (
+                                                                <option key={i + 1} value={`Zone ${i + 1}`}>
+                                                                    Zone {i + 1}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
+                                        </>
+                                    )}
                                 </div>
                             </fieldset>
                         ))}

@@ -28,6 +28,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
         ...data,
         age: data?.dob ? calculateAge(data.dob) : data?.age || '',
     });
+    const [isDirty, setIsDirty] = useState(false); // Track if form has unsaved changes
     const [regions, setRegions] = useState([]);
     const [provinces, setProvinces] = useState([]);
     const [cities, setCities] = useState([]);
@@ -54,7 +55,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
             return;
         }
 
-        if (residentData?.spouse) {
+        if (residentData?.spouse && !isDirty) {
             const spouseData = {
                 ...residentData.spouse,
                 age: residentData.spouse.dob
@@ -66,7 +67,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
             setCustomGender(residentData.spouse.customGender || '');
             setEmploymentType(residentData.spouse.employmentType || '');
         }
-    }, [userId]);
+    }, [userId, isDirty]);
 
     // Load regions and fetch user data on mount
     useEffect(() => {
@@ -88,6 +89,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
     // Handle input changes
     const handleChange = (e) => {
         const { name, value } = e.target;
+        setIsDirty(true); // Mark form as dirty on any change
         setFormData((prev) => {
             const updatedData = { ...prev, [name]: value };
             if (name === 'middleName') {
@@ -115,12 +117,14 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
     const handleGenderChange = (e) => {
         const value = e.target.value;
         setGender(value);
+        setIsDirty(true);
         if (value !== 'Other') setCustomGender('');
         handleChange(e);
     };
 
     const handleEmploymentChange = (e) => {
         setEmploymentType(e.target.value);
+        setIsDirty(true);
         handleChange(e);
     };
 
@@ -183,6 +187,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
             return;
         }
 
+        setIsDirty(false); // Reset dirty state after saving
         onNext(updatedData, 'householdComposition');
     };
 
@@ -355,25 +360,27 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <label>
-                                Zone# <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                name="zone"
-                                className="input-style"
-                                value={formData.zone || ''}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Select</option>
-                                {[...Array(9)].map((_, i) => (
-                                    <option key={i + 1} value={`Zone ${i + 1}`}>
-                                        Zone {i + 1}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {formData.region === '100000000' &&
+                            formData.province === '104300000' &&
+                            formData.city === '104305000' &&
+                            formData.barangay === '104305040' && (
+                                <div>
+                                    <label>Zone#</label>
+                                    <select
+                                        name="zone"
+                                        className="input-style"
+                                        value={formData.zone || ''}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="">Select</option>
+                                        {[...Array(9)].map((_, i) => (
+                                            <option key={i + 1} value={`Zone ${i + 1}`}>
+                                                Zone {i + 1}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         <div>
                             <label>
                                 Zip Code <span className="text-red-500">*</span>
@@ -443,7 +450,10 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                     name="customGender"
                                     className="input-style"
                                     value={customGender}
-                                    onChange={(e) => setCustomGender(e.target.value)}
+                                    onChange={(e) => {
+                                        setCustomGender(e.target.value);
+                                        setIsDirty(true);
+                                    }}
                                 />
                             </div>
                         )}

@@ -1,5 +1,5 @@
 import React from "react";
-import { FaHome, FaUsers, FaCog, FaUserTie, FaUserFriends, FaClipboardList, FaMap, FaMapMarkerAlt, FaComment } from "react-icons/fa";
+import { FaHome, FaUsers, FaCog, FaUserTie, FaUserFriends, FaClipboardList, FaMap, FaMapMarkerAlt, FaComment, FaFileAlt } from "react-icons/fa";
 
 const AdminTitles = ({ currentPage }) => {
     const titles = {
@@ -10,6 +10,7 @@ const AdminTitles = ({ currentPage }) => {
         "Resident Management": { title: "Resident Management", icon: FaUsers },
         "Strategic Road Map": { title: "Strategic Road Map", icon: FaMap },
         "Project Management": { title: "Project Management", icon: FaClipboardList },
+        "Transparency": { title: "Transparency", icon: FaFileAlt },
         "User Feedback": { title: "User Feedback", icon: FaComment },
         Settings: { title: "Settings", icon: FaCog },
         Profile: { title: "Profile", icon: FaUsers }, // Assuming FaUsers for Profile; adjust if needed

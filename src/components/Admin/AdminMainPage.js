@@ -9,6 +9,7 @@ import Settings from "./Settings";
 import AdminStrategicRoadmap from "./AdminStrategicRoadmap";
 import Geotagging from "./Geotagging";
 import UserFeedback from "./UserFeedback";
+import TransparencyMainComponent from "./TransparencyMainComponent";
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
@@ -29,6 +30,8 @@ const AdminMainPage = ({ currentPage }) => {
                 return <AdminProMgmt />;
             case "User Feedback":
                 return <UserFeedback />;
+            case "Transparency":
+                return <TransparencyMainComponent />;
             case "Profile":
                 return <AdminMainProfileComponent />;
             case "Settings":
