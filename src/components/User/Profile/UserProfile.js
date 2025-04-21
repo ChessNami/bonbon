@@ -123,7 +123,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 household,
                 spouse,
                 household_composition,
-                census, -- Added census column
+                census,
                 children_count,
                 number_of_household_members,
                 resident_profile_status (
