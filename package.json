@@ -17,7 +17,9 @@
     "concurrently": "^9.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
+    "file-saver": "^2.0.5",
     "framer-motion": "^12.6.0",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
@@ -36,12 +38,14 @@
     "react-slick": "^0.30.3",
     "react-spinners": "^0.15.0",
     "recharts": "^2.15.1",
+    "sheetjs-style": "^0.15.8",
     "slick-carousel": "^1.8.1",
     "sweetalert2": "^11.19.1",
     "sweetalert2-react-content": "^5.1.0",
     "swiper": "^11.2.6",
     "uuid": "^11.1.0",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",

@@ -62,6 +62,9 @@ Make sure you have the following installed on your machine:
    npm install @turf/turf
    npm install @turf/kinks
    npm install adblock-detect-react
+   npm install xlsx
+   npm install sheetjs-style
+   npm install exceljs file-saver
    ```
 
 ### Usage

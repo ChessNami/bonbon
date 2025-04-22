@@ -105,6 +105,7 @@ const UserDocuments = ({ documentType }) => {
                 position: "top-end",
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true,
             });
         } finally {
@@ -162,6 +163,7 @@ const UserDocuments = ({ documentType }) => {
                 position: "top-end",
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true,
             });
         }
@@ -174,6 +176,7 @@ const UserDocuments = ({ documentType }) => {
             toast: true,
             position: "top-end",
             allowOutsideClick: false,
+            scrollbarPadding: false,
             showConfirmButton: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -208,6 +211,7 @@ const UserDocuments = ({ documentType }) => {
                 position: "top-end",
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true,
             });
         } catch (err) {
@@ -226,6 +230,7 @@ const UserDocuments = ({ documentType }) => {
                 position: "top-end",
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true,
             });
         }
@@ -350,8 +355,8 @@ const UserDocuments = ({ documentType }) => {
                             onClick={() => paginate(currentPage - 1)}
                             disabled={currentPage === 1}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === 1
-                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                    : "bg-blue-500 text-white hover:bg-blue-600"
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-blue-500 text-white hover:bg-blue-600"
                                 }`}
                         >
                             <FaArrowLeft size={14} />
@@ -362,8 +367,8 @@ const UserDocuments = ({ documentType }) => {
                                     key={page}
                                     onClick={() => paginate(page)}
                                     className={`px-3 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${currentPage === page
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                         }`}
                                 >
                                     {page}
@@ -374,8 +379,8 @@ const UserDocuments = ({ documentType }) => {
                             onClick={() => paginate(currentPage + 1)}
                             disabled={currentPage === totalPages}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === totalPages
-                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                    : "bg-blue-500 text-white hover:bg-blue-600"
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-blue-500 text-white hover:bg-blue-600"
                                 }`}
                         >
                             <FaArrowRight size={14} />
@@ -434,6 +439,7 @@ const UserDocuments = ({ documentType }) => {
                                                     position: "top-end",
                                                     showConfirmButton: false,
                                                     timer: 1500,
+                                                    scrollbarPadding: false,
                                                     timerProgressBar: true,
                                                 });
                                             }}

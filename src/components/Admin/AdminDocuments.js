@@ -104,6 +104,8 @@ const AdminDocuments = ({ documentType }) => {
                 showConfirmButton: false,
                 timer: 1500,
                 timerProgressBar: true,
+                scrollbarPadding: false,
+
             });
         } finally {
             setIsLoading(false);
@@ -135,6 +137,7 @@ const AdminDocuments = ({ documentType }) => {
                 position: "top-end",
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true,
             });
         }
@@ -200,6 +203,7 @@ const AdminDocuments = ({ documentType }) => {
                     title: "File added successfully",
                     showConfirmButton: false,
                     timer: 1500,
+                    scrollbarPadding: false,
                     timerProgressBar: true,
                 });
             } else if (modalMode === "edit" && currentFile) {
@@ -219,6 +223,7 @@ const AdminDocuments = ({ documentType }) => {
                     title: "File updated successfully",
                     showConfirmButton: false,
                     timer: 1500,
+                    scrollbarPadding: false,
                     timerProgressBar: true,
                 });
             }
@@ -237,6 +242,7 @@ const AdminDocuments = ({ documentType }) => {
                 position: "top-end",
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true,
             });
         }
@@ -259,6 +265,7 @@ const AdminDocuments = ({ documentType }) => {
             confirmButtonColor: "#d33",
             cancelButtonColor: "#3085d6",
             confirmButtonText: "Yes, delete it!",
+            scrollbarPadding: false,
             cancelButtonText: "Cancel",
         }).then(async (result) => {
             if (result.isConfirmed) {
@@ -288,6 +295,7 @@ const AdminDocuments = ({ documentType }) => {
                         title: "File deleted successfully",
                         showConfirmButton: false,
                         timer: 1500,
+                        scrollbarPadding: false,
                         timerProgressBar: true,
                     });
 
@@ -301,6 +309,7 @@ const AdminDocuments = ({ documentType }) => {
                         position: "top-end",
                         showConfirmButton: false,
                         timer: 1500,
+                        scrollbarPadding: false,
                         timerProgressBar: true,
                     });
                 }
@@ -355,6 +364,7 @@ const AdminDocuments = ({ documentType }) => {
                 position: "top-end",
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true,
             });
         } finally {
@@ -533,8 +543,8 @@ const AdminDocuments = ({ documentType }) => {
                             onClick={() => paginate(currentPage - 1)}
                             disabled={currentPage === 1}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === 1
-                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                    : "bg-blue-500 text-white hover:bg-blue-600"
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-blue-500 text-white hover:bg-blue-600"
                                 }`}
                         >
                             <FaArrowLeft size={14} />
@@ -545,8 +555,8 @@ const AdminDocuments = ({ documentType }) => {
                                     key={page}
                                     onClick={() => paginate(page)}
                                     className={`px-3 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${currentPage === page
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                         }`}
                                 >
                                     {page}
@@ -557,8 +567,8 @@ const AdminDocuments = ({ documentType }) => {
                             onClick={() => paginate(currentPage + 1)}
                             disabled={currentPage === totalPages}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === totalPages
-                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                    : "bg-blue-500 text-white hover:bg-blue-600"
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-blue-500 text-white hover:bg-blue-600"
                                 }`}
                         >
                             <FaArrowRight size={14} />
@@ -694,6 +704,7 @@ const AdminDocuments = ({ documentType }) => {
                                             position: "top-end",
                                             showConfirmButton: false,
                                             timer: 1500,
+                                            scrollbarPadding: false,
                                             timerProgressBar: true,
                                         });
                                     }}
