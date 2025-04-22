@@ -228,8 +228,6 @@ const Settings = () => {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen"
         >
-            <h2 className="text-3xl font-bold mb-6 text-gray-800 border-b-2 border-blue-200 pb-4">Settings</h2>
-
             {/* Navigation Menu */}
             <nav className="mb-8 bg-white shadow-lg rounded-xl p-4">
                 <ul className="flex flex-col sm:flex-row gap-4">
@@ -239,14 +237,6 @@ const Settings = () => {
                             className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold shadow-md hover:from-blue-600 hover:to-purple-700 transition-all duration-300"
                         >
                             Footer Configuration
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="#social-links"
-                            className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold shadow-md hover:from-purple-600 hover:to-pink-700 transition-all duration-300"
-                        >
-                            Social Connections
                         </a>
                     </li>
                 </ul>

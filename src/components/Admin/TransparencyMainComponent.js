@@ -1,14 +1,28 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import BarangayOfficials from "./BarangayOfficials";
+import SKOfficials from "./SKOfficials";
 import AdminImplementationReports from "./AdminImplementationReports";
 import AdminBudgetReports from "./AdminBudgetReports";
 import AdminBidsProjects from "./AdminBidsProjects";
 
 const TransparencyMainComponent = () => {
-    const [activeTab, setActiveTab] = useState("Implementation");
+    const [activeTab, setActiveTab] = useState("BarangayOfficials");
+
+    const tabs = [
+        { key: "BarangayOfficials", label: "Barangay Officials" },
+        { key: "SKOfficials", label: "SK Officials" },
+        { key: "Bids", label: "Bids and Projects" },
+        { key: "Budget", label: "Budget & Financial Reports" },
+        { key: "Implementation", label: "Implementation Reports" },
+    ];
 
     const renderContent = () => {
         switch (activeTab) {
+            case "BarangayOfficials":
+                return <BarangayOfficials />;
+            case "SKOfficials":
+                return <SKOfficials />;
             case "Implementation":
                 return <AdminImplementationReports />;
             case "Budget":
@@ -16,7 +30,7 @@ const TransparencyMainComponent = () => {
             case "Bids":
                 return <AdminBidsProjects />;
             default:
-                return <AdminImplementationReports />;
+                return <BarangayOfficials />;
         }
     };
 
@@ -34,81 +48,48 @@ const TransparencyMainComponent = () => {
     };
 
     return (
-        <div className="p-4">
-            <div className="flex border-b border-gray-200">
-                <motion.button
-                    className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Implementation"
-                        ? "text-blue-600"
-                        : "text-gray-500 hover:text-gray-700"
-                        }`}
-                    onClick={() => setActiveTab("Implementation")}
-                    variants={tabVariants}
-                    animate={activeTab === "Implementation" ? "active" : "inactive"}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                >
-                    Implementation Reports
-                    {activeTab === "Implementation" && (
+        <div className="flex flex-col w-full overflow-hidden p-4">
+            <div className="w-full">
+                <div className="border-b bg-gray-100 flex flex-wrap">
+                    {tabs.map((tab) => (
                         <motion.div
-                            className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
-                            layout
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        />
-                    )}
-                </motion.button>
-                <motion.button
-                    className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Budget"
-                        ? "text-blue-600"
-                        : "text-gray-500 hover:text-gray-700"
-                        }`}
-                    onClick={() => setActiveTab("Budget")}
-                    variants={tabVariants}
-                    animate={activeTab === "Budget" ? "active" : "inactive"}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                >
-                    Budget & Financial Reports
-                    {activeTab === "Budget" && (
+                            key={tab.key}
+                            className={`cursor-pointer px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium flex-shrink-0 relative ${activeTab === tab.key
+                                ? "border-b border-blue-700 text-blue-700"
+                                : "text-gray-600 hover:text-blue-700"
+                                }`}
+                            onClick={() => setActiveTab(tab.key)}
+                            variants={tabVariants}
+                            animate={activeTab === tab.key ? "active" : "inactive"}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            {tab.label}
+                            {activeTab === tab.key && (
+                                <motion.div
+                                    className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-700"
+                                    layout
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                        </motion.div>
+                    ))}
+                </div>
+                <div className="p-2 sm:p-4">
+                    <AnimatePresence mode="wait">
                         <motion.div
-                            className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
-                            layout
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        />
-                    )}
-                </motion.button>
-                <motion.button
-                    className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Bids"
-                        ? "text-blue-600"
-                        : "text-gray-500 hover:text-gray-700"
-                        }`}
-                    onClick={() => setActiveTab("Bids")}
-                    variants={tabVariants}
-                    animate={activeTab === "Bids" ? "active" : "inactive"}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                >
-                    Bids and Projects
-                    {activeTab === "Bids" && (
-                        <motion.div
-                            className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
-                            layout
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        />
-                    )}
-                </motion.button>
+                            key={activeTab}
+                            variants={contentVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                        >
+                            {renderContent()}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
             </div>
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={activeTab}
-                    variants={contentVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                >
-                    {renderContent()}
-                </motion.div>
-            </AnimatePresence>
-        </div >
+        </div>
     );
 };
 

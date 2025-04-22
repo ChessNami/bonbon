@@ -118,7 +118,7 @@ const StrategicRoadMapView = () => {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.3, delay: 0.1 }}
                 >
-                    <MapContainer center={centerCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
+                    <MapContainer center={centerCoords} zoom={16} style={{ height: "100%", width: "100%" }}>
                         <LayersControl position="topright">
                             <LayersControl.BaseLayer checked name="Street Map">
                                 <TileLayer
@@ -132,26 +132,20 @@ const StrategicRoadMapView = () => {
                                     attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
                                 />
                             </LayersControl.BaseLayer>
-                            <LayersControl.BaseLayer name="Terrain">
-                                <TileLayer
-                                    url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                                    attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-                                />
-                            </LayersControl.BaseLayer>
-                            <LayersControl.BaseLayer name="Grayscale">
-                                <TileLayer
-                                    url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                    attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                />
-                            </LayersControl.BaseLayer>
                         </LayersControl>
                         {roads.map((road) => (
                             <Polyline key={road.id} positions={road.coords} pathOptions={getRoadStyle(road.color)}>
                                 <Popup>
-                                    <div className="p-2">
+                                    <div className="p-2 w-64">
                                         <h3 className="font-semibold">{road.title}</h3>
                                         <p>
                                             <strong>Status:</strong> {road.type}
+                                        </p>
+                                        <p>
+                                            <strong>Start Address:</strong> {road.start_address || "Fetching address..."}
+                                        </p>
+                                        <p>
+                                            <strong>End Address:</strong> {road.end_address || "Fetching address..."}
                                         </p>
                                         <p className="mt-2">{road.description || "No description provided"}</p>
                                     </div>
@@ -253,18 +247,6 @@ const StrategicRoadMapView = () => {
                                                             <TileLayer
                                                                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                                                                 attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Terrain">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                                                                attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Grayscale">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                                                attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                                             />
                                                         </LayersControl.BaseLayer>
                                                     </LayersControl>

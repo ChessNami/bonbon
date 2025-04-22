@@ -92,14 +92,19 @@ const ProjectManagementView = () => {
         const baseStyle =
             {
                 Satisfactory: { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 },
-                "With Serious Deficiencies": { fillColor: "rgba(255, 0, 0, 0.5)", color: "red", weight: 2 },
                 "With Minor Deficiencies": { fillColor: "rgba(255, 165, 0, 0.5)", color: "orange", weight: 2 },
+                "With Serious Deficiencies": { fillColor: "rgba(255, 0, 0, 0.5)", color: "red", weight: 2 },
             }[color] || { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 };
 
-        return {
-            ...baseStyle,
-            dashArray: status === "Completed" ? "5, 5" : status === "In Progress" ? "10, 10" : null,
-        };
+        const statusStyle = {
+            Planned: { color: "blue", dashArray: null },
+            "In Progress": { color: "orange", dashArray: "10, 10" },
+            Completed: { color: "green", dashArray: "5, 5" },
+            Terminated: { color: "red", dashArray: "3, 10" },
+            Cancelled: { color: "gray", dashArray: "15, 5" },
+        }[status] || { color: "blue", dashArray: null };
+
+        return { ...baseStyle, color: statusStyle.color, dashArray: statusStyle.dashArray };
     };
 
     // Handle "See more..." click
@@ -148,7 +153,7 @@ const ProjectManagementView = () => {
                 >
                     <MapContainer
                         center={bonbonCoords}
-                        zoom={15}
+                        zoom={17}
                         maxZoom={19}
                         style={{ height: "100%", width: "100%", zIndex: 10 }}
                     >
@@ -164,20 +169,6 @@ const ProjectManagementView = () => {
                                 <TileLayer
                                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                                     attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                                    maxZoom={20}
-                                />
-                            </LayersControl.BaseLayer>
-                            <LayersControl.BaseLayer name="Terrain">
-                                <TileLayer
-                                    url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                                    attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-                                    maxZoom={17}
-                                />
-                            </LayersControl.BaseLayer>
-                            <LayersControl.BaseLayer name="Grayscale">
-                                <TileLayer
-                                    url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                    attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                     maxZoom={20}
                                 />
                             </LayersControl.BaseLayer>
@@ -251,10 +242,16 @@ const ProjectManagementView = () => {
                             <div className="w-4 h-4 border-2 border-blue-500"></div> Planned
                         </li>
                         <li className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-blue-500 border-dashed"></div> In Progress
+                            <div className="w-4 h-4 border-2 border-orange-500 border-dashed"></div> In Progress
                         </li>
                         <li className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-blue-500 border-dotted"></div> Completed
+                            <div className="w-4 h-4 border-2 border-green-500 border-dotted"></div> Completed
+                        </li>
+                        <li className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-red-500" style={{ borderStyle: 'dashed', borderDashOffset: '3, 10' }}></div> Terminated
+                        </li>
+                        <li className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-gray-500" style={{ borderStyle: 'dashed', borderDashOffset: '15, 5' }}></div> Cancelled
                         </li>
                     </ul>
                 </div>
@@ -385,20 +382,6 @@ const ProjectManagementView = () => {
                                                             <TileLayer
                                                                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                                                                 attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                                                                maxZoom={20}
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Terrain">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                                                                attribution='Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-                                                                maxZoom={17}
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Grayscale">
-                                                            <TileLayer
-                                                                url="https://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png"
-                                                                attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                                                 maxZoom={20}
                                                             />
                                                         </LayersControl.BaseLayer>

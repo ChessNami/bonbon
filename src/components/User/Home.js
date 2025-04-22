@@ -4,23 +4,26 @@ import { supabase } from "../../supabaseClient";
 import Swal from "sweetalert2";
 import Loader from "../Loader";
 import MiniCalendar from "./MiniCalendar";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const Home = () => {
-    const [allEvents, setAllEvents] = useState([]); // Store all events (including past)
+    const [allEvents, setAllEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [itemsPerPage, setItemsPerPage] = useState(5); // For announcements
+    const [currentPage, setCurrentPage] = useState(1); // For announcements
+    const [upcomingItemsPerPage, setUpcomingItemsPerPage] = useState(4); // For upcoming events
+    const [upcomingCurrentPage, setUpcomingCurrentPage] = useState(1); // For upcoming events
 
     useEffect(() => {
         fetchEvents();
-        // Subscribe to real-time changes
         const subscription = supabase
             .channel('events-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-                fetchEvents(); // Refetch data when any change occurs
+                fetchEvents();
             })
             .subscribe();
 
-        // Cleanup subscription on unmount
         return () => {
             subscription.unsubscribe();
         };
@@ -32,7 +35,7 @@ const Home = () => {
             const { data, error } = await supabase
                 .from("events")
                 .select("*")
-                .order("created_at", { ascending: false }); // Sort by created_at descending (latest first)
+                .order("created_at", { ascending: false });
 
             if (error) throw error;
 
@@ -51,7 +54,7 @@ const Home = () => {
                 })
             );
 
-            setAllEvents(eventsWithImages); // Store all events for announcements
+            setAllEvents(eventsWithImages);
         } catch (error) {
             Swal.fire({
                 icon: "error",
@@ -153,28 +156,28 @@ const Home = () => {
         };
     }, [isModalOpen]);
 
-    // Filter upcoming events and determine the earliest future date for display
+    // Filter upcoming events within 30 days
     const upcomingEvents = allEvents
         .map((event) => {
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set to start of today
+            today.setHours(0, 0, 0, 0);
+            const thirtyDaysFromNow = new Date(today);
+            thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-            // Find the earliest future date from event.dates
             const futureDates = event.dates
                 .map((date) => new Date(date))
                 .filter((date) => {
-                    date.setHours(0, 0, 0, 0); // Normalize date
-                    return date >= today;
+                    date.setHours(0, 0, 0, 0);
+                    return date >= today && date <= thirtyDaysFromNow;
                 })
                 .sort((a, b) => a - b);
 
-            // If there are future dates, return the event with the earliest future date
             if (futureDates.length > 0) {
                 return { ...event, displayDate: futureDates[0] };
             }
             return null;
         })
-        .filter((event) => event !== null); // Remove events with no future dates
+        .filter((event) => event !== null);
 
     const handleEventClick = (e, facebookLink) => {
         if (!facebookLink) {
@@ -189,80 +192,186 @@ const Home = () => {
                 timer: 1500,
             });
         }
-        // If facebookLink exists, the <a> tag's href will handle the navigation
+    };
+
+    // Pagination for announcements
+    const totalPages = Math.ceil(allEvents.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedEvents = allEvents.slice(startIndex, startIndex + itemsPerPage);
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleItemsPerPageChange = (e) => {
+        setItemsPerPage(Number(e.target.value));
+        setCurrentPage(1);
+    };
+
+    // Pagination for upcoming events
+    const upcomingTotalPages = Math.ceil(upcomingEvents.length / upcomingItemsPerPage);
+    const upcomingStartIndex = (upcomingCurrentPage - 1) * upcomingItemsPerPage;
+    const paginatedUpcomingEvents = upcomingEvents.slice(upcomingStartIndex, upcomingStartIndex + upcomingItemsPerPage);
+
+    const handleUpcomingPageChange = (page) => {
+        setUpcomingCurrentPage(page);
+    };
+
+    const handleUpcomingItemsPerPageChange = (e) => {
+        setUpcomingItemsPerPage(Number(e.target.value));
+        setUpcomingCurrentPage(1);
     };
 
     return (
         <div className="relative w-full mx-auto p-2 sm:p-4 md:p-6 lg:p-8 min-h-screen">
             <div className="flex flex-col lg:flex-row gap-4">
-                {/* Left: Announcements (all events, latest to oldest) */}
-                <div className="w-full lg:w-3/4 bg-white p-2 sm:p-4 rounded-md shadow-md">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 sm:mb-4">
-                        Announcements and Events
-                    </h1>
-                    <div className="w-full border-b border-gray-300 my-2 sm:my-4"></div>
-                    {isLoading ? (
-                        <div className="flex justify-center items-center h-64">
-                            <Loader />
+                {/* Left: Announcements */}
+                <div className="w-full lg:w-3/4 bg-white p-2 sm:p-4 rounded-md shadow-md flex flex-col">
+                    <div className="flex justify-between items-center mb-2 sm:mb-4">
+                        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+                            Announcements and Events
+                        </h1>
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="itemsPerPage" className="text-sm text-gray-600">
+                                Show:
+                            </label>
+                            <select
+                                id="itemsPerPage"
+                                value={itemsPerPage}
+                                onChange={handleItemsPerPageChange}
+                                className="border border-gray-300 rounded-md p-1 text-sm"
+                            >
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={15}>15</option>
+                                <option value={20}>20</option>
+                            </select>
                         </div>
-                    ) : (
-                        <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 md:p-6">
-                            {allEvents.map((item) => (
-                                <motion.div
-                                    key={item.id}
-                                    className="bg-[#dee5f8] p-2 sm:p-4 rounded shadow-md border border-gray-200 flex flex-col sm:flex-row gap-4"
-                                    variants={cardVariants}
-                                    initial="hidden"
-                                    animate="visible"
+                    </div>
+                    <div className="w-full border-b border-gray-300 my-2 sm:my-4"></div>
+                    <div className="flex-1">
+                        {isLoading ? (
+                            <div className="flex justify-center items-center h-64">
+                                <Loader />
+                            </div>
+                        ) : (
+                            <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 md:p-6">
+                                {paginatedEvents.map((item) => (
+                                    <a
+                                        key={item.id}
+                                        href={item.facebook_link || "#"}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => handleEventClick(e, item.facebook_link)}
+                                        className="block"
+                                    >
+                                        <motion.div
+                                            className="bg-[#dee5f8] p-2 sm:p-4 rounded shadow-md border border-gray-200 flex flex-col sm:flex-row gap-4 hover:shadow-lg transition-shadow duration-200"
+                                            variants={cardVariants}
+                                            initial="hidden"
+                                            animate="visible"
+                                        >
+                                            <div className="w-full sm:w-1/3">
+                                                <div className="aspect-video w-full rounded overflow-hidden">
+                                                    <img
+                                                        src={
+                                                            item.image ||
+                                                            "https://via.placeholder.com/300x200"
+                                                        }
+                                                        alt={item.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="w-full sm:w-2/3">
+                                                <h2 className="text-gray-700 mb-1 sm:mb-2 text-lg sm:text-xl font-bold capitalize">
+                                                    {item.title}
+                                                </h2>
+                                                <p className="text-sm sm:text-lg text-gray-600 capitalize">
+                                                    <span className="font-bold">Date:</span>{" "}
+                                                    {formatDates(item.dates)}
+                                                    <br />
+                                                    <span className="font-bold">Time:</span>{" "}
+                                                    {item.whole_day
+                                                        ? "Whole Day"
+                                                        : `${item.start_time} - ${item.end_time}`}
+                                                    <br />
+                                                    <span className="font-bold">Where:</span>{" "}
+                                                    {item.location}
+                                                </p>
+                                                <p className="mt-1 sm:mt-2 text-gray-500 text-sm sm:text-sm">
+                                                    {item.description}
+                                                </p>
+                                            </div>
+                                        </motion.div>
+                                    </a>
+                                ))}
+                                {paginatedEvents.length === 0 && (
+                                    <p className="text-gray-500 text-center">No events to display</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    {/* Pagination Controls at Bottom */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-4 pb-4">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                            >
+                                <FaChevronLeft />
+                            </button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                    key={page}
+                                    onClick={() => handlePageChange(page)}
+                                    className={`px-3 py-1 rounded ${currentPage === page
+                                            ? "bg-blue-500 text-white"
+                                            : "bg-gray-200 hover:bg-gray-300"
+                                        }`}
                                 >
-                                    <div className="w-full sm:w-1/3">
-                                        <div className="aspect-video w-full rounded overflow-hidden">
-                                            <img
-                                                src={
-                                                    item.image ||
-                                                    "https://via.placeholder.com/300x200"
-                                                }
-                                                alt={item.title}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="w-full sm:w-2/3">
-                                        <h2 className="text-gray-700 mb-1 sm:mb-2 text-lg sm:text-xl font-bold capitalize">
-                                            {item.title}
-                                        </h2>
-                                        <p className="text-sm sm:text-lg text-gray-600 capitalize">
-                                            <span className="font-bold">Date:</span>{" "}
-                                            {formatDates(item.dates)}
-                                            <br />
-                                            <span className="font-bold">Time:</span>{" "}
-                                            {item.whole_day
-                                                ? "Whole Day"
-                                                : `${item.start_time} - ${item.end_time}`}
-                                            <br />
-                                            <span className="font-bold">Where:</span>{" "}
-                                            {item.location}
-                                        </p>
-                                        <p className="mt-1 sm:mt-2 text-gray-500 text-sm sm:text-sm">
-                                            {item.description}
-                                        </p>
-                                    </div>
-                                </motion.div>
+                                    {page}
+                                </button>
                             ))}
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                            >
+                                <FaChevronRight />
+                            </button>
                         </div>
                     )}
                 </div>
 
                 {/* Right: Mini Calendar and Upcoming Events */}
                 <div className="w-full lg:w-1/4 flex flex-col gap-4">
-                    {/* Mini Calendar */}
                     <MiniCalendar setIsModalOpen={setIsModalOpen} />
-
-                    {/* Upcoming Events (only future events) */}
-                    <div className="space-y-2 sm:space-y-4">
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-800">Upcoming Events</h2>
+                    <div className="flex flex-col space-y-2 sm:space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                                Upcoming Events (Next 30 Days)
+                            </h2>
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="upcomingItemsPerPage" className="text-sm text-gray-600">
+                                    Show:
+                                </label>
+                                <select
+                                    id="upcomingItemsPerPage"
+                                    value={upcomingItemsPerPage}
+                                    onChange={handleUpcomingItemsPerPageChange}
+                                    className="border border-gray-300 rounded-md p-1 text-sm"
+                                >
+                                    <option value={4}>4</option>
+                                    <option value={8}>8</option>
+                                    <option value={12}>12</option>
+                                </select>
+                            </div>
+                        </div>
                         <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-4">
-                            {upcomingEvents.slice(0, 4).map((item) => (
+                            {paginatedUpcomingEvents.map((item) => (
                                 <a
                                     key={item.id}
                                     href={item.facebook_link || "#"}
@@ -291,10 +400,43 @@ const Home = () => {
                                     </div>
                                 </a>
                             ))}
-                            {upcomingEvents.length === 0 && !isLoading && (
-                                <p className="text-gray-500 text-sm text-center">No upcoming events</p>
+                            {paginatedUpcomingEvents.length === 0 && !isLoading && (
+                                <p className="text-gray-500 text-sm text-center col-span-2 lg:col-span-1">
+                                    No upcoming events in the next 30 days
+                                </p>
                             )}
                         </div>
+                        {/* Pagination for Upcoming Events */}
+                        {upcomingTotalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 mt-2">
+                                <button
+                                    onClick={() => handleUpcomingPageChange(upcomingCurrentPage - 1)}
+                                    disabled={upcomingCurrentPage === 1}
+                                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                                >
+                                    <FaChevronLeft />
+                                </button>
+                                {Array.from({ length: upcomingTotalPages }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => handleUpcomingPageChange(page)}
+                                        className={`px-3 py-1 rounded ${upcomingCurrentPage === page
+                                                ? "bg-blue-500 text-white"
+                                                : "bg-gray-200 hover:bg-gray-300"
+                                            }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => handleUpcomingPageChange(upcomingCurrentPage + 1)}
+                                    disabled={upcomingCurrentPage === upcomingTotalPages}
+                                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                                >
+                                    <FaChevronRight />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

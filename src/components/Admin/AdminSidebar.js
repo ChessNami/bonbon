@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaBars, FaHome, FaUsers, FaCog, FaUserTie, FaUserFriends, FaClipboardList, FaMap, FaMapMarkerAlt, FaComment, FaFileAlt } from "react-icons/fa";
+import { FaBars, FaHome, FaUsers, FaCog, FaComment, FaFileAlt, FaChartLine } from "react-icons/fa";
 import logo from "../../img/Logo/bonbon-logo.png";
 
 const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPage }) => {
@@ -16,12 +16,8 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
 
     const navItems = [
         { label: "Home", icon: FaHome },
-        { label: "Barangay Officials", icon: FaUserTie },
-        { label: "SK Officials", icon: FaUserFriends },
-        { label: "Geotagging", icon: FaMapMarkerAlt },
         { label: "Resident Management", icon: FaUsers },
-        { label: "Strategic Road Map", icon: FaMap },
-        { label: "Project Management", icon: FaClipboardList },
+        { label: "Planning", icon: FaChartLine },
         { label: "Transparency", icon: FaFileAlt },
         { label: "User Feedback", icon: FaComment },
         { label: "Settings", icon: FaCog },

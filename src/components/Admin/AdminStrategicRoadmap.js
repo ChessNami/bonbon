@@ -1211,16 +1211,16 @@ const AdminStrategicRoadmap = () => {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-700">Type:</p>
-                                        <p className="text-sm text-gray-600">{selectedFullDetailsRoad.type}</p>
-                                    </div>
-                                    <div>
                                         <p className="text-sm font-medium text-gray-700">Start Address:</p>
                                         <p className="text-sm text-gray-600">{selectedFullDetailsRoad.start_address || "Fetching address..."}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-gray-700">End Address:</p>
                                         <p className="text-sm text-gray-600">{selectedFullDetailsRoad.end_address || "Fetching address..."}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700">Type:</p>
+                                        <p className="text-sm text-gray-600">{selectedFullDetailsRoad.type}</p>
                                     </div>
                                 </div>
                                 <div className="mb-4">

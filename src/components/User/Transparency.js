@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaArrowLeft, FaUsers, FaProjectDiagram, FaMoneyBillWave, FaChartBar, FaUserFriends, FaComment } from "react-icons/fa";
 import BarangayCouncil from "./Transparency/BarangayCouncil";
 import SK from "./Transparency/SK";
-import BidsProjects from "./Transparency/BidsProjects";
-import BudgetReports from "./Transparency/BudgetReports";
-import ImplementationReports from "./Transparency/ImplementationReports";
+import UserBidsProjects from "./Transparency/UserBidsProjects";
+import UserBudgetReports from "./Transparency/UserBudgetReports";
+import UserImplementationReports from "./Transparency/UserImplementationReports";
 import Feedback from "./Feedback";
 import sklogo from "../../img/Logo/sk.png";
 import barangaybonbon from "../../img/Logo/bonbon-logo.png";
@@ -45,11 +45,11 @@ const Transparency = () => {
             case "Sanguniang Kabataan (SK)":
                 return <SK />;
             case "Bids and Projects":
-                return <BidsProjects />;
+                return <UserBidsProjects />;
             case "Budget & Financial Reports":
-                return <BudgetReports />;
+                return <UserBudgetReports />;
             case "Implementation Reports":
-                return <ImplementationReports />;
+                return <UserImplementationReports />;
             case "Feedback":
                 return <Feedback />;
             default:

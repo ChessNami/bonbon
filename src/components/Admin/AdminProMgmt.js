@@ -5,7 +5,7 @@ import L from "leaflet";
 import * as turf from "@turf/turf";
 import kinks from "@turf/kinks";
 import "../../index.css";
-import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaTag, FaMap, FaMoneyBillWave, FaCalendarAlt, FaUser, FaExclamationCircle, FaImage, FaInfoCircle, FaPercent } from "react-icons/fa";
+import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaTag, FaMap, FaMoneyBillWave, FaCalendarAlt, FaUser, FaExclamationCircle, FaImage, FaInfoCircle, FaPercent, FaHistory } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import Compressor from "compressorjs";
@@ -55,6 +55,7 @@ const AdminProMgmt = () => {
     const fullDetailsModalRef = useRef(null);
     const [isFullDetailsModalOpen, setIsFullDetailsModalOpen] = useState(false);
     const [selectedFullDetailsPolygon, setSelectedFullDetailsPolygon] = useState(null);
+    const [statusHistory, setStatusHistory] = useState([]);
 
 
 
@@ -472,6 +473,41 @@ const AdminProMgmt = () => {
         };
     }, [isModalOpen, isFullDetailsModalOpen, isDetailModalOpen, isImageModalOpen, isCompletionModalOpen]);
 
+    useEffect(() => {
+        const fetchStatusHistory = async () => {
+            if (selectedFullDetailsPolygon) {
+                const { data, error } = await supabase
+                    .rpc("get_project_status_history", { project_id_param: selectedFullDetailsPolygon.id });
+
+                if (error) {
+                    console.error("Error fetching status history:", error);
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "error",
+                        title: "Failed to fetch status history!",
+                        showConfirmButton: false,
+                        scrollbarPadding: false,
+                        timer: 1500,
+                    });
+                    return;
+                }
+
+                // Map the data to match expected structure
+                const formattedData = data.map(item => ({
+                    id: item.id,
+                    old_status: item.old_status,
+                    new_status: item.new_status,
+                    changed_at: item.changed_at
+                }));
+
+                setStatusHistory(formattedData || []);
+            }
+        };
+
+        fetchStatusHistory();
+    }, [selectedFullDetailsPolygon]);
+
     // Handle image selection and preview
     const handleImageSelect = (e) => {
         const files = Array.from(e.target.files);
@@ -608,12 +644,13 @@ const AdminProMgmt = () => {
             });
             return;
         }
-        if (!["Planned", "In Progress", "Completed"].includes(newUpdateStatus)) {
+        const validStatuses = ["Planned", "In Progress", "Completed", "Terminated", "Cancelled"];
+        if (!validStatuses.includes(newUpdateStatus)) {
             Swal.fire({
                 toast: true,
                 position: "top-end",
                 icon: "error",
-                title: "Invalid update status! Choose Planned, In Progress, or Completed.",
+                title: "Invalid update status! Choose Planned, In Progress, Completed, Terminated, or Cancelled.",
                 showConfirmButton: false,
                 scrollbarPadding: false,
                 timer: 1500,
@@ -941,12 +978,13 @@ const AdminProMgmt = () => {
             });
             return;
         }
-        if (!["Planned", "In Progress", "Completed"].includes(newUpdateStatus)) {
+        const validStatuses = ["Planned", "In Progress", "Completed", "Terminated", "Cancelled"];
+        if (!validStatuses.includes(newUpdateStatus)) {
             Swal.fire({
                 toast: true,
                 position: "top-end",
                 icon: "error",
-                title: "Invalid update status! Choose Planned, In Progress, or Completed.",
+                title: "Invalid update status! Choose Planned, In Progress, Completed, Terminated, or Cancelled.",
                 showConfirmButton: false,
                 scrollbarPadding: false,
                 timer: 1500,
@@ -1058,19 +1096,23 @@ const AdminProMgmt = () => {
         setDragStartCoord(null);
     };
 
-    // Polygon styling
     const getPolygonStyle = (color, status) => {
         const baseStyle =
             {
                 Satisfactory: { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 },
-                "With Serious Deficiencies": { fillColor: "rgba(255, 0, 0, 0.5)", color: "red", weight: 2 },
                 "With Minor Deficiencies": { fillColor: "rgba(255, 165, 0, 0.5)", color: "orange", weight: 2 },
+                "With Serious Deficiencies": { fillColor: "rgba(255, 0, 0, 0.5)", color: "red", weight: 2 },
             }[color] || { fillColor: "rgba(0, 123, 255, 0.5)", color: "blue", weight: 2 };
 
-        return {
-            ...baseStyle,
-            dashArray: status === "Completed" ? "5, 5" : status === "In Progress" ? "10, 10" : null,
-        };
+        const statusStyle = {
+            Planned: { color: "blue", dashArray: null },
+            "In Progress": { color: "orange", dashArray: "10, 10" },
+            Completed: { color: "green", dashArray: "5, 5" },
+            Terminated: { color: "red", dashArray: "3, 10" },
+            Cancelled: { color: "gray", dashArray: "15, 5" },
+        }[status] || { color: "blue", dashArray: null };
+
+        return { ...baseStyle, color: statusStyle.color, dashArray: statusStyle.dashArray };
     };
 
     // Handle "See more..." click
@@ -1295,23 +1337,25 @@ const AdminProMgmt = () => {
                                         <div className="w-4 h-4 bg-blue-500 rounded-full"></div> Satisfactory
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <div className="w-4 h-4 bg-orange-500 rounded-full"></div> With Minor
-                                        Deficiencies
+                                        <div className="w-4 h-4 bg-orange-500 rounded-full"></div> With Minor Deficiencies
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <div className="w-4 h-4 bg-red-500 rounded-full"></div> With Serious
-                                        Deficiencies
+                                        <div className="w-4 h-4 bg-red-500 rounded-full"></div> With Serious Deficiencies
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <div className="w-4 h-4 border-2 border-blue-500"></div> Planned
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-blue-500 border-dashed"></div> In
-                                        Progress
+                                        <div className="w-4 h-4 border-2 border-orange-500 border-dashed"></div> In Progress
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-blue-500 border-dotted"></div>
-                                        Completed
+                                        <div className="w-4 h-4 border-2 border-green-500 border-dotted"></div> Completed
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-red-500" style={{ borderStyle: 'dashed', borderDashOffset: '3, 10' }}></div> Terminated
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-gray-500" style={{ borderStyle: 'dashed', borderDashOffset: '15, 5' }}></div> Cancelled
                                     </li>
                                 </ul>
                             </div>
@@ -1396,6 +1440,8 @@ const AdminProMgmt = () => {
                                         <option value="Planned">Planned</option>
                                         <option value="In Progress">In Progress</option>
                                         <option value="Completed">Completed</option>
+                                        <option value="Terminated">Terminated</option>
+                                        <option value="Cancelled">Cancelled</option>
                                     </select>
                                 </div>
                                 <div>
@@ -1577,6 +1623,8 @@ const AdminProMgmt = () => {
                                             <option value="Planned">Planned</option>
                                             <option value="In Progress">In Progress</option>
                                             <option value="Completed">Completed</option>
+                                            <option value="Terminated">Terminated</option>
+                                            <option value="Cancelled">Cancelled</option>
                                         </select>
                                     </div>
                                     <div className="flex-1 min-w-[150px]">
@@ -1885,6 +1933,36 @@ const AdminProMgmt = () => {
                                         </div>
                                     ) : (
                                         <p className="text-sm text-gray-500 italic">No images available</p>
+                                    )}
+                                </div>
+                                <div className="mb-4">
+                                    <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                        <FaHistory className="text-blue-600" />
+                                        Status Change History
+                                    </p>
+                                    {statusHistory.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm text-left text-gray-600">
+                                                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                                                    <tr>
+                                                        <th scope="col" className="px-4 py-2">Old Status</th>
+                                                        <th scope="col" className="px-4 py-2">New Status</th>
+                                                        <th scope="col" className="px-4 py-2">Changed At</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {statusHistory.map((history) => (
+                                                        <tr key={history.id} className="border-b">
+                                                            <td className="px-4 py-2">{history.old_status || "N/A"}</td>
+                                                            <td className="px-4 py-2">{history.new_status}</td>
+                                                            <td className="px-4 py-2">{new Date(history.changed_at).toLocaleString()}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 italic">No status change history available</p>
                                     )}
                                 </div>
                             </div>
