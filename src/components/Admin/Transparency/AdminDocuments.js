@@ -12,7 +12,7 @@ import {
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 import { useDetectAdBlock } from "adblock-detect-react";
 import { ClipLoader } from "react-spinners";
 

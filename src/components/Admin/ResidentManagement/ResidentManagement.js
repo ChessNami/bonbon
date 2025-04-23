@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaSyncAlt, FaTrashAlt } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../../../supabaseClient';
 import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBarangaysByMunicipality } from '@aivangogh/ph-address';
-import Loader from '../Loader';
+import Loader from '../../Loader';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 

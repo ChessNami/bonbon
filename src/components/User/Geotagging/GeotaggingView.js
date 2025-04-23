@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import ReactDOMServer from "react-dom/server";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 import {
     FaBuilding, FaStore, FaSchool, FaHospital, FaHotel, FaChurch, FaShoppingBasket, FaClinicMedical
 } from "react-icons/fa";

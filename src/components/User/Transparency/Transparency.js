@@ -2,19 +2,19 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaArrowLeft, FaUsers, FaProjectDiagram, FaMoneyBillWave, FaChartBar, FaUserFriends, FaComment } from "react-icons/fa";
-import BarangayCouncil from "./Transparency/BarangayCouncil";
-import SK from "./Transparency/SK";
-import UserBidsProjects from "./Transparency/UserBidsProjects";
-import UserBudgetReports from "./Transparency/UserBudgetReports";
-import UserImplementationReports from "./Transparency/UserImplementationReports";
+import BarangayCouncil from "./BarangayCouncil";
+import SK from "./SK";
+import UserBidsProjects from "./UserBidsProjects";
+import UserBudgetReports from "./UserBudgetReports";
+import UserImplementationReports from "./UserImplementationReports";
 import Feedback from "./Feedback";
-import sklogo from "../../img/Logo/sk.png";
-import barangaybonbon from "../../img/Logo/bonbon-logo.png";
-import bids from "../../img/Transparency/bids.jpg";
-import budget from "../../img/Transparency/budget.jpg";
-import implementation from "../../img/Transparency/implementation.jpg";
-import feedbackImg from "../../img/Transparency/feedback.webp";
-import Loader from "../Loader";
+import sklogo from "../../../img/Logo/sk.png";
+import barangaybonbon from "../../../img/Logo/bonbon-logo.png";
+import bids from "../../../img/Transparency/bids.jpg";
+import budget from "../../../img/Transparency/budget.jpg";
+import implementation from "../../../img/Transparency/implementation.jpg";
+import feedbackImg from "../../../img/Transparency/feedback.webp";
+import Loader from "../../Loader";
 
 const Transparency = () => {
     const [selectedCard, setSelectedCard] = useState(null);

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaStar, FaCommentAlt } from "react-icons/fa";
-import { supabase } from "../../supabaseClient";
-import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
-import Loader from "../Loader";
+import { supabase } from "../../../supabaseClient";
+import { fetchUserPhotos, subscribeToUserPhotos } from "../../../utils/supabaseUtils";
+import Loader from "../../Loader";
 
 const UserFeedback = () => {
     const [feedbacks, setFeedbacks] = useState([]);

@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { FaTimes, FaMap, FaTag, FaInfoCircle, FaImage, FaBan } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 
 const ProjectManagementView = () => {
     const bonbonCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);

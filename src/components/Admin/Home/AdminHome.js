@@ -1,11 +1,11 @@
 import React, { useState, useEffect, Suspense } from "react";
-import Calendar from "./Home/Calendar";
-import TotalResident from "./Home/TotalResident";
-import ApprovedProfile from "./Home/ApprovedProfile";
-import RejectedProfile from "./Home/RejectedProfile";
-import PendingProfile from "./Home/PendingProfile";
-import BarangayCouncilTable from "./Home/BarangayCouncilTable";
-import ZonePopulationTable from "./Home/ZonePopulationTable";
+import Calendar from "./Calendar";
+import TotalResident from "./TotalResident";
+import ApprovedProfile from "./ApprovedProfile";
+import RejectedProfile from "./RejectedProfile";
+import PendingProfile from "./PendingProfile";
+import BarangayCouncilTable from "./BarangayCouncilTable";
+import ZonePopulationTable from "./ZonePopulationTable";
 
 const AdminHome = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -19,9 +19,9 @@ const AdminHome = () => {
             try {
                 // Simulate prefetching data for child components
                 await Promise.all([
-                    import('./Home/ApprovedProfile'),
-                    import('./Home/RejectedProfile'),
-                    import('./Home/PendingProfile')
+                    import('./ApprovedProfile'),
+                    import('./RejectedProfile'),
+                    import('./PendingProfile')
                 ]);
             } catch (error) {
                 console.error('Error prefetching components:', error);

@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from "react"; // Import useCallback
 import { motion } from "framer-motion";
-import UserProfile from "../User/Profile/UserProfile";
-import MyAccount from "../User/Profile/MyAccount";
-import AccountSettings from "../User/Profile/AccountSettings";
-import AdminHelp from "./AdminHelp";
-import Loader from "../Loader"; // Assuming you have a Loader component
+import UserProfile from "../UserProfile/UserProfile";
+import MyAccount from "../UserProfile/MyAccount";
+import AccountSettings from "../UserProfile/AccountSettings";
+import ResidentProfiling from "./ResidentProfiling";
+import Help from "../UserProfile/Help";
+import Loader from "../../Loader"; // Assuming you have a Loader component
 
-const AdminMainProfileComponent = () => {
+const MainProfileComponent = () => {
     const [activeTab, setActiveTab] = useState("myAccount");
     const [loading, setLoading] = useState(true);
 
@@ -30,8 +31,11 @@ const AdminMainProfileComponent = () => {
             case "accountSettings":
                 Component = AccountSettings;
                 break;
+            case "residentProfiling":
+                Component = ResidentProfiling;
+                break;
             case "help":
-                Component = AdminHelp;
+                Component = Help;
                 break;
             default:
                 Component = MyAccount;
@@ -78,4 +82,4 @@ const AdminMainProfileComponent = () => {
     );
 };
 
-export default AdminMainProfileComponent;
+export default MainProfileComponent;

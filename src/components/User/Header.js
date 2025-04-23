@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef } from "react";
+import { useUser } from "../contexts/UserContext";
 import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaMapMarkerAlt } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
-import { fetchUserData, subscribeToUserData } from "../../utils/supabaseUtils";
+import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 
 const Header = ({ onLogout, setCurrentPage }) => {
-    const [displayName, setDisplayName] = useState("User");
-    const [profilePic, setProfilePic] = useState(placeholderImg);
-    const [isLoading, setIsLoading] = useState(true);
+    const { displayName } = useUser();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isSmallScreen, setIsSmallScreen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [profilePic, setProfilePic] = useState(placeholderImg);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
 
@@ -50,33 +50,25 @@ const Header = ({ onLogout, setCurrentPage }) => {
 
     useEffect(() => {
         let unsubscribe;
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const { data: { user }, error } = await supabase.auth.getUser();
+        const fetchProfilePic = async () => {
+            const { data: { user }, error } = await supabase.auth.getUser();
 
-                if (error || !user) {
-                    console.error("Error fetching user:", error?.message || "No user found");
-                    setDisplayName("User");
-                    setProfilePic(placeholderImg);
-                    return;
-                }
-
-                const { displayName, profilePic } = await fetchUserData(user.id);
-                setDisplayName(displayName);
-                setProfilePic(profilePic || placeholderImg);
-
-                // Subscribe to user data changes
-                unsubscribe = subscribeToUserData(user.id, (newData) => {
-                    setDisplayName(newData.displayName);
-                    setProfilePic(newData.profilePic || placeholderImg);
-                });
-            } finally {
-                setIsLoading(false);
+            if (error || !user) {
+                console.error("Error fetching user:", error?.message || "No user found");
+                setProfilePic(placeholderImg);
+                return;
             }
+
+            const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
+            setProfilePic(profilePicUrl || placeholderImg);
+
+            // Subscribe to photo changes
+            unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
+                setProfilePic(newPhotos.profilePic || placeholderImg);
+            });
         };
 
-        fetchData();
+        fetchProfilePic();
 
         return () => {
             if (unsubscribe) unsubscribe();
@@ -147,22 +139,13 @@ const Header = ({ onLogout, setCurrentPage }) => {
                         aria-label="User Profile"
                         tabIndex={0}
                     >
-                        {isLoading ? (
-                            <>
-                                <div className="w-24 h-5 bg-gray-300 rounded animate-pulse mr-2"></div>
-                                <div className="w-10 h-10 bg-gray-300 rounded-full animate-pulse"></div>
-                            </>
-                        ) : (
-                            <>
-                                <span className="mr-2">{displayName}</span>
-                                <img
-                                    src={profilePic}
-                                    alt="User Profile"
-                                    className="w-10 h-10 rounded-full object-cover select-none"
-                                    draggable="false"
-                                />
-                            </>
-                        )}
+                        <span className="mr-2">{displayName}</span>
+                        <img
+                            src={profilePic}
+                            alt="User Profile"
+                            className="w-10 h-10 rounded-full object-cover select-none"
+                            draggable="false"
+                        />
                     </div>
 
                     {dropdownOpen && (

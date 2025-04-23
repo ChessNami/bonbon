@@ -1,5 +1,5 @@
 import React from "react";
-import UserDocuments from "../UserDocuments";
+import UserDocuments from "./UserDocuments";
 
 const UserImplementationReports = () => {
     return <UserDocuments documentType="ImplementationReports" />;

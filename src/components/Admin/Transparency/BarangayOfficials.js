@@ -2,21 +2,21 @@ import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import { FaPlus, FaEdit, FaTrash, FaTimes, FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../../../supabaseClient';
 import Compressor from 'compressorjs';
 import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
-import placeholderImage from '../../img/Placeholder/placeholder.png';
-import Loader from '../Loader';
+import placeholderImage from '../../../img/Placeholder/placeholder.png';
+import Loader from '../../Loader';
 
-const SKOfficials = () => {
+const BarangayOfficials = () => {
     const [officials, setOfficials] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState("create");
     const [currentOfficial, setCurrentOfficial] = useState(null);
     const [formData, setFormData] = useState({
         name: "",
-        position: "SK Kagawad",
+        position: "Kagawad",
         official_type: "",
         image: null,
         image_preview: "",
@@ -39,7 +39,7 @@ const SKOfficials = () => {
         setIsLoading(true);
         try {
             const { data, error } = await supabase
-                .from('sk_officials')
+                .from('barangay_officials')
                 .select('*');
 
             if (error) throw error;
@@ -47,9 +47,9 @@ const SKOfficials = () => {
             const officialsWithSignedUrls = await Promise.all(
                 (data || []).map(async (official) => {
                     if (official.image_url) {
-                        const filePath = official.image_url.split('/skofficials/')[1] || `public/sk_official_${official.id}.jpg`;
+                        const filePath = official.image_url.split('/barangayofficials/')[1] || `public/official_${official.id}.jpg`;
                         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-                            .from('skofficials')
+                            .from('barangayofficials')
                             .createSignedUrl(filePath, 3600);
 
                         if (signedUrlError) {
@@ -63,20 +63,20 @@ const SKOfficials = () => {
                 })
             );
 
-            // Sort officials with SK Chairperson first
+            // Sort officials with Punong Barangay first
             const sortedOfficials = officialsWithSignedUrls.sort((a, b) => {
-                if (a.position === "SK Chairperson") return -1;
-                if (b.position === "SK Chairperson") return 1;
+                if (a.position === "Punong Barangay") return -1;
+                if (b.position === "Punong Barangay") return 1;
                 return a.name.localeCompare(b.name);
             });
 
             setOfficials(sortedOfficials);
         } catch (error) {
-            console.error('Error fetching SK officials:', error);
+            console.error('Error fetching officials:', error);
             Swal.fire({
                 icon: "error",
                 title: "Fetch Error",
-                text: "Failed to fetch SK officials. Check console for details.",
+                text: "Failed to fetch officials. Check console for details.",
             });
             setOfficials([]);
         } finally {
@@ -124,7 +124,7 @@ const SKOfficials = () => {
         setModalMode("create");
         setFormData({
             name: "",
-            position: "SK Kagawad",
+            position: "Kagawad",
             official_type: "",
             image: null,
             image_preview: "",
@@ -207,7 +207,7 @@ const SKOfficials = () => {
 
                     // Insert the official data first
                     const { data: insertData, error: insertError } = await supabase
-                        .from('sk_officials')
+                        .from('barangay_officials')
                         .insert([{
                             name: formData.name,
                             position: formData.position,
@@ -215,14 +215,13 @@ const SKOfficials = () => {
                         }])
                         .select('id');
 
-                    if (insertError) throw new Error(`Error inserting SK official: ${insertError.message}`);
+                    if (insertError) throw new Error(`Error inserting official: ${insertError.message}`);
 
                     officialId = insertData[0].id;
-                    const fileName = `public/sk_official_${officialId}.jpg`;
+                    const fileName = `public/official_${officialId}.jpg`;
 
-                    // Upload the image
                     const { error: uploadError } = await supabase.storage
-                        .from('skofficials')
+                        .from('barangayofficials')
                         .upload(fileName, compressedImage, {
                             cacheControl: '3600',
                             upsert: true,
@@ -230,9 +229,8 @@ const SKOfficials = () => {
 
                     if (uploadError) throw new Error(`Error uploading image: ${uploadError.message}`);
 
-                    // Update the official with the image URL
                     const { error: updateError } = await supabase
-                        .from('sk_officials')
+                        .from('barangay_officials')
                         .update({ image_url: fileName })
                         .eq('id', officialId);
 
@@ -240,7 +238,7 @@ const SKOfficials = () => {
                 }
             } else if (modalMode === "edit" && currentOfficial) {
                 const { error: updateError } = await supabase
-                    .from('sk_officials')
+                    .from('barangay_officials')
                     .update({
                         name: formData.name,
                         position: formData.position,
@@ -248,14 +246,14 @@ const SKOfficials = () => {
                     })
                     .eq('id', currentOfficial.id);
 
-                if (updateError) throw new Error(`Error updating SK official: ${updateError.message}`);
+                if (updateError) throw new Error(`Error updating official: ${updateError.message}`);
 
-                Swal.close(); // Close loader before showing success
+                Swal.close();
                 Swal.fire({
                     toast: true,
                     position: "top-end",
                     icon: "success",
-                    title: "SK Official updated successfully",
+                    title: "Official updated successfully",
                     showConfirmButton: false,
                     timer: 1500,
                 });
@@ -266,12 +264,12 @@ const SKOfficials = () => {
             }
 
             if (modalMode === "create") {
-                Swal.close(); // Close loader before showing success
+                Swal.close();
                 Swal.fire({
                     toast: true,
                     position: "top-end",
                     icon: "success",
-                    title: "SK Official added successfully",
+                    title: "Official added successfully",
                     showConfirmButton: false,
                     timer: 1500,
                 });
@@ -281,7 +279,7 @@ const SKOfficials = () => {
             setIsModalOpen(false);
 
         } catch (error) {
-            Swal.close(); // Close loader on error
+            Swal.close();
             console.error('Error in handleSubmit:', error);
             Swal.fire({
                 icon: "error",
@@ -293,27 +291,26 @@ const SKOfficials = () => {
 
     const handleDeleteConfirm = async () => {
         if (currentOfficial) {
-            // Delete the image from storage if it exists
             if (currentOfficial.image_url) {
-                const filePath = currentOfficial.image_url.split('/skofficials/')[1] || `public/sk_official_${currentOfficial.id}.jpg`;
+                const filePath = currentOfficial.image_url.split('/barangayofficials/')[1] || `public/official_${currentOfficial.id}.jpg`;
                 await supabase.storage
-                    .from('skofficials')
+                    .from('barangayofficials')
                     .remove([filePath]);
             }
 
             const { error } = await supabase
-                .from('sk_officials')
+                .from('barangay_officials')
                 .delete()
                 .eq('id', currentOfficial.id);
 
             if (error) {
-                console.error('Error deleting SK official:', error);
+                console.error('Error deleting official:', error);
             } else {
                 Swal.fire({
                     toast: true,
                     position: "top-end",
                     icon: "success",
-                    title: "SK Official deleted successfully",
+                    title: "Official deleted successfully",
                     showConfirmButton: false,
                     timer: 1500,
                 });
@@ -328,7 +325,7 @@ const SKOfficials = () => {
         setCurrentOfficial(null);
         setFormData({
             name: "",
-            position: "SK Kagawad",
+            position: "Kagawad",
             official_type: "",
             image: null,
             image_preview: "",
@@ -337,7 +334,6 @@ const SKOfficials = () => {
         setErrors({});
     };
 
-    // Pagination logic
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = officials.slice(indexOfFirstItem, indexOfLastItem);
@@ -349,7 +345,7 @@ const SKOfficials = () => {
 
     const handleItemsPerPageChange = (e) => {
         setItemsPerPage(Number(e.target.value));
-        setCurrentPage(1); // Reset to first page when items per page changes
+        setCurrentPage(1);
     };
 
     const modalVariants = {
@@ -370,7 +366,7 @@ const SKOfficials = () => {
                     onClick={handleCreate}
                     className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-md"
                 >
-                    <FaPlus className="mr-2" /> Add SK Official
+                    <FaPlus className="mr-2" /> Add Official
                 </button>
                 <div className="flex items-center space-x-2">
                     <label className="text-sm font-medium text-gray-700">Items per page:</label>
@@ -394,7 +390,7 @@ const SKOfficials = () => {
                 </div>
             ) : officials.length === 0 ? (
                 <div className="text-center py-12 text-gray-500 text-lg">
-                    No SK officials available. Add a new SK official to get started.
+                    No officials available. Add a new official to get started.
                 </div>
             ) : (
                 <>
@@ -452,8 +448,8 @@ const SKOfficials = () => {
                             onClick={() => paginate(currentPage - 1)}
                             disabled={currentPage === 1}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === 1
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
                                 }`}
                         >
                             <FaArrowLeft size={16} />
@@ -464,8 +460,8 @@ const SKOfficials = () => {
                                     key={page}
                                     onClick={() => paginate(page)}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${currentPage === page
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                 >
                                     {page}
@@ -476,8 +472,8 @@ const SKOfficials = () => {
                             onClick={() => paginate(currentPage + 1)}
                             disabled={currentPage === totalPages}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === totalPages
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
                                 }`}
                         >
                             <FaArrowRight size={16} />
@@ -503,8 +499,8 @@ const SKOfficials = () => {
                         >
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-xl font-bold">
-                                    {modalMode === "create" && "Add New SK Official"}
-                                    {modalMode === "edit" && "Edit SK Official"}
+                                    {modalMode === "create" && "Add New Official"}
+                                    {modalMode === "edit" && "Edit Official"}
                                     {modalMode === "delete" && "Confirm Delete"}
                                 </h2>
                                 <button
@@ -688,4 +684,4 @@ const SKOfficials = () => {
     );
 };
 
-export default SKOfficials;
+export default BarangayOfficials;

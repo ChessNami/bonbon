@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { supabase } from "../../supabaseClient";
-import Loader from "../Loader";
+import { supabase } from "../../../supabaseClient";
+import Loader from "../../Loader";
 import { FaTrash, FaFileExport, FaFileExcel } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { motion } from "framer-motion";

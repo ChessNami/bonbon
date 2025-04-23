@@ -4,12 +4,12 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import * as turf from "@turf/turf";
 import kinks from "@turf/kinks";
-import "../../index.css";
+import "../../../index.css";
 import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaTag, FaMap, FaMoneyBillWave, FaCalendarAlt, FaUser, FaExclamationCircle, FaImage, FaInfoCircle, FaPercent, FaHistory } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import Compressor from "compressorjs";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 
 const AdminProMgmt = () => {
     const bonbonCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);

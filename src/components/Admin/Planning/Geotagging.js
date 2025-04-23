@@ -10,7 +10,7 @@ import { MdAccountBalance, MdSportsBasketball, MdDirectionsBus } from "react-ico
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import ReactDOMServer from "react-dom/server";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 
 // Custom DivIcon for Markers with Name Label
 const getCustomIcon = (icon, name) => {

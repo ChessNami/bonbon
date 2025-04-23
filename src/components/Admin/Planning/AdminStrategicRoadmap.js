@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { MapContainer, TileLayer, Popup, Polyline, useMapEvents, CircleMarker, LayersControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import "../../index.css";
+import "../../../index.css";
 import { FaTimes, FaMapMarkedAlt, FaUndo, FaRedo, FaTrash, FaSave, FaBan, FaHeading, FaAlignLeft, FaTag, FaMap } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 
 const AdminStrategicRoadmap = () => {
     const centerCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);

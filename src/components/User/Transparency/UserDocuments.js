@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { FaArrowLeft, FaArrowRight, FaFilePdf, FaTimes, FaDownload } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 import Swal from "sweetalert2";
 import { useDetectAdBlock } from "adblock-detect-react";
 import { ClipLoader } from "react-spinners";

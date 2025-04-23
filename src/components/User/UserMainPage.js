@@ -1,13 +1,13 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion"; // Import Framer Motion
-import Home from "./Home";
-import Transparency from "./Transparency";
-import Demographics from "./Demographics";
-import MainProfileComponent from "../User/Profile/MainProfileComponent";
-import GeotaggingView from "./GeotaggingView";
-import Feedback from "./Feedback";
-import StrategicRoadMapView from "./StrategicRoadMapView";
-import ProjectManagementView from "./ProjectManagementView";
+import Home from "./Home/Home";
+import Transparency from "./Transparency/Transparency";
+import Demographics from "./Demographics/Demographics";
+import MainProfileComponent from "./Profiling/MainProfilingComponent";
+import GeotaggingView from "./Geotagging/GeotaggingView";
+import Feedback from "./Transparency/Feedback";
+import StrategicRoadMapView from "./StrategicRoad/StrategicRoadMapView";
+import ProjectManagementView from "./ProjectManagement/ProjectManagementView";
 
 const pageVariants = {
     initial: { opacity: 0, x: -25 }, // Start with opacity 0 and slide in from the left

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 import Swal from "sweetalert2";
-import Loader from "../Loader";
+import Loader from "../../Loader";
 import MiniCalendar from "./MiniCalendar";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 

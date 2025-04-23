@@ -3,17 +3,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaSignOutAlt, FaSun, FaMoon } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
-import { fetchUserData, subscribeToUserData } from "../../utils/supabaseUtils";
+import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 
 const AdminHeader = ({ onLogout, setCurrentPage }) => {
-    const [displayName, setDisplayName] = useState("Admin");
+    const [displayName, setDisplayName] = useState();
     const [profilePicture, setProfilePicture] = useState(placeholderImg);
-    const [isLoading, setIsLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
+    const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
 
     useEffect(() => {
         const handleResize = () => {
@@ -27,32 +26,28 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
 
     useEffect(() => {
         let unsubscribe;
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const { data: { user }, error } = await supabase.auth.getUser();
+        const fetchUserData = async () => {
+            const { data: { user }, error } = await supabase.auth.getUser();
 
-                if (error || !user) {
-                    console.error("Error fetching user:", error?.message || "No user found");
-                    setDisplayName("Admin");
-                    setProfilePicture(placeholderImg);
-                    return;
-                }
-
-                const { displayName, profilePic } = await fetchUserData(user.id);
-                setDisplayName(displayName || "Admin");
-                setProfilePicture(profilePic || placeholderImg);
-
-                unsubscribe = subscribeToUserData(user.id, (newData) => {
-                    setDisplayName(newData.displayName || "Admin");
-                    setProfilePicture(newData.profilePic || placeholderImg);
-                });
-            } finally {
-                setIsLoading(false);
+            if (error || !user) {
+                console.error("Error fetching user:", error?.message || "No user found");
+                setProfilePicture(placeholderImg);
+                setDisplayName("Admin");
+                return;
             }
+
+            setDisplayName(user.user_metadata?.display_name || "Admin");
+
+            const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
+            setProfilePicture(profilePicUrl || placeholderImg);
+
+            // Subscribe to photo changes
+            unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
+                setProfilePicture(newPhotos.profilePic || placeholderImg);
+            });
         };
 
-        fetchData();
+        fetchUserData();
 
         return () => {
             if (unsubscribe) unsubscribe();
@@ -77,25 +72,12 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                 profileRef.current &&
                 !profileRef.current.contains(event.target)
             ) {
-                console.log("Click outside detected, closing dropdown");
                 setDropdownOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
-    // Handle focus loss to close dropdown
-    useEffect(() => {
-        const handleFocusLoss = () => {
-            if (dropdownOpen) {
-                console.log("Focus lost, closing dropdown");
-                setDropdownOpen(false);
-            }
-        };
-        document.addEventListener("focusin", handleFocusLoss);
-        return () => document.removeEventListener("focusin", handleFocusLoss);
-    }, [dropdownOpen]);
 
     const formatDate = (date) => {
         const isSmallScreen = window.innerWidth < 920;
@@ -122,13 +104,9 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
         );
     };
 
-    const toggleDropdown = () => {
-        console.log("Toggling dropdown, current state:", dropdownOpen);
-        setDropdownOpen((prev) => !prev);
-    };
+    const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
     const handleDropdownClick = (action) => {
-        console.log("Dropdown item clicked, action:", action);
         action();
         setDropdownOpen(false);
     };
@@ -137,20 +115,23 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
     ];
 
+    // Framer Motion variants for dropdown animation
     const dropdownVariants = {
         hidden: { opacity: 0, y: -10, scale: 0.95 },
         visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
-        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } },
+        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } }
     };
 
+    // Framer Motion variants for profile hover
     const profileVariants = {
         rest: { scale: 1 },
-        hover: { scale: 1.05, transition: { duration: 0.2 } },
+        hover: { scale: 1.05, transition: { duration: 0.2 } }
     };
 
+    // Framer Motion variants for dropdown items
     const itemVariants = {
         rest: { x: 0 },
-        hover: { x: 5, transition: { duration: 0.2 } },
+        hover: { x: 5, transition: { duration: 0.2 } }
     };
 
     return (
@@ -175,29 +156,17 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                         initial="rest"
                         whileHover="hover"
                     >
-                        {isLoading ? (
-                            <>
-                                {isDisplayNameVisible && (
-                                    <div className="w-24 h-5 bg-gray-300 rounded animate-pulse mr-2"></div>
-                                )}
-                                <div className="w-10 h-10 bg-gray-300 rounded-full animate-pulse"></div>
-                            </>
-                        ) : (
-                            <>
-                                {isDisplayNameVisible && <span className="mr-2">{displayName}</span>}
-                                <motion.img
-                                    src={profilePicture}
-                                    alt="User Profile"
-                                    className="w-10 h-10 rounded-full select-none object-cover"
-                                    draggable="false"
-                                />
-                            </>
-                        )}
+                        {isDisplayNameVisible && <span className="mr-2">{displayName}</span>}
+                        <motion.img
+                            src={profilePicture}
+                            alt="User Profile"
+                            className="w-10 h-10 rounded-full select-none object-cover"
+                            draggable="false"
+                        />
                     </motion.div>
                     <AnimatePresence>
                         {dropdownOpen && (
                             <motion.div
-                                key="dropdown"
                                 ref={dropdownRef}
                                 className="absolute right-0 mt-4 w-96 bg-white text-gray-900 rounded-md shadow-lg z-20"
                                 style={{ top: "100%" }}

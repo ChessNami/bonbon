@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 
 const cardVariants = {
     hidden: { opacity: 0, y: 20 },

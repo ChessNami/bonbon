@@ -1,11 +1,11 @@
 import React from "react";
-import AdminHome from "./AdminHome";
-import ResidentManagement from "./ResidentManagement";
-import AdminMainProfileComponent from "./AdminMainProfileComponent";
-import Settings from "./Settings";
-import UserFeedback from "./UserFeedback";
-import TransparencyMainComponent from "./TransparencyMainComponent";
-import PlanningMainComponent from "./PlanningMainComponent";
+import AdminHome from "./Home/AdminHome";
+import ResidentManagement from "./ResidentManagement/ResidentManagement";
+import AdminMainProfileComponent from "./Profile/AdminMainProfileComponent";
+import Settings from "./Settings/Settings";
+import UserFeedback from "./UserFeedback/UserFeedback";
+import TransparencyMainComponent from "./Transparency/TransparencyMainComponent";
+import PlanningMainComponent from "./Planning/PlanningMainComponent";
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {

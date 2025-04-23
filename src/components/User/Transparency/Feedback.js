@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FaStar, FaPaperPlane, FaCommentAlt } from "react-icons/fa";
 import Swal from "sweetalert2";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 
 const Feedback = () => {
     const [feedback, setFeedback] = useState("");
