@@ -147,6 +147,10 @@ code {
   text-overflow: ellipsis;
 }
 
+.modal-open {
+  overflow: hidden;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

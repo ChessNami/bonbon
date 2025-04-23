@@ -70,15 +70,17 @@ const ZonePopulationTable = () => {
         });
 
         // Convert zoneCounts to array of { name, population }
-        return Object.entries(zoneCounts).map(([name, population]) => ({
-            name,
-            population,
-        })).sort((a, b) => {
-            // Sort zones numerically based on the zone number
-            const zoneA = parseInt(a.name.split(' ')[1]);
-            const zoneB = parseInt(b.name.split(' ')[1]);
-            return zoneA - zoneB;
-        });
+        return Object.entries(zoneCounts)
+            .map(([name, population]) => ({
+                name,
+                population,
+            }))
+            .sort((a, b) => {
+                // Sort zones numerically based on the zone number
+                const zoneA = parseInt(a.name.split(" ")[1]);
+                const zoneB = parseInt(b.name.split(" ")[1]);
+                return zoneA - zoneB;
+            });
     }, []);
 
     // Function to fetch residents data
@@ -89,7 +91,13 @@ const ZonePopulationTable = () => {
 
             const { data, error } = await supabase
                 .from("residents")
-                .select("household, spouse, household_composition");
+                .select(`
+                    household,
+                    spouse,
+                    household_composition,
+                    resident_profile_status!inner(status)
+                `)
+                .eq("resident_profile_status.status", 1); // Only fetch approved residents
 
             if (error) {
                 throw error;
@@ -120,9 +128,26 @@ const ZonePopulationTable = () => {
             .channel("residents-channel")
             .on(
                 "postgres_changes",
-                { event: "*", schema: "public", table: "residents" },
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "residents",
+                },
                 (payload) => {
-                    console.log("Change detected:", payload);
+                    console.log("Change detected in residents:", payload);
+                    fetchResidents();
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "resident_profile_status",
+                    filter: "status=eq.1", // Subscribe to changes for approved status
+                },
+                (payload) => {
+                    console.log("Change detected in resident_profile_status:", payload);
                     fetchResidents();
                 }
             )

@@ -6,6 +6,7 @@ import "cropperjs/dist/cropper.css";
 import Compressor from "compressorjs";
 import { supabase } from "../../../supabaseClient";
 import Swal from "sweetalert2";
+import { ClipLoader } from "react-spinners";
 
 const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYear, events: initialEvents, selectedDates, setSelectedDates }) => {
     const [holidays, setHolidays] = useState([]);
@@ -14,6 +15,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
     const [userEvents, setUserEvents] = useState(initialEvents || {});
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [currentEvent, setCurrentEvent] = useState(null);
+    const [isLoadingEvents, setIsLoadingEvents] = useState(false); // New state for loading events
     const modalRef = useRef(null);
     const eventModalRef = useRef(null);
     const cropperRef = useRef(null);
@@ -43,6 +45,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
     }, [selectedYear, fetchHolidays]);
 
     const fetchUserEvents = async () => {
+        setIsLoadingEvents(true);
         try {
             const { data, error } = await supabase
                 .from("events")
@@ -86,6 +89,8 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 showConfirmButton: false,
                 timer: 1500,
             });
+        } finally {
+            setIsLoadingEvents(false);
         }
     };
 
@@ -125,29 +130,73 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         setModalData(null);
     };
 
-    const handleClickOutsideModal = (e) => {
-        if (modalRef.current && !modalRef.current.contains(e.target)) {
-            setModalData(null);
-        }
-        if (eventModalRef.current && !eventModalRef.current.contains(e.target)) {
-            setIsEventModalOpen(false);
-            setIsEditModalOpen(false);
-        }
+    const handleCloseEventModal = () => {
+        setIsEventModalOpen(false);
+        setEventDetails({
+            title: "",
+            date: "",
+            startHour: "1",
+            startMinute: "00",
+            startPeriod: "AM",
+            endHour: "1",
+            endMinute: "00",
+            endPeriod: "AM",
+            location: "",
+            description: "",
+            facebook_link: "",
+            image: null,
+            image_preview: "",
+            croppedImage: null,
+        });
     };
+
+    const handleCloseEditModal = () => {
+        setIsEditModalOpen(false);
+        setCurrentEvent(null);
+        setEventDetails({
+            title: "",
+            date: "",
+            startHour: "1",
+            startMinute: "00",
+            startPeriod: "AM",
+            endHour: "1",
+            endMinute: "00",
+            endPeriod: "AM",
+            location: "",
+            description: "",
+            facebook_link: "",
+            image: null,
+            image_preview: "",
+            croppedImage: null,
+        });
+    };
+
+    const handleClickOutsideModal = useCallback((e) => {
+        if (isEditModalOpen && eventModalRef.current && !eventModalRef.current.contains(e.target)) {
+            handleCloseEditModal();
+        } else if (isEventModalOpen && eventModalRef.current && !eventModalRef.current.contains(e.target)) {
+            handleCloseEventModal();
+        } else if (modalData && modalRef.current && !modalRef.current.contains(e.target)) {
+            handleCloseModal();
+        }
+    }, [isEventModalOpen, isEditModalOpen, modalData]);
 
     useEffect(() => {
         if (modalData || isEventModalOpen || isEditModalOpen) {
-            document.body.classList.add("overflow-hidden");
+            document.body.style.overflow = "hidden";
+            document.body.style.paddingRight = "15px";
             document.addEventListener("mousedown", handleClickOutsideModal);
         } else {
-            document.body.classList.remove("overflow-hidden");
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
             document.removeEventListener("mousedown", handleClickOutsideModal);
         }
         return () => {
-            document.body.classList.remove("overflow-hidden");
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
             document.removeEventListener("mousedown", handleClickOutsideModal);
         };
-    }, [modalData, isEventModalOpen, isEditModalOpen]);
+    }, [modalData, isEventModalOpen, isEditModalOpen, handleClickOutsideModal]);
 
     const totalSlots = 42;
     const emptySlots = firstDayOfMonth;
@@ -185,6 +234,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         image: null,
         image_preview: "",
         croppedImage: null,
+        wholeDay: false,
     });
 
     const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
@@ -390,6 +440,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 image: null,
                 image_preview: "",
                 croppedImage: null,
+                wholeDay: false,
             });
             setSelectedDates([]);
             setIsEventModalOpen(false);
@@ -447,9 +498,13 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             description: event.description,
             facebook_link: event.facebook_link || "",
             wholeDay: event.whole_day,
+            image: null,
+            image_preview: "",
+            croppedImage: null,
         });
         setSelectedDates(event.dates);
         setIsEditModalOpen(true);
+        setModalData(null); // Close event details modal
     };
 
     const handleUpdateEvent = async (e) => {
@@ -530,6 +585,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 image: null,
                 image_preview: "",
                 croppedImage: null,
+                wholeDay: false,
             });
             setSelectedDates([]);
             setIsEditModalOpen(false);
@@ -656,6 +712,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                         onClick={() => {
                             if (selectedDates.length > 0) {
                                 setIsEventModalOpen(true);
+                                setModalData(null); // Close event details modal if open
                             } else {
                                 Swal.fire({
                                     toast: true,
@@ -888,72 +945,80 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                 </motion.button>
                             </div>
                             <div className="p-4">
-                                {modalData.holiday && (
-                                    <div className="mb-4">
-                                        <span className="font-bold">Holiday:</span> {modalData.holiday.localName}
+                                {isLoadingEvents ? (
+                                    <div className="flex justify-center items-center py-8">
+                                        <ClipLoader color="#3B82F6" size={50} />
                                     </div>
-                                )}
-                                {modalData.userEvents.length > 0 ? (
-                                    modalData.userEvents.map((event, idx) => (
-                                        <motion.div
-                                            key={idx}
-                                            className="bg-blue-100 p-4 rounded mb-4"
-                                            variants={itemVariants}
-                                            initial="hidden"
-                                            animate="visible"
-                                        >
-                                            <h3 className="font-bold">{event.title}</h3>
-                                            <p>
-                                                <span className="font-bold">Dates:</span> {event.dates.join(", ")}
-                                            </p>
-                                            <p>
-                                                <span className="font-bold">Time:</span>{" "}
-                                                {event.whole_day ? "Whole Day" : `${event.start_time} - ${event.end_time}`}
-                                            </p>
-                                            <p>
-                                                <span className="font-bold">Location:</span> {event.location}
-                                            </p>
-                                            <p>
-                                                <span className="font-bold">Description:</span> {event.description || "N/A"}
-                                            </p>
-                                            {event.facebook_link && (
-                                                <p>
-                                                    <span className="font-bold">Facebook Post:</span>{" "}
-                                                    <a href={event.facebook_link} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
-                                                        View Post
-                                                    </a>
-                                                </p>
-                                            )}
-                                            {event.signedImageUrl && (
-                                                <img
-                                                    src={event.signedImageUrl}
-                                                    alt={event.title}
-                                                    className="mt-2 w-full h-full object-cover rounded"
-                                                    onError={(e) => (e.target.src = "https://via.placeholder.com/800x450")}
-                                                />
-                                            )}
-                                            <div className="flex justify-end space-x-2 mt-2">
-                                                <motion.button
-                                                    onClick={() => handleEditEvent(event)}
-                                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaEdit className="mr-1" /> Edit
-                                                </motion.button>
-                                                <motion.button
-                                                    onClick={() => handleDeleteEvent(event)}
-                                                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 flex items-center"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaTrash className="mr-1" /> Delete
-                                                </motion.button>
-                                            </div>
-                                        </motion.div>
-                                    ))
                                 ) : (
-                                    <div className="text-gray-500">No user-created events.</div>
+                                    <>
+                                        {modalData.holiday && (
+                                            <div className="mb-4">
+                                                <span className="font-bold">Holiday:</span> {modalData.holiday.localName}
+                                            </div>
+                                        )}
+                                        {modalData.userEvents.length > 0 ? (
+                                            modalData.userEvents.map((event, idx) => (
+                                                <motion.div
+                                                    key={idx}
+                                                    className="bg-blue-100 p-4 rounded mb-4"
+                                                    variants={itemVariants}
+                                                    initial="hidden"
+                                                    animate="visible"
+                                                >
+                                                    <h3 className="font-bold">{event.title}</h3>
+                                                    <p>
+                                                        <span className="font-bold">Dates:</span> {event.dates.join(", ")}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-bold">Time:</span>{" "}
+                                                        {event.whole_day ? "Whole Day" : `${event.start_time} - ${event.end_time}`}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-bold">Location:</span> {event.location}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-bold">Description:</span> {event.description || "N/A"}
+                                                    </p>
+                                                    {event.facebook_link && (
+                                                        <p>
+                                                            <span className="font-bold">Facebook Post:</span>{" "}
+                                                            <a href={event.facebook_link} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+                                                                View Post
+                                                            </a>
+                                                        </p>
+                                                    )}
+                                                    {event.signedImageUrl && (
+                                                        <img
+                                                            src={event.signedImageUrl}
+                                                            alt={event.title}
+                                                            className="mt-2 w-full h-full object-cover rounded"
+                                                            onError={(e) => (e.target.src = "https://via.placeholder.com/800x450")}
+                                                        />
+                                                    )}
+                                                    <div className="flex justify-end space-x-2 mt-2">
+                                                        <motion.button
+                                                            onClick={() => handleEditEvent(event)}
+                                                            className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                        >
+                                                            <FaEdit className="mr-1" /> Edit
+                                                        </motion.button>
+                                                        <motion.button
+                                                            onClick={() => handleDeleteEvent(event)}
+                                                            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 flex items-center"
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                        >
+                                                            <FaTrash className="mr-1" /> Delete
+                                                        </motion.button>
+                                                    </div>
+                                                </motion.div>
+                                            ))
+                                        ) : (
+                                            <div className="text-gray-500">No user-created events.</div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </motion.div>
@@ -964,7 +1029,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             <AnimatePresence>
                 {isEventModalOpen && (
                     <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -980,7 +1045,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                             <div className="p-4 border-b flex justify-between items-center">
                                 <h2 className="text-lg font-bold">Create New Event</h2>
                                 <motion.button
-                                    onClick={() => setIsEventModalOpen(false)}
+                                    onClick={handleCloseEventModal}
                                     className="text-gray-500 hover:text-gray-700 transition"
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
@@ -1187,7 +1252,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             <AnimatePresence>
                 {isEditModalOpen && (
                     <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -1203,7 +1268,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                             <div className="p-4 border-b flex justify-between items-center">
                                 <h2 className="text-lg font-bold">Edit Event</h2>
                                 <motion.button
-                                    onClick={() => setIsEditModalOpen(false)}
+                                    onClick={handleCloseEditModal}
                                     className="text-gray-500 hover:text-gray-700 transition"
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}

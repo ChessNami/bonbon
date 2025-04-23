@@ -13,7 +13,8 @@ const UserDocuments = ({ documentType }) => {
     const itemsPerPageOptions = [4, 8, 12, 16];
     const [selectedFile, setSelectedFile] = useState(null);
     const [blobUrl, setBlobUrl] = useState(null);
-    const [isFetching, setIsFetching] = useState(false); // Renamed for clarity
+    const [isFetching, setIsFetching] = useState(false);
+    const [isLoadingDocument, setIsLoadingDocument] = useState(false); // New state for document loading
     const [error, setError] = useState(null);
     const adBlockDetected = useDetectAdBlock();
     const modalRef = useRef(null);
@@ -36,6 +37,21 @@ const UserDocuments = ({ documentType }) => {
         }
     }, [adBlockDetected]);
 
+    // Disable page scroll when modal is open
+    useEffect(() => {
+        if (selectedFile) {
+            document.body.style.overflow = "hidden";
+            document.body.style.paddingRight = "15px"; // Compensate for scrollbar width
+        } else {
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
+        };
+    }, [selectedFile]);
+
     // Handle clicks outside the modal
     const handleCloseModal = useCallback(() => {
         if (blobUrl) {
@@ -43,6 +59,7 @@ const UserDocuments = ({ documentType }) => {
             setBlobUrl(null);
         }
         setSelectedFile(null);
+        setIsLoadingDocument(false);
         setError(null);
     }, [blobUrl]);
 
@@ -120,6 +137,7 @@ const UserDocuments = ({ documentType }) => {
     const handleViewDocument = async (file) => {
         setError(null);
         setSelectedFile(file);
+        setIsLoadingDocument(true); // Start loading
 
         try {
             if (adBlockDetected) {
@@ -166,6 +184,8 @@ const UserDocuments = ({ documentType }) => {
                 scrollbarPadding: false,
                 timerProgressBar: true,
             });
+        } finally {
+            setIsLoadingDocument(false); // Stop loading
         }
     };
 
@@ -355,8 +375,8 @@ const UserDocuments = ({ documentType }) => {
                             onClick={() => paginate(currentPage - 1)}
                             disabled={currentPage === 1}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === 1
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                : "bg-blue-500 text-white hover:bg-blue-600"
+                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                    : "bg-blue-500 text-white hover:bg-blue-600"
                                 }`}
                         >
                             <FaArrowLeft size={14} />
@@ -367,8 +387,8 @@ const UserDocuments = ({ documentType }) => {
                                     key={page}
                                     onClick={() => paginate(page)}
                                     className={`px-3 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${currentPage === page
-                                        ? "bg-blue-500 text-white"
-                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                            ? "bg-blue-500 text-white"
+                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                         }`}
                                 >
                                     {page}
@@ -379,8 +399,8 @@ const UserDocuments = ({ documentType }) => {
                             onClick={() => paginate(currentPage + 1)}
                             disabled={currentPage === totalPages}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === totalPages
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                : "bg-blue-500 text-white hover:bg-blue-600"
+                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                    : "bg-blue-500 text-white hover:bg-blue-600"
                                 }`}
                         >
                             <FaArrowRight size={14} />
@@ -420,7 +440,11 @@ const UserDocuments = ({ documentType }) => {
                                             </button>
                                         </div>
                                     </div>
-                                    {error ? (
+                                    {isLoadingDocument ? (
+                                        <div className="flex justify-center items-center h-[60vh] sm:h-[70vh]">
+                                            <ClipLoader color="#3B82F6" size={50} />
+                                        </div>
+                                    ) : error ? (
                                         <div className="text-center py-8 sm:py-12 text-red-500 text-sm sm:text-lg">
                                             {error}
                                         </div>

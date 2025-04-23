@@ -78,6 +78,7 @@ const ResidentManagement = () => {
                     title: 'Failed to load address mappings',
                     showConfirmButton: false,
                     timer: 1500,
+                    scrollbarPadding: false,
                     timerProgressBar: true
                 });
             }
@@ -203,6 +204,7 @@ const ResidentManagement = () => {
                 title: error.message || 'Unexpected error fetching residents',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         } finally {
@@ -235,6 +237,7 @@ const ResidentManagement = () => {
                         title: 'Subscription error occurred',
                         showConfirmButton: false,
                         timer: 1500,
+                        scrollbarPadding: false,
                         timerProgressBar: true
                     });
                 }
@@ -304,6 +307,7 @@ const ResidentManagement = () => {
         try {
             Swal.fire({
                 title: 'Updating status...',
+                scrollbarPadding: false,
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -336,6 +340,7 @@ const ResidentManagement = () => {
                 title: 'Profile status updated to Update Requested',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
             await fetchResidents();
@@ -348,6 +353,7 @@ const ResidentManagement = () => {
                 title: error.message || 'Failed to update profile status',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         }
@@ -368,6 +374,7 @@ const ResidentManagement = () => {
                 title: 'Please provide a reason for the update request',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
             return;
@@ -379,6 +386,22 @@ const ResidentManagement = () => {
     };
 
     const handleDelete = async (id) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: 'This action will permanently delete the resident profile.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            scrollbarPadding: false,
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
         try {
             const { error: statusError } = await supabase
                 .from('resident_profile_status')
@@ -405,6 +428,7 @@ const ResidentManagement = () => {
                 title: 'Resident deleted successfully',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         } catch (error) {
@@ -415,10 +439,12 @@ const ResidentManagement = () => {
                 title: error.message || 'Failed to delete resident',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         }
     };
+
 
     const handlePending = () => {
         setPendingModalOpen(true);
@@ -441,6 +467,7 @@ const ResidentManagement = () => {
         try {
             Swal.fire({
                 title: 'Approving resident...',
+                scrollbarPadding: false,
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -478,6 +505,7 @@ const ResidentManagement = () => {
                 title: 'Profile approved successfully',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
             await fetchResidents();
@@ -490,6 +518,7 @@ const ResidentManagement = () => {
                 title: error.message || 'Failed to approve profile',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         }
@@ -504,6 +533,7 @@ const ResidentManagement = () => {
                 title: 'Please provide a rejection reason',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
             return;
@@ -512,6 +542,7 @@ const ResidentManagement = () => {
         try {
             Swal.fire({
                 title: 'Rejecting resident...',
+                scrollbarPadding: false,
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -554,6 +585,7 @@ const ResidentManagement = () => {
                 title: 'Profile rejected successfully',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
             setShowRejectionForm(null);
@@ -568,6 +600,7 @@ const ResidentManagement = () => {
                 title: error.message || 'Failed to reject profile',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         }
@@ -577,6 +610,7 @@ const ResidentManagement = () => {
         try {
             Swal.fire({
                 title: 'Approving update request...',
+                scrollbarPadding: false,
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -608,6 +642,7 @@ const ResidentManagement = () => {
                 title: 'Update request approved successfully',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
             await fetchResidents();
@@ -620,6 +655,7 @@ const ResidentManagement = () => {
                 title: error.message || 'Failed to approve update request',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         }
@@ -634,6 +670,7 @@ const ResidentManagement = () => {
                 title: 'Please provide a reason for declining the request',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
             return;
@@ -642,6 +679,7 @@ const ResidentManagement = () => {
         try {
             Swal.fire({
                 title: 'Declining update request...',
+                scrollbarPadding: false,
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -674,6 +712,7 @@ const ResidentManagement = () => {
                 title: 'Update request declined successfully',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
             setShowRejectionForm(null);
@@ -688,6 +727,7 @@ const ResidentManagement = () => {
                 title: error.message || 'Failed to decline update request',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         }
@@ -697,6 +737,7 @@ const ResidentManagement = () => {
         try {
             Swal.fire({
                 title: 'Reloading residents...',
+                scrollbarPadding: false,
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -713,6 +754,7 @@ const ResidentManagement = () => {
                 title: 'Residents reloaded successfully',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         } catch (error) {
@@ -724,6 +766,7 @@ const ResidentManagement = () => {
                 title: error.message || 'Failed to reload residents',
                 showConfirmButton: false,
                 timer: 1500,
+                scrollbarPadding: false,
                 timerProgressBar: true
             });
         }
@@ -1021,6 +1064,8 @@ const ResidentManagement = () => {
                                                                     'province',
                                                                     'city',
                                                                     'barangay',
+                                                                    'zone',
+                                                                    'zipCode',
                                                                     'dob',
                                                                     'age',
                                                                     'gender',
@@ -1266,10 +1311,13 @@ const ResidentManagement = () => {
                                                                                 <div className="flex space-x-2">
                                                                                     <motion.button
                                                                                         onClick={() => handleRejectProfile(resident)}
-                                                                                        className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                                                                        disabled={!rejectionReason.trim()}
+                                                                                        className={`px-3 py-1 rounded-md transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1 ${!rejectionReason.trim()
+                                                                                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                                                                            : 'bg-red-600 text-white hover:bg-red-700'
+                                                                                            }`}
                                                                                         whileHover={{ scale: 1.05 }}
                                                                                         whileTap={{ scale: 0.95 }}
-                                                                                        disabled={!rejectionReason.trim()}
                                                                                     >
                                                                                         <FaBan />
                                                                                         Submit Rejection
@@ -1535,10 +1583,13 @@ const ResidentManagement = () => {
                                                 <div className="flex justify-end space-x-2">
                                                     <motion.button
                                                         onClick={handleSubmitUpdate}
-                                                        className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors duration-200 text-sm flex items-center gap-1"
+                                                        disabled={!rejectionReason.trim()}
+                                                        className={`px-4 py-2 rounded-md transition-colors duration-200 text-sm flex items-center gap-1 ${!rejectionReason.trim()
+                                                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                                            : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                                                            }`}
                                                         whileHover={{ scale: 1.05 }}
                                                         whileTap={{ scale: 0.95 }}
-                                                        disabled={!rejectionReason.trim()}
                                                     >
                                                         <FaSyncAlt />
                                                         Submit

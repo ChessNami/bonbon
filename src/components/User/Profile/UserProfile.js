@@ -705,6 +705,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 return "Update Requested";
             case 5:
                 return "Update Approved";
+            case "not_submitted":
+                return "Not yet submitted";
             default:
                 return "Not yet submitted";
         }
@@ -736,11 +738,26 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 .single();
 
             if (residentError || !residentData) {
-                throw new Error("Failed to fetch resident profile status");
+                // No resident data found, set status to "not_submitted"
+                setResidentProfileStatus("not_submitted");
+                setRejectionReason(null);
+
+                Swal.close();
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "info",
+                    title: "No profile data found",
+                    text: "Resident profile has not yet been submitted.",
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                });
+                return;
             }
 
             const statusData = residentData.resident_profile_status;
-            setResidentProfileStatus(statusData?.status || null);
+            setResidentProfileStatus(statusData?.status || "not_submitted");
             setRejectionReason(statusData?.rejection_reason || null);
 
             Swal.close();

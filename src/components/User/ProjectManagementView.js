@@ -59,10 +59,10 @@ const ProjectManagementView = () => {
                                 const filePath = imageUrl.split("/project-images/")[1];
                                 const { data: signedData, error: signedError } = await supabase.storage
                                     .from("project-images")
-                                    .createSignedUrl(filePath, 7200); // 2-hour expiration
+                                    .createSignedUrl(filePath, 7200);
                                 if (signedError) {
                                     console.error("Error creating signed URL:", signedError);
-                                    return imageUrl; // Fallback to original URL
+                                    return imageUrl;
                                 }
                                 return signedData.signedUrl;
                             })
@@ -77,24 +77,52 @@ const ProjectManagementView = () => {
         fetchProjects();
     }, []);
 
-    // Close modals on outside click
+    // Close modals on outside click with proper nesting
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (imageModalRef.current && !imageModalRef.current.contains(event.target)) {
+            // Close Image Modal (highest level)
+            if (imageModalRef.current && !imageModalRef.current.contains(event.target) && isImageModalOpen) {
                 setIsImageModalOpen(false);
                 return;
             }
-            if (fullDetailsModalRef.current && !fullDetailsModalRef.current.contains(event.target)) {
+            // Close Details Modal (middle level)
+            if (
+                fullDetailsModalRef.current &&
+                !fullDetailsModalRef.current.contains(event.target) &&
+                isDetailModalOpen &&
+                !isImageModalOpen
+            ) {
                 setIsDetailModalOpen(false);
                 return;
             }
-            if (modalRef.current && !modalRef.current.contains(event.target)) {
+            // Close All Projects Modal (base level)
+            if (
+                modalRef.current &&
+                !modalRef.current.contains(event.target) &&
+                isModalOpen &&
+                !isDetailModalOpen &&
+                !isImageModalOpen
+            ) {
                 setIsModalOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    }, [isModalOpen, isDetailModalOpen, isImageModalOpen]);
+
+    // Disable page scroll when any modal is open
+    useEffect(() => {
+        if (isModalOpen || isDetailModalOpen || isImageModalOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
+        };
+    }, [isModalOpen, isDetailModalOpen, isImageModalOpen]);
 
     // Calculate polygon center for map centering
     const getPolygonCenter = (coords) => {
@@ -197,7 +225,7 @@ const ProjectManagementView = () => {
             <div className="flex flex-col gap-6">
                 {/* Map Section */}
                 <motion.div
-                    className="w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg shadow-lg overflow-hidden relative z-10"
+                    className="w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg shadow-lg overflow-hidden relative z-0"
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.3, delay: 0.1 }}
@@ -206,7 +234,7 @@ const ProjectManagementView = () => {
                         center={bonbonCoords}
                         zoom={17}
                         maxZoom={19}
-                        style={{ height: "100%", width: "100%", zIndex: 10 }}
+                        style={{ height: "100%", width: "100%", zIndex: 0 }}
                     >
                         <LayersControl position="topright">
                             <LayersControl.BaseLayer checked name="Street Map">
@@ -312,7 +340,7 @@ const ProjectManagementView = () => {
             <AnimatePresence>
                 {isModalOpen && (
                     <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100]"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -320,7 +348,7 @@ const ProjectManagementView = () => {
                     >
                         <motion.div
                             ref={modalRef}
-                            className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col z-50"
+                            className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col z-[100]"
                             initial={{ scale: 0.8, y: 50 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.8, y: 50 }}
@@ -421,7 +449,7 @@ const ProjectManagementView = () => {
                                             />
                                         </div>
                                     </div>
-                                    <div className="flex items-end">
+                                    <div className="flex-1 flex items-end min-w-[150px]">
                                         <motion.button
                                             onClick={() => {
                                                 setFilterTitle("");
@@ -461,7 +489,7 @@ const ProjectManagementView = () => {
                                                         center={getPolygonCenter(polygon.coords)}
                                                         zoom={17}
                                                         maxZoom={19}
-                                                        style={{ height: "100%", width: "100%", zIndex: 10 }}
+                                                        style={{ height: "100%", width: "100%", zIndex: 0 }}
                                                         scrollWheelZoom={false}
                                                     >
                                                         <LayersControl position="topright">
@@ -521,7 +549,7 @@ const ProjectManagementView = () => {
             <AnimatePresence>
                 {isDetailModalOpen && selectedPolygon && (
                     <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]"
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[200]"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -529,7 +557,7 @@ const ProjectManagementView = () => {
                     >
                         <motion.div
                             ref={fullDetailsModalRef}
-                            className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col z-[60]"
+                            className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col z-[200]"
                             initial={{ scale: 0.8, y: 50 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.8, y: 50 }}
@@ -557,7 +585,7 @@ const ProjectManagementView = () => {
                                             center={getPolygonCenter(selectedPolygon.coords)}
                                             zoom={17}
                                             maxZoom={19}
-                                            style={{ height: "100%", width: "100%", zIndex: 10 }}
+                                            style={{ height: "100%", width: "100%", zIndex: 0 }}
                                             scrollWheelZoom={false}
                                         >
                                             <LayersControl position="topright">
@@ -646,7 +674,7 @@ const ProjectManagementView = () => {
             <AnimatePresence>
                 {isImageModalOpen && selectedImage && (
                     <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]"
+                        className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[300]"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -654,7 +682,7 @@ const ProjectManagementView = () => {
                     >
                         <motion.div
                             ref={imageModalRef}
-                            className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col z-[1000]"
+                            className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col z-[300]"
                             initial={{ scale: 0.8, y: 50 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.8, y: 50 }}

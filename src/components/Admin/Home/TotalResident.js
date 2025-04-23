@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { FaUsers } from "react-icons/fa";
-import { supabase } from "../../../supabaseClient"; // Adjust path based on your project structure
+import { supabase } from "../../../supabaseClient";
 
 const TotalResident = () => {
     const [totalResidents, setTotalResidents] = useState(0);
@@ -42,7 +42,7 @@ const TotalResident = () => {
         });
 
         return total;
-    }, []); // No dependencies, as it doesn't rely on external variables
+    }, []);
 
     // Memoize fetchResidents
     const fetchResidents = useCallback(async () => {
@@ -52,7 +52,13 @@ const TotalResident = () => {
 
             const { data, error } = await supabase
                 .from("residents")
-                .select("household, spouse, household_composition");
+                .select(`
+                    household,
+                    spouse,
+                    household_composition,
+                    resident_profile_status!inner(status)
+                `)
+                .eq("resident_profile_status.status", 1); // Only fetch approved residents
 
             if (error) {
                 throw error;
@@ -71,7 +77,7 @@ const TotalResident = () => {
         } finally {
             setLoading(false);
         }
-    }, [calculateTotalResidents]); // Depends on calculateTotalResidents
+    }, [calculateTotalResidents]);
 
     useEffect(() => {
         // Initial fetch
@@ -82,10 +88,27 @@ const TotalResident = () => {
             .channel("residents-channel")
             .on(
                 "postgres_changes",
-                { event: "*", schema: "public", table: "residents" },
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "residents",
+                },
                 (payload) => {
-                    console.log("Change detected:", payload);
+                    console.log("Change detected in residents:", payload);
                     fetchResidents(); // Re-fetch data on any change
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "resident_profile_status",
+                    filter: "status=eq.1", // Subscribe to changes for approved status
+                },
+                (payload) => {
+                    console.log("Change detected in resident_profile_status:", payload);
+                    fetchResidents(); // Re-fetch data on status change
                 }
             )
             .subscribe();
@@ -94,7 +117,7 @@ const TotalResident = () => {
         return () => {
             supabase.removeChannel(subscription);
         };
-    }, [fetchResidents]); // Depends on fetchResidents
+    }, [fetchResidents]);
 
     return (
         <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">

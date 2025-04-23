@@ -65,6 +65,7 @@ const ResidentProfiling = () => {
                             icon: 'error',
                             title: 'Please log in to continue',
                             timer: 1500,
+                            scrollbarPadding: false,
                             showConfirmButton: false,
                         });
                     }
@@ -163,8 +164,14 @@ const ResidentProfiling = () => {
 
     const handleNext = (data, nextTab, childrenCount, numberOfhouseholdMembers) => {
         setFormData((prev) => {
-            if (nextTab === 'spouseForm') {
-                return { ...prev, household: data, spouse: { ...prev.spouse, civilStatus: 'Married' } };
+            if (activeTab === 'householdForm') {
+                // Check civilStatus to determine the next tab
+                const isMarried = data.civilStatus === 'Married';
+                return {
+                    ...prev,
+                    household: data,
+                    spouse: isMarried ? { ...prev.spouse, civilStatus: 'Married' } : null,
+                };
             } else if (nextTab === 'householdComposition') {
                 return { ...prev, spouse: data };
             } else if (nextTab === 'censusQuestions') {
@@ -180,18 +187,22 @@ const ResidentProfiling = () => {
             } else if (nextTab === 'confirmation') {
                 return { ...prev, census: data };
             } else {
-                return {
-                    ...prev,
-                    householdComposition: Array.isArray(data) ? data : [],
-                    childrenCount: childrenCount !== undefined ? parseInt(childrenCount, 10) || 0 : prev.childrenCount,
-                    numberOfhouseholdMembers:
-                        numberOfhouseholdMembers !== undefined
-                            ? parseInt(numberOfhouseholdMembers, 10) || 0
-                            : prev.numberOfhouseholdMembers,
-                };
+                // Fallback for unexpected cases
+                return prev;
             }
         });
-        setActiveTab(nextTab || tabs[tabs.findIndex((t) => t.key === activeTab) + 1].key);
+
+        // Determine the next tab
+        if (activeTab === 'householdForm') {
+            // If civilStatus is Married, go to spouseForm; otherwise, go to householdComposition
+            setActiveTab(data.civilStatus === 'Married' ? 'spouseForm' : 'householdComposition');
+        } else if (nextTab) {
+            setActiveTab(nextTab);
+        } else {
+            // Move to the next tab in the defined order
+            const currentIndex = tabs.findIndex((t) => t.key === activeTab);
+            setActiveTab(tabs[Math.min(currentIndex + 1, tabs.length - 1)].key);
+        }
         setActiveConfirmationTab('householdHead');
     };
 
@@ -210,6 +221,7 @@ const ResidentProfiling = () => {
                 icon: 'info',
                 title: 'Profile already approved',
                 timer: 1500,
+                scrollbarPadding: false,
                 showConfirmButton: false,
             });
             return;
@@ -218,6 +230,7 @@ const ResidentProfiling = () => {
         const loadingSwal = Swal.fire({
             title: 'Submitting...',
             text: 'Please wait while your profile is being submitted',
+            scrollbarPadding: false,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -254,6 +267,7 @@ const ResidentProfiling = () => {
                         icon: 'error',
                         title: `Household form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
                         timer: 1500,
+                        scrollbarPadding: false,
                         showConfirmButton: false,
                     });
                     return;
@@ -268,6 +282,7 @@ const ResidentProfiling = () => {
                     icon: 'error',
                     title: 'Spouse information is required for married status',
                     timer: 1500,
+                    scrollbarPadding: false,
                     showConfirmButton: false,
                 });
                 return;
@@ -302,6 +317,7 @@ const ResidentProfiling = () => {
                             icon: 'error',
                             title: `Spouse form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
                             timer: 1500,
+                            scrollbarPadding: false,
                             showConfirmButton: false,
                         });
                         return;
@@ -335,6 +351,7 @@ const ResidentProfiling = () => {
                                 icon: 'error',
                                 title: `Household composition is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required for member ${index + 1}`,
                                 timer: 1500,
+                                scrollbarPadding: false,
                                 showConfirmButton: false,
                             });
                             return;
@@ -361,6 +378,7 @@ const ResidentProfiling = () => {
                         icon: 'error',
                         title: `Census form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
                         timer: 1500,
+                        scrollbarPadding: false,
                         showConfirmButton: false,
                     });
                     return;
@@ -375,6 +393,7 @@ const ResidentProfiling = () => {
                     icon: 'error',
                     title: 'Census form is incomplete: Voter’s Precinct Number is required',
                     timer: 1500,
+                    scrollbarPadding: false,
                     showConfirmButton: false,
                 });
                 return;
@@ -406,6 +425,7 @@ const ResidentProfiling = () => {
                     icon: 'error',
                     title: `Failed to save resident data: ${residentError.message}`,
                     timer: 1500,
+                    scrollbarPadding: false,
                     showConfirmButton: false,
                 });
                 return;
@@ -432,6 +452,7 @@ const ResidentProfiling = () => {
                     icon: 'error',
                     title: `Failed to set resident profile status: ${statusError.message}`,
                     timer: 1500,
+                    scrollbarPadding: false,
                     showConfirmButton: false,
                 });
                 return;
@@ -450,6 +471,7 @@ const ResidentProfiling = () => {
                 icon: 'success',
                 title: `Form submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
                 timer: 1500,
+                scrollbarPadding: false,
                 showConfirmButton: false,
             });
         } catch (error) {
@@ -461,6 +483,7 @@ const ResidentProfiling = () => {
                 icon: 'error',
                 title: `An unexpected error occurred: ${error.message || 'Unknown error'}`,
                 timer: 1500,
+                scrollbarPadding: false,
                 showConfirmButton: false,
             });
         }
@@ -486,6 +509,7 @@ const ResidentProfiling = () => {
                 icon: 'error',
                 title: 'Please log in to continue',
                 timer: 1500,
+                scrollbarPadding: false,
                 showConfirmButton: false,
             });
             return null;
@@ -519,14 +543,13 @@ const ResidentProfiling = () => {
             );
         }
 
-        const currentIndex = tabs.findIndex((tab) => tab.key === activeTab);
         switch (activeTab) {
             case 'householdForm':
                 return (
                     <HouseholdForm
                         data={formData.household}
-                        onNext={handleNext}
-                        onBack={currentIndex === 0 ? null : handleBack}
+                        onNext={(data) => handleNext(data)} // Remove hardcoded nextTab
+                        onBack={null}
                         userId={userId}
                     />
                 );
@@ -534,7 +557,7 @@ const ResidentProfiling = () => {
                 return (
                     <SpouseForm
                         data={formData.spouse}
-                        onNext={handleNext}
+                        onNext={(data) => handleNext(data, 'householdComposition')}
                         onBack={handleBack}
                         userId={userId}
                     />
@@ -545,7 +568,9 @@ const ResidentProfiling = () => {
                         data={formData.householdComposition}
                         childrenCount={formData.childrenCount}
                         numberOfhouseholdMembers={formData.numberOfhouseholdMembers}
-                        onNext={handleNext}
+                        onNext={(data, childrenCount, numberOfhouseholdMembers) =>
+                            handleNext(data, 'censusQuestions', childrenCount, numberOfhouseholdMembers)
+                        }
                         onBack={handleBack}
                         userId={userId}
                     />
@@ -554,7 +579,7 @@ const ResidentProfiling = () => {
                 return (
                     <CensusQuestions
                         data={formData.census}
-                        onNext={handleNext}
+                        onNext={(data) => handleNext(data, 'confirmation')}
                         onBack={handleBack}
                         userId={userId}
                     />
@@ -568,8 +593,8 @@ const ResidentProfiling = () => {
                                     key={tab.key}
                                     onClick={() => !tab.disabled && setActiveConfirmationTab(tab.key)}
                                     className={`cursor-pointer px-3 py-2 text-xs sm:text-sm font-medium flex-shrink-0 ${activeConfirmationTab === tab.key
-                                            ? 'border-b-2 border-blue-700 text-blue-700'
-                                            : 'text-gray-600 hover:text-blue-700'
+                                        ? 'border-b-2 border-blue-700 text-blue-700'
+                                        : 'text-gray-600 hover:text-blue-700'
                                         } ${tab.disabled ? 'pointer-events-none opacity-50' : ''}`}
                                 >
                                     {tab.label}
@@ -834,8 +859,8 @@ const ResidentProfiling = () => {
                             key={tab.key}
                             onClick={() => (profileStatus !== 1 && profileStatus !== 4) && setActiveTab(tab.key)}
                             className={`cursor-pointer px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium flex-shrink-0 ${activeTab === tab.key
-                                    ? 'border-b-2 border-blue-700 text-blue-700'
-                                    : 'text-gray-600 hover:text-blue-700'
+                                ? 'border-b-2 border-blue-700 text-blue-700'
+                                : 'text-gray-600 hover:text-blue-700'
                                 } ${profileStatus === 1 || profileStatus === 4 ? 'pointer-events-none opacity-50' : ''}`}
                         >
                             {tab.label}
