@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Loader from "../../Loader";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../../utils/supabaseUtils";
 import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBarangaysByMunicipality } from '@aivangogh/ph-address';
+import axios from "axios";
 
 const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
     const [user, setUser] = useState(null);
@@ -593,6 +594,14 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
         if (result.isConfirmed) {
             try {
+                Swal.fire({
+                    title: "Submitting request...",
+                    text: "Please wait while your request is being processed.",
+                    allowOutsideClick: false,
+                    scrollbarPadding: false,
+                    didOpen: () => Swal.showLoading(),
+                });
+
                 const { error: statusError } = await supabase
                     .from("resident_profile_status")
                     .update({ status: 4, rejection_reason: null })
@@ -605,26 +614,51 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
 
                 setResidentProfileStatus(4);
 
-                Swal.fire({
-                    toast: true,
-                    position: "top-end",
-                    icon: "success",
-                    title: "Update Requested",
-                    text: "Your request to update your profile has been submitted. Please wait for admin approval.",
-                    timer: 1500,
-                    showConfirmButton: false,
-                    scrollbarPadding: false,
-                });
+                try {
+                    await axios.post('http://localhost:5000/api/email/send-update-request', {
+                        userId: user.id,
+                        updateReason: "User requested profile update",
+                    });
+                } catch (emailError) {
+                    console.error('Failed to send update request email:', emailError.message);
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "warning",
+                        title: "Update requested, but failed to send notification email: " + emailError.message,
+                        showConfirmButton: false,
+                        timer: 3000,
+                        scrollbarPadding: false,
+                        timerProgressBar: true
+                    });
+                }
+
+                Swal.close();
+                if (!Swal.isVisible()) {
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "success",
+                        title: "Update Requested",
+                        text: "Your request to update your profile has been submitted. Please wait for admin approval.",
+                        showConfirmButton: false,
+                        timer: 1500,
+                        scrollbarPadding: false,
+                        timerProgressBar: true
+                    });
+                }
             } catch (error) {
+                Swal.close();
                 Swal.fire({
                     toast: true,
                     position: "top-end",
                     icon: "error",
                     title: "Request Failed",
-                    text: error.message,
-                    timer: 1500,
+                    text: error.message || "Failed to request profile update",
                     showConfirmButton: false,
+                    timer: 1500,
                     scrollbarPadding: false,
+                    timerProgressBar: true
                 });
             }
         }

@@ -1,16 +1,25 @@
 import { supabase } from "../supabaseClient";
 import Swal from "sweetalert2";
 
-// Cache for signed URLs to avoid repeated requests
-const signedUrlCache = new Map();
+// Cache for user data (display name and photos) to avoid repeated requests
+const userDataCache = new Map();
 
-export const fetchUserPhotos = async (userId, forceRefresh = false) => {
+export const fetchUserData = async (userId, forceRefresh = false) => {
     try {
         // Check cache first unless forceRefresh is true
-        const cacheKey = `photos_${userId}`;
-        if (!forceRefresh && signedUrlCache.has(cacheKey)) {
-            return signedUrlCache.get(cacheKey);
+        const cacheKey = `user_data_${userId}`;
+        if (!forceRefresh && userDataCache.has(cacheKey)) {
+            return userDataCache.get(cacheKey);
         }
+
+        // Fetch user metadata
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user || user.id !== userId) {
+            console.error("Error fetching user or mismatched user ID:", userError?.message || "No user found");
+            return { displayName: "User", profilePic: null, coverPhoto: null };
+        }
+
+        const displayName = user.user_metadata?.display_name || "User";
 
         // Fetch photo paths from user_photos table
         const { data: photoData, error: photoError } = await supabase
@@ -19,54 +28,53 @@ export const fetchUserPhotos = async (userId, forceRefresh = false) => {
             .eq("user_id", userId)
             .single();
 
-        if (photoError || !photoData) {
-            console.error("Error fetching user photos:", photoError?.message);
-            return { profilePic: null, coverPhoto: null };
-        }
-
-        const { profile_pic_path, cover_photo_path } = photoData;
         let profilePicUrl = null;
         let coverPhotoUrl = null;
 
-        // Generate signed URLs if paths exist
-        if (profile_pic_path) {
-            const { data: signedProfilePic, error: profilePicError } = await supabase.storage
-                .from("user-assets")
-                .createSignedUrl(profile_pic_path, 3600);
-            if (!profilePicError) {
-                profilePicUrl = signedProfilePic.signedUrl;
+        if (!photoError && photoData) {
+            const { profile_pic_path, cover_photo_path } = photoData;
+
+            // Generate signed URLs if paths exist
+            if (profile_pic_path) {
+                const { data: signedProfilePic, error: profilePicError } = await supabase.storage
+                    .from("user-assets")
+                    .createSignedUrl(profile_pic_path, 3600);
+                if (!profilePicError) {
+                    profilePicUrl = signedProfilePic.signedUrl;
+                }
+            }
+
+            if (cover_photo_path) {
+                const { data: signedCoverPhoto, error: coverPhotoError } = await supabase.storage
+                    .from("user-assets")
+                    .createSignedUrl(cover_photo_path, 3600);
+                if (!coverPhotoError) {
+                    coverPhotoUrl = signedCoverPhoto.signedUrl;
+                }
             }
         }
 
-        if (cover_photo_path) {
-            const { data: signedCoverPhoto, error: coverPhotoError } = await supabase.storage
-                .from("user-assets")
-                .createSignedUrl(cover_photo_path, 3600);
-            if (!coverPhotoError) {
-                coverPhotoUrl = signedCoverPhoto.signedUrl;
-            }
-        }
-
-        const result = { profilePic: profilePicUrl, coverPhoto: coverPhotoUrl };
+        const result = { displayName, profilePic: profilePicUrl, coverPhoto: coverPhotoUrl };
 
         // Cache the result for 1 hour (3600 seconds)
-        signedUrlCache.set(cacheKey, result);
-        setTimeout(() => signedUrlCache.delete(cacheKey), 3600 * 1000);
+        userDataCache.set(cacheKey, result);
+        setTimeout(() => userDataCache.delete(cacheKey), 3600 * 1000);
 
         return result;
     } catch (err) {
-        console.error("Error in fetchUserPhotos:", err.message);
-        return { profilePic: null, coverPhoto: null };
+        console.error("Error in fetchUserData:", err.message);
+        return { displayName: "User", profilePic: null, coverPhoto: null };
     }
 };
 
-export const subscribeToUserPhotos = (userId, callback) => {
+export const subscribeToUserData = (userId, callback) => {
     if (!userId) {
-        console.error("No userId provided for photo subscription");
+        console.error("No userId provided for user data subscription");
         return () => { };
     }
 
-    const channel = supabase
+    // Subscribe to user_photos changes
+    const photosChannel = supabase
         .channel(`user_photos_changes_${userId}`)
         .on(
             "postgres_changes",
@@ -78,8 +86,8 @@ export const subscribeToUserPhotos = (userId, callback) => {
             },
             async (payload) => {
                 console.log("User photos change detected:", payload);
-                const newPhotos = await fetchUserPhotos(userId, true); // Force refresh on change
-                callback(newPhotos);
+                const newData = await fetchUserData(userId, true); // Force refresh on change
+                callback(newData);
             }
         )
         .subscribe((status, error) => {
@@ -97,5 +105,29 @@ export const subscribeToUserPhotos = (userId, callback) => {
             }
         });
 
-    return () => supabase.removeChannel(channel);
+    // Subscribe to auth state changes for user metadata updates
+    const authChannel = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === "USER_UPDATED" || event === "SIGNED_IN") {
+            console.log("User metadata change detected:", event);
+            const newData = await fetchUserData(userId, true); // Force refresh on change
+            callback(newData);
+        }
+    });
+
+    return () => {
+        supabase.removeChannel(photosChannel);
+        authChannel.data.subscription.unsubscribe();
+    };
+};
+
+// Legacy functions for backward compatibility
+export const fetchUserPhotos = async (userId, forceRefresh = false) => {
+    const data = await fetchUserData(userId, forceRefresh);
+    return { profilePic: data.profilePic, coverPhoto: data.coverPhoto };
+};
+
+export const subscribeToUserPhotos = (userId, callback) => {
+    return subscribeToUserData(userId, (data) => {
+        callback({ profilePic: data.profilePic, coverPhoto: data.coverPhoto });
+    });
 };

@@ -1,17 +1,19 @@
 import React, { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../supabaseClient";
 import { FaCalendarAlt, FaSignOutAlt, FaSun, FaMoon } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
-import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
+import { fetchUserData, subscribeToUserData } from "../../utils/supabaseUtils";
 
 const AdminHeader = ({ onLogout, setCurrentPage }) => {
-    const [displayName, setDisplayName] = useState();
+    const [displayName, setDisplayName] = useState("Admin");
     const [profilePicture, setProfilePicture] = useState(placeholderImg);
+    const [isLoading, setIsLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
-    const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
 
     useEffect(() => {
         const handleResize = () => {
@@ -25,28 +27,32 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
 
     useEffect(() => {
         let unsubscribe;
-        const fetchUserData = async () => {
-            const { data: { user }, error } = await supabase.auth.getUser();
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
 
-            if (error || !user) {
-                console.error("Error fetching user:", error?.message || "No user found");
-                setProfilePicture(placeholderImg);
-                setDisplayName("Admin");
-                return;
+                if (error || !user) {
+                    console.error("Error fetching user:", error?.message || "No user found");
+                    setDisplayName("Admin");
+                    setProfilePicture(placeholderImg);
+                    return;
+                }
+
+                const { displayName, profilePic } = await fetchUserData(user.id);
+                setDisplayName(displayName || "Admin");
+                setProfilePicture(profilePic || placeholderImg);
+
+                unsubscribe = subscribeToUserData(user.id, (newData) => {
+                    setDisplayName(newData.displayName || "Admin");
+                    setProfilePicture(newData.profilePic || placeholderImg);
+                });
+            } finally {
+                setIsLoading(false);
             }
-
-            setDisplayName(user.user_metadata?.display_name || "Admin");
-
-            const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
-            setProfilePicture(profilePicUrl || placeholderImg);
-
-            // Subscribe to photo changes
-            unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
-                setProfilePicture(newPhotos.profilePic || placeholderImg);
-            });
         };
 
-        fetchUserData();
+        fetchData();
 
         return () => {
             if (unsubscribe) unsubscribe();
@@ -71,12 +77,25 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                 profileRef.current &&
                 !profileRef.current.contains(event.target)
             ) {
+                console.log("Click outside detected, closing dropdown");
                 setDropdownOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Handle focus loss to close dropdown
+    useEffect(() => {
+        const handleFocusLoss = () => {
+            if (dropdownOpen) {
+                console.log("Focus lost, closing dropdown");
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("focusin", handleFocusLoss);
+        return () => document.removeEventListener("focusin", handleFocusLoss);
+    }, [dropdownOpen]);
 
     const formatDate = (date) => {
         const isSmallScreen = window.innerWidth < 920;
@@ -103,9 +122,13 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
         );
     };
 
-    const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+    const toggleDropdown = () => {
+        console.log("Toggling dropdown, current state:", dropdownOpen);
+        setDropdownOpen((prev) => !prev);
+    };
 
     const handleDropdownClick = (action) => {
+        console.log("Dropdown item clicked, action:", action);
         action();
         setDropdownOpen(false);
     };
@@ -113,6 +136,22 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     const dropdownItems = [
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
     ];
+
+    const dropdownVariants = {
+        hidden: { opacity: 0, y: -10, scale: 0.95 },
+        visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
+        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } },
+    };
+
+    const profileVariants = {
+        rest: { scale: 1 },
+        hover: { scale: 1.05, transition: { duration: 0.2 } },
+    };
+
+    const itemVariants = {
+        rest: { x: 0 },
+        hover: { x: 5, transition: { duration: 0.2 } },
+    };
 
     return (
         <header className="bg-primary text-white py-3 flex select-none shadow-md">
@@ -126,50 +165,79 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                     {formatTime(currentTime)}
                 </div>
                 <div className="text-lg flex-1 text-right flex items-center justify-end relative space-x-4">
-                    <div
+                    <motion.div
                         className="flex items-center p-2 cursor-pointer rounded-md hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
                         onClick={toggleDropdown}
                         ref={profileRef}
                         aria-label="User Profile"
                         tabIndex={0}
+                        variants={profileVariants}
+                        initial="rest"
+                        whileHover="hover"
                     >
-                        {isDisplayNameVisible && <span className="mr-2">{displayName}</span>}
-                        <img
-                            src={profilePicture}
-                            alt="User Profile"
-                            className="w-10 h-10 rounded-full select-none object-cover"
-                            draggable="false"
-                        />
-                    </div>
-                    {dropdownOpen && (
-                        <div
-                            ref={dropdownRef}
-                            className="absolute right-0 mt-4 w-96 bg-white text-gray-900 rounded-md shadow-lg z-20 transition-opacity duration-200 opacity-100"
-                            style={{ top: "100%" }}
-                        >
-                            <ul className="p-2 space-y-2">
-                                <li
-                                    className="flex items-center p-2 cursor-pointer hover:bg-gray-100 active:bg-gray-200 rounded-md transition"
-                                    onClick={() => handleDropdownClick(() => setCurrentPage("Profile"))}
-                                    tabIndex={0}
-                                >
-                                    <img src={profilePicture} alt="Profile" className="w-12 h-12 rounded-full object-cover mr-2" />
-                                    <span className="font-semibold text-left">{displayName}</span>
-                                </li>
-                                <hr className="border-t border-gray-300 my-2" />
-                                {dropdownItems.map((item, index) => (
-                                    <li
-                                        key={index}
-                                        className={`px-4 py-2 flex items-center hover:bg-blue-100 active:bg-blue-200 cursor-pointer rounded-md transition ${item.textColor || ""}`}
-                                        onClick={() => handleDropdownClick(item.action)}
+                        {isLoading ? (
+                            <>
+                                {isDisplayNameVisible && (
+                                    <div className="w-24 h-5 bg-gray-300 rounded animate-pulse mr-2"></div>
+                                )}
+                                <div className="w-10 h-10 bg-gray-300 rounded-full animate-pulse"></div>
+                            </>
+                        ) : (
+                            <>
+                                {isDisplayNameVisible && <span className="mr-2">{displayName}</span>}
+                                <motion.img
+                                    src={profilePicture}
+                                    alt="User Profile"
+                                    className="w-10 h-10 rounded-full select-none object-cover"
+                                    draggable="false"
+                                />
+                            </>
+                        )}
+                    </motion.div>
+                    <AnimatePresence>
+                        {dropdownOpen && (
+                            <motion.div
+                                key="dropdown"
+                                ref={dropdownRef}
+                                className="absolute right-0 mt-4 w-96 bg-white text-gray-900 rounded-md shadow-lg z-20"
+                                style={{ top: "100%" }}
+                                variants={dropdownVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                            >
+                                <ul className="p-2 space-y-2">
+                                    <motion.li
+                                        className="flex items-center p-2 cursor-pointer hover:bg-gray-100 active:bg-gray-200 rounded-md transition"
+                                        onClick={() => handleDropdownClick(() => setCurrentPage("Profile"))}
                                         tabIndex={0}
+                                        variants={itemVariants}
+                                        initial="rest"
+                                        whileHover="hover"
+                                        whileTap={{ scale: 0.98 }}
                                     >
-                                        {item.icon} {item.label}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
+                                        <img src={profilePicture} alt="Profile" className="w-12 h-12 rounded-full object-cover mr-2" />
+                                        <span className="font-semibold text-left">{displayName}</span>
+                                    </motion.li>
+                                    <hr className="border-t border-gray-300 my-2" />
+                                    {dropdownItems.map((item, index) => (
+                                        <motion.li
+                                            key={index}
+                                            className={`px-4 py-2 flex items-center hover:bg-blue-100 active:bg-blue-200 cursor-pointer rounded-md transition ${item.textColor || ""}`}
+                                            onClick={() => handleDropdownClick(item.action)}
+                                            tabIndex={0}
+                                            variants={itemVariants}
+                                            initial="rest"
+                                            whileHover="hover"
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            {item.icon} {item.label}
+                                        </motion.li>
+                                    ))}
+                                </ul>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </header>

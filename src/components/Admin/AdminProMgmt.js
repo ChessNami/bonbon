@@ -554,7 +554,7 @@ const AdminProMgmt = () => {
                 (file) =>
                     new Promise((resolve, reject) => {
                         new Compressor(file, {
-                            quality: 0.25,
+                            quality: 0.80,
                             success: (compressedFile) => resolve(compressedFile),
                             error: (err) => {
                                 console.error("Compression error:", err);

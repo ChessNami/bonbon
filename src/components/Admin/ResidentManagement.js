@@ -493,21 +493,37 @@ const ResidentManagement = () => {
                 throw new Error('Failed to accept profile');
             }
 
-            await axios.post('http://localhost:5000/api/email/send-approval', {
-                userId: residentData.user_id,
-            });
+            try {
+                await axios.post('http://localhost:5000/api/email/send-approval', {
+                    userId: residentData.user_id,
+                });
+            } catch (emailError) {
+                console.error('Failed to send approval email:', emailError.message);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: 'Profile approved, but failed to send approval email: ' + emailError.message,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+            }
 
             Swal.close();
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Profile approved successfully',
-                showConfirmButton: false,
-                timer: 1500,
-                scrollbarPadding: false,
-                timerProgressBar: true
-            });
+            if (!Swal.isVisible()) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Profile approved successfully',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+            }
             await fetchResidents();
         } catch (error) {
             Swal.close();
@@ -572,22 +588,38 @@ const ResidentManagement = () => {
                 throw new Error('Failed to reject profile');
             }
 
-            await axios.post('http://localhost:5000/api/email/send-rejection', {
-                userId: residentData.user_id,
-                rejectionReason,
-            });
+            try {
+                await axios.post('http://localhost:5000/api/email/send-rejection', {
+                    userId: residentData.user_id,
+                    rejectionReason,
+                });
+            } catch (emailError) {
+                console.error('Failed to send rejection email:', emailError.message);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: 'Profile rejected, but failed to send rejection email: ' + emailError.message,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+            }
 
             Swal.close();
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Profile rejected successfully',
-                showConfirmButton: false,
-                timer: 1500,
-                scrollbarPadding: false,
-                timerProgressBar: true
-            });
+            if (!Swal.isVisible()) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Profile rejected successfully',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+            }
             setShowRejectionForm(null);
             setRejectionReason('');
             await fetchResidents();
@@ -630,21 +662,37 @@ const ResidentManagement = () => {
                 throw new Error('Failed to accept update request');
             }
 
-            await axios.post('http://localhost:5000/api/email/send-update-approval', {
-                userId: resident.userId,
-            });
+            try {
+                await axios.post('http://localhost:5000/api/email/send-update-approval', {
+                    userId: resident.userId,
+                });
+            } catch (emailError) {
+                console.error('Failed to send update approval email:', emailError.message);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: 'Update request approved, but failed to send approval email: ' + emailError.message,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+            }
 
             Swal.close();
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Update request approved successfully',
-                showConfirmButton: false,
-                timer: 1500,
-                scrollbarPadding: false,
-                timerProgressBar: true
-            });
+            if (!Swal.isVisible()) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Update request approved successfully',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+            }
             await fetchResidents();
         } catch (error) {
             Swal.close();
@@ -699,22 +747,38 @@ const ResidentManagement = () => {
                 throw new Error('Failed to decline update request');
             }
 
-            await axios.post('http://localhost:5000/api/email/send-update-rejection', {
-                userId: resident.userId,
-                rejectionReason,
-            });
+            try {
+                await axios.post('http://localhost:5000/api/email/send-update-rejection', {
+                    userId: resident.userId,
+                    rejectionReason,
+                });
+            } catch (emailError) {
+                console.error('Failed to send update rejection email:', emailError.message);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: 'Update request declined, but failed to send rejection email: ' + emailError.message,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+            }
 
             Swal.close();
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Update request declined successfully',
-                showConfirmButton: false,
-                timer: 1500,
-                scrollbarPadding: false,
-                timerProgressBar: true
-            });
+            if (!Swal.isVisible()) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Update request declined successfully',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+            }
             setShowRejectionForm(null);
             setRejectionReason('');
             await fetchResidents();

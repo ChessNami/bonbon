@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import logo from "../../img/Logo/bonbon-logo.png";
 import DropdownNav from "./DropdownNav";
 import FullNav from "./FullNav";
 import { useUser } from "../contexts/UserContext";
-import { FaSignOutAlt, FaCog, FaCommentDots } from "react-icons/fa";
+import { FaSignOutAlt, FaCommentDots } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 import { supabase } from "../../supabaseClient";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
@@ -55,7 +56,6 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
             const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
             setProfilePic(profilePicUrl || placeholderImg);
 
-            // Subscribe to photo changes
             unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
                 setProfilePic(newPhotos.profilePic || placeholderImg);
             });
@@ -69,6 +69,19 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     }, []);
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+
+    // Framer Motion variants for dropdown animation
+    const dropdownVariants = {
+        hidden: { opacity: 0, y: -10, scale: 0.95 },
+        visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
+        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } }
+    };
+
+    // Framer Motion variants for profile image hover
+    const profileVariants = {
+        rest: { scale: 1 },
+        hover: { scale: 1.05, transition: { duration: 0.2 } }
+    };
 
     return (
         <nav className="bg-white shadow-md sticky top-0 z-20 select-none">
@@ -90,49 +103,63 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                     {isSmallScreen ? (
                         // Show Profile Section in Navbar when screen width < 1160px
                         <div className="relative">
-                            <div
+                            <motion.div
                                 className="flex items-center p-1 cursor-pointer rounded-full active:bg-blue-400 hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
                                 onClick={toggleDropdown}
                                 ref={profileRef}
                                 aria-label="User Profile"
                                 tabIndex={0}
+                                variants={profileVariants}
+                                initial="rest"
+                                whileHover="hover"
                             >
-                                <img
+                                <motion.img
                                     src={profilePic}
                                     alt="User Profile"
                                     className="w-16 h-16 rounded-full object-cover select-none"
                                     draggable="false"
                                 />
-                            </div>
+                            </motion.div>
 
-                            {dropdownOpen && (
-                                <div ref={dropdownRef} className="absolute right-0 mt-3 min-w-96 bg-white text-gray-900 rounded-md shadow-lg z-20">
-                                    <ul className="p-4 space-y-2">
-                                        <li
-                                            className="px-4 py-2 flex items-center cursor-pointer active:bg-blue-200 hover:bg-blue-100 rounded-md transition"
-                                            onClick={() => {
-                                                setCurrentPage("Profile");
-                                                setDropdownOpen(false);
-                                            }}
-                                        >
-                                            <img src={profilePic} className="w-14 h-14 rounded-full object-cover mr-2" alt="User Profile" />
-                                            <span className="text-xl font-semibold">{displayName}</span>
-                                        </li>
-                                        <li className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition">
-                                            <FaCog className="mr-2 text-gray-700" /> Settings
-                                        </li>
-                                        <li className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition">
-                                            <FaCommentDots className="mr-2 text-gray-700" /> Give Feedback
-                                        </li>
-                                        <li
-                                            className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition text-red-600"
-                                            onClick={onLogout}
-                                        >
-                                            <FaSignOutAlt className="mr-2 text-red-600" /> Logout
-                                        </li>
-                                    </ul>
-                                </div>
-                            )}
+                            <AnimatePresence>
+                                {dropdownOpen && (
+                                    <motion.div
+                                        ref={dropdownRef}
+                                        className="absolute right-0 mt-4 min-w-96 bg-white text-gray-900 rounded-md shadow-lg z-20"
+                                        variants={dropdownVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                    >
+                                        <ul className="p-4 space-y-2">
+                                            <motion.li
+                                                className="px-4 py-2 flex items-center cursor-pointer active:bg-blue-200 hover:bg-blue-100 rounded-md transition"
+                                                onClick={() => {
+                                                    setCurrentPage("Profile");
+                                                    setDropdownOpen(false);
+                                                }}
+                                                whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
+                                            >
+                                                <img src={profilePic} className="w-14 h-14 rounded-full object-cover mr-2" alt="User Profile" />
+                                                <span className="text-xl font-semibold">{displayName}</span>
+                                            </motion.li>
+                                            <motion.li
+                                                className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition"
+                                                whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
+                                            >
+                                                <FaCommentDots className="mr-2 text-gray-700" /> Give Feedback
+                                            </motion.li>
+                                            <motion.li
+                                                className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition text-red-600"
+                                                onClick={onLogout}
+                                                whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
+                                            >
+                                                <FaSignOutAlt className="mr-2 text-red-600" /> Logout
+                                            </motion.li>
+                                        </ul>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     ) : (
                         // Show Full Navigation when screen width >= 1160px

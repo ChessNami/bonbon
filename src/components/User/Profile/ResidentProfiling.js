@@ -459,21 +459,37 @@ const ResidentProfiling = () => {
             }
 
             if (newStatus === 3) {
-                await axios.post('http://localhost:5000/api/email/send-pending', {
-                    userId,
-                });
+                try {
+                    await axios.post('http://localhost:5000/api/email/send-pending', {
+                        userId,
+                    });
+                } catch (emailError) {
+                    console.error('Failed to send pending email:', emailError.message);
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'warning',
+                        title: `Form submitted, but failed to send notification email: ${emailError.message}`,
+                        showConfirmButton: false,
+                        timer: 3000,
+                        scrollbarPadding: false,
+                        timerProgressBar: true,
+                    });
+                }
             }
 
             await loadingSwal.close();
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: `Form submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
-                timer: 1500,
-                scrollbarPadding: false,
-                showConfirmButton: false,
-            });
+            if (!Swal.isVisible()) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `Form submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    showConfirmButton: false,
+                });
+            }
         } catch (error) {
             console.error('Unexpected error:', error);
             await loadingSwal.close();

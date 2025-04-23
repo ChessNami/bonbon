@@ -16,19 +16,23 @@ const MyAccount = () => {
     useEffect(() => {
         const fetchUser = async () => {
             setLoading(true);
-            const { data: { user }, error } = await supabase.auth.getUser();
-            if (error) {
-                console.error("Error fetching user:", error.message);
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+                if (error) {
+                    setUser(null);
+                } else {
+                    setUser(user);
+                    setFormData({
+                        displayName: user.user_metadata?.display_name || "",
+                        email: user.email || "",
+                        dateOfBirth: user.user_metadata?.date_of_birth || "",
+                    });
+                }
+            } catch (error) {
                 setUser(null);
-            } else {
-                setUser(user);
-                setFormData({
-                    displayName: user.user_metadata?.display_name || "",
-                    email: user.email || "",
-                    dateOfBirth: user.user_metadata?.date_of_birth || "",
-                });
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
         fetchUser();
     }, []);
@@ -43,31 +47,48 @@ const MyAccount = () => {
 
     const handleSaveChanges = async () => {
         setLoading(true);
-        try {
-            const updates = {
-                display_name: formData.displayName,
-                date_of_birth: formData.dateOfBirth,
-            };
 
+        // Fallback timeout to ensure loader stops and editing is disabled
+        const timeoutId = setTimeout(() => {
+            setLoading(false);
+            setEditing(false);
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "warning",
+                title: "Save took too long, but changes may have been saved",
+                timer: 2000,
+                showConfirmButton: false,
+                background: "#fff3cd",
+            });
+        }, 10000); // 10 seconds timeout
+
+        try {
             const { error } = await supabase.auth.updateUser({
-                data: updates,
+                data: {
+                    display_name: formData.displayName,
+                    date_of_birth: formData.dateOfBirth,
+                },
             });
 
             if (error) {
-                throw error;
+                throw new Error(error.message);
             }
 
-            setUser((prevUser) => ({
-                ...prevUser,
-                user_metadata: {
-                    ...prevUser.user_metadata,
-                    ...updates,
-                },
-            }));
+            setUser((prevUser) => {
+                const updatedUser = {
+                    ...prevUser,
+                    user_metadata: {
+                        ...prevUser.user_metadata,
+                        display_name: formData.displayName,
+                        date_of_birth: formData.dateOfBirth,
+                    },
+                };
+                return updatedUser;
+            });
 
             setEditing(false);
 
-            // Success notification
             Swal.fire({
                 toast: true,
                 position: "top-end",
@@ -75,29 +96,31 @@ const MyAccount = () => {
                 title: "Changes saved successfully!",
                 timer: 1500,
                 showConfirmButton: false,
-                background: "#f0f9ff", // Optional: Light background for better visibility
+                background: "#f0f9ff",
             });
         } catch (error) {
-            console.error("Error saving changes:", error.message);
-
-            // Error notification
             Swal.fire({
                 toast: true,
                 position: "top-end",
                 icon: "error",
-                title: "Failed to save changes!",
+                title: "Failed to save changes",
                 text: error.message,
-                timer: 1500,
+                timer: 2000,
                 showConfirmButton: false,
-                background: "#ffe4e6", // Optional: Light background for better visibility
+                background: "#ffe4e6",
             });
         } finally {
+            clearTimeout(timeoutId);
             setLoading(false);
         }
     };
 
-    if (loading) return <Loader />;
-    if (!user) return <p className="text-red-500">No user found. Please log in.</p>;
+    if (loading) {
+        return <Loader />;
+    }
+    if (!user) {
+        return <p className="text-red-500">No user found. Please log in.</p>;
+    }
 
     return (
         <div className="w-full">

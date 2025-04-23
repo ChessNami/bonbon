@@ -797,7 +797,7 @@ const HouseholdComposition = ({
                                             <option value="Nephew">Nephew</option>
                                             <option value="Niece">Niece</option>
                                             <option value="Cousin">Cousin</option>
-                                            <option value="Other">Other</option>
+                                            <option value="Guardian">Other</option>
                                         </select>
                                     </div>
                                     <div>
@@ -820,13 +820,24 @@ const HouseholdComposition = ({
                                     {member.gender === 'Other' && (
                                         <div>
                                             <label>Specify Gender</label>
-                                            <input
-                                                type="text"
+                                            <select
                                                 name="customGender"
                                                 className="input-style"
                                                 value={member.customGender || ''}
                                                 onChange={(e) => handleMemberChange(index, e)}
-                                            />
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="Non-Binary">Non-Binary</option>
+                                                <option value="Transgender">Transgender</option>
+                                                <option value="Genderqueer">Genderqueer</option>
+                                                <option value="Agender">Agender</option>
+                                                <option value="Genderfluid">Genderfluid</option>
+                                                <option value="Two-Spirit">Two-Spirit</option>
+                                                <option value="Bigender">Bigender</option>
+                                                <option value="Demigender">Demigender</option>
+                                                <option value="Androgynous">Androgynous</option>
+                                                <option value="Pangender">Pangender</option>
+                                            </select>
                                         </div>
                                     )}
                                     <div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import logo from "../img/Logo/bonbon-logo.png";
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser, FaCalendarAlt } from "react-icons/fa";
@@ -17,7 +17,22 @@ const Auth = ({ onLoginSuccess }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isResetPassword, setIsResetPassword] = useState(false);
+    const [isResetPasswordForm, setIsResetPasswordForm] = useState(false); // New state for reset password form
     const { setDisplayName } = useUser();
+
+    // Check for access_token in URL hash on mount
+    useEffect(() => {
+        const hash = window.location.hash;
+        const params = new URLSearchParams(hash.replace('#', ''));
+        const token = params.get('access_token');
+        if (token) {
+            setIsResetPasswordForm(true); // Show reset password form
+            setIsLogin(false);
+            setIsResetPassword(false);
+            // Clear the hash to avoid confusion
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, []);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -148,7 +163,7 @@ const Auth = ({ onLoginSuccess }) => {
         }
     };
 
-    const handleResetPassword = async (e) => {
+    const handleResetPasswordRequest = async (e) => {
         e.preventDefault();
         Swal.fire({
             title: 'Processing...',
@@ -158,7 +173,9 @@ const Auth = ({ onLoginSuccess }) => {
                 Swal.showLoading();
             }
         });
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/auth`, // Redirect to the same auth page
+        });
         Swal.close();
         if (error) {
             Swal.fire({
@@ -174,7 +191,60 @@ const Auth = ({ onLoginSuccess }) => {
             Swal.fire({
                 icon: 'success',
                 title: 'Success',
-                text: 'Password reset email sent',
+                text: 'Password reset email sent. Please check your email.',
+                timer: 1500,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: '#f0f9ff',
+            });
+            switchToLogin();
+        }
+    };
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        if (password !== confirmPassword) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Passwords do not match',
+                timer: 1500,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: '#ffe4e6',
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we update your password.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const { error } = await supabase.auth.updateUser({
+            password,
+        });
+
+        Swal.close();
+        if (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: error.message,
+                timer: 1500,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: '#ffe4e6',
+            });
+        } else {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: 'Password updated successfully. Please log in with your new password.',
                 timer: 1500,
                 timerProgressBar: true,
                 showConfirmButton: false,
@@ -199,17 +269,21 @@ const Auth = ({ onLoginSuccess }) => {
         clearForm();
         setIsLogin(true);
         setIsResetPassword(false);
+        setIsResetPasswordForm(false);
     };
 
     const switchToRegister = () => {
         clearForm();
         setIsLogin(false);
         setIsResetPassword(false);
+        setIsResetPasswordForm(false);
     };
 
     const switchToResetPassword = () => {
-        clearForm();
+        clearForm(); // Fixed typo: was "clearFace"
+        setIsLogin(false);
         setIsResetPassword(true);
+        setIsResetPasswordForm(false);
     };
 
     // Animation variants for form
@@ -248,7 +322,7 @@ const Auth = ({ onLoginSuccess }) => {
                 <div className="w-full md:w-1/2 p-6 flex flex-col items-center justify-center">
                     <AnimatePresence mode="wait">
                         <motion.div
-                            key={isResetPassword ? "reset" : isLogin ? "login" : "register"}
+                            key={isResetPasswordForm ? "reset-password" : isResetPassword ? "reset" : isLogin ? "login" : "register"}
                             variants={formVariants}
                             initial="hidden"
                             animate="visible"
@@ -256,13 +330,17 @@ const Auth = ({ onLoginSuccess }) => {
                             className="w-full max-w-md"
                         >
                             <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-700 mb-6 text-center uppercase">
-                                {isResetPassword ? "Reset Password" : isLogin ? "Login" : "Register"}
+                                {isResetPasswordForm ? "Reset Password" : isResetPassword ? "Reset Password" : isLogin ? "Login" : "Register"}
                             </h2>
                             <form
                                 className="w-full space-y-4"
-                                onSubmit={isResetPassword ? handleResetPassword : isLogin ? handleLogin : handleRegister}
+                                onSubmit={
+                                    isResetPasswordForm ? handleResetPassword :
+                                        isResetPassword ? handleResetPasswordRequest :
+                                            isLogin ? handleLogin : handleRegister
+                                }
                             >
-                                {!isLogin && !isResetPassword && (
+                                {!isLogin && !isResetPassword && !isResetPasswordForm && (
                                     <>
                                         <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
                                             <motion.div
@@ -319,91 +397,130 @@ const Auth = ({ onLoginSuccess }) => {
                                         </motion.div>
                                     </>
                                 )}
-                                <motion.div
-                                    className="relative"
-                                    variants={inputVariants}
-                                    custom={isLogin || isResetPassword ? 0 : 3}
-                                    initial="hidden"
-                                    animate="visible"
-                                >
-                                    <FaEnvelope className="absolute left-3 top-3.5 text-gray-400" />
-                                    <input
-                                        type="email"
-                                        placeholder="Email"
-                                        className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                    />
-                                </motion.div>
-                                {!isResetPassword && (
-                                    <>
-                                        <motion.div
-                                            className="relative"
-                                            variants={inputVariants}
-                                            custom={isLogin ? 1 : 4}
-                                            initial="hidden"
-                                            animate="visible"
+                                {(isLogin || isResetPassword || !isResetPasswordForm) && (
+                                    <motion.div
+                                        className="relative"
+                                        variants={inputVariants}
+                                        custom={isLogin || isResetPassword ? 0 : 3}
+                                        initial="hidden"
+                                        animate="visible"
+                                    >
+                                        <FaEnvelope className="absolute left-3 top-3.5 text-gray-400" />
+                                        <input
+                                            type="email"
+                                            placeholder="Email"
+                                            className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                        />
+                                    </motion.div>
+                                )}
+                                {(isLogin || (!isResetPassword && !isResetPasswordForm)) && ( // Added parentheses for clarity
+                                    <motion.div
+                                        className="relative"
+                                        variants={inputVariants}
+                                        custom={isLogin ? 1 : 4}
+                                        initial="hidden"
+                                        animate="visible"
+                                    >
+                                        <FaLock className="absolute left-3 top-3.5 text-gray-400" />
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="Password"
+                                            className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            onClick={() => setShowPassword(!showPassword)}
                                         >
-                                            <FaLock className="absolute left-3 top-3.5 text-gray [18:01] text-gray-400" />
-                                            <input
-                                                type={showPassword ? "text" : "password"}
-                                                placeholder="Password"
-                                                className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                required
-                                            />
-                                            <button
-                                                type="button"
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                            >
-                                                {showPassword ? <FaEye /> : <FaEyeSlash />}
-                                            </button>
-                                        </motion.div>
-                                        {!isLogin && (
-                                            <motion.div
-                                                className="relative"
-                                                variants={inputVariants}
-                                                custom={5}
-                                                initial="hidden"
-                                                animate="visible"
-                                            >
-                                                <FaLock className="absolute left-3 top-3.5 text-gray-400" />
-                                                <input
-                                                    type={showConfirmPassword ? "text" : "password"}
-                                                    placeholder="Confirm Password"
-                                                    className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
-                                                    value={confirmPassword}
-                                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                                    required
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                >
-                                                    {showConfirmPassword ? <FaEye /> : <FaEyeSlash />}
-                                                </button>
-                                            </motion.div>
-                                        )}
-                                    </>
+                                            {showPassword ? <FaEye /> : <FaEyeSlash />}
+                                        </button>
+                                    </motion.div>
+                                )}
+                                {((!isLogin && !isResetPassword) || isResetPasswordForm) && ( // Added parentheses for clarity
+                                    <motion.div
+                                        className="relative"
+                                        variants={inputVariants}
+                                        custom={isResetPasswordForm ? 0 : 5}
+                                        initial="hidden"
+                                        animate="visible"
+                                    >
+                                        <FaLock className="absolute left-3 top-3.5 text-gray-400" />
+                                        <input
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            placeholder={isResetPasswordForm ? "New Password" : "Confirm Password"}
+                                            className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        >
+                                            {showConfirmPassword ? <FaEye /> : <FaEyeSlash />}
+                                        </button>
+                                    </motion.div>
+                                )}
+                                {isResetPasswordForm && (
+                                    <motion.div
+                                        className="relative"
+                                        variants={inputVariants}
+                                        custom={1}
+                                        initial="hidden"
+                                        animate="visible"
+                                    >
+                                        <FaLock className="absolute left-3 top-3.5 text-gray-400" />
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="Confirm New Password"
+                                            className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                        >
+                                            {showPassword ? <FaEye /> : <FaEyeSlash />}
+                                        </button>
+                                    </motion.div>
                                 )}
                                 <motion.button
                                     type="submit"
                                     className={`w-full py-2 text-white font-bold rounded-lg uppercase transition duration-200 shadow-md ${isLogin
+                                        ? "bg-blue-500 hover:bg-blue-600"
+                                        : isResetPasswordForm
                                             ? "bg-blue-500 hover:bg-blue-600"
                                             : "bg-green-500 hover:bg-green-600"
                                         }`}
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
-                                    {isResetPassword ? "Reset Password" : isLogin ? "Login" : "Register"}
+                                    {isResetPasswordForm ? "Update Password" : isResetPassword ? "Reset Password" : isLogin ? "Login" : "Register"}
                                 </motion.button>
                             </form>
                             <div className="mt-4 text-center text-sm text-gray-600 space-y-2">
-                                {isResetPassword ? (
+                                {isResetPasswordForm ? (
+                                    <p>
+                                        Return to{" "}
+                                        <motion.button
+                                            onClick={switchToLogin}
+                                            className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200"
+                                            whileHover={{ scale: 1.05 }}
+                                        >
+                                            Login
+                                        </motion.button>
+                                    </p>
+                                ) : isResetPassword ? (
                                     <p>
                                         Remembered your password?{" "}
                                         <motion.button

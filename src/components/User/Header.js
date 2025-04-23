@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useUser } from "../contexts/UserContext";
 import { supabase } from "../../supabaseClient";
-import { FaCalendarAlt, FaCog, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaMapMarkerAlt } from "react-icons/fa";
+import { FaCalendarAlt, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaMapMarkerAlt } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
-import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
+import { fetchUserData, subscribeToUserData } from "../../utils/supabaseUtils";
 
 const Header = ({ onLogout, setCurrentPage }) => {
-    const { displayName } = useUser();
+    const [displayName, setDisplayName] = useState("User");
+    const [profilePic, setProfilePic] = useState(placeholderImg);
+    const [isLoading, setIsLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isSmallScreen, setIsSmallScreen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [profilePic, setProfilePic] = useState(placeholderImg);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
 
@@ -50,25 +50,33 @@ const Header = ({ onLogout, setCurrentPage }) => {
 
     useEffect(() => {
         let unsubscribe;
-        const fetchProfilePic = async () => {
-            const { data: { user }, error } = await supabase.auth.getUser();
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
 
-            if (error || !user) {
-                console.error("Error fetching user:", error?.message || "No user found");
-                setProfilePic(placeholderImg);
-                return;
+                if (error || !user) {
+                    console.error("Error fetching user:", error?.message || "No user found");
+                    setDisplayName("User");
+                    setProfilePic(placeholderImg);
+                    return;
+                }
+
+                const { displayName, profilePic } = await fetchUserData(user.id);
+                setDisplayName(displayName);
+                setProfilePic(profilePic || placeholderImg);
+
+                // Subscribe to user data changes
+                unsubscribe = subscribeToUserData(user.id, (newData) => {
+                    setDisplayName(newData.displayName);
+                    setProfilePic(newData.profilePic || placeholderImg);
+                });
+            } finally {
+                setIsLoading(false);
             }
-
-            const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
-            setProfilePic(profilePicUrl || placeholderImg);
-
-            // Subscribe to photo changes
-            unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
-                setProfilePic(newPhotos.profilePic || placeholderImg);
-            });
         };
 
-        fetchProfilePic();
+        fetchData();
 
         return () => {
             if (unsubscribe) unsubscribe();
@@ -113,7 +121,6 @@ const Header = ({ onLogout, setCurrentPage }) => {
 
     const dropdownItems = [
         { icon: <FaUser className="mr-2 text-gray-700" />, label: "Profile", action: () => setCurrentPage("Profile") },
-        { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => console.log("Settings Clicked") },
         { icon: <FaMapMarkerAlt className="mr-2 text-gray-700" />, label: "Geotagging", action: () => setCurrentPage("Geotagging") },
         { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => setCurrentPage("Feedback") },
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
@@ -140,13 +147,22 @@ const Header = ({ onLogout, setCurrentPage }) => {
                         aria-label="User Profile"
                         tabIndex={0}
                     >
-                        <span className="mr-2">{displayName}</span>
-                        <img
-                            src={profilePic}
-                            alt="User Profile"
-                            className="w-10 h-10 rounded-full object-cover select-none"
-                            draggable="false"
-                        />
+                        {isLoading ? (
+                            <>
+                                <div className="w-24 h-5 bg-gray-300 rounded animate-pulse mr-2"></div>
+                                <div className="w-10 h-10 bg-gray-300 rounded-full animate-pulse"></div>
+                            </>
+                        ) : (
+                            <>
+                                <span className="mr-2">{displayName}</span>
+                                <img
+                                    src={profilePic}
+                                    alt="User Profile"
+                                    className="w-10 h-10 rounded-full object-cover select-none"
+                                    draggable="false"
+                                />
+                            </>
+                        )}
                     </div>
 
                     {dropdownOpen && (

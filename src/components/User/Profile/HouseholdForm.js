@@ -457,13 +457,24 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                         {gender === 'Other' && (
                             <div>
                                 <label>Specify Gender</label>
-                                <input
-                                    type="text"
+                                <select
                                     name="customGender"
                                     className="input-style"
                                     value={customGender}
                                     onChange={(e) => setCustomGender(e.target.value)}
-                                />
+                                >
+                                    <option value="">Select</option>
+                                    <option value="Non-Binary">Non-Binary</option>
+                                    <option value="Transgender">Transgender</option>
+                                    <option value="Genderqueer">Genderqueer</option>
+                                    <option value="Agender">Agender</option>
+                                    <option value="Genderfluid">Genderfluid</option>
+                                    <option value="Two-Spirit">Two-Spirit</option>
+                                    <option value="Bigender">Bigender</option>
+                                    <option value="Demigender">Demigender</option>
+                                    <option value="Androgynous">Androgynous</option>
+                                    <option value="Pangender">Pangender</option>
+                                </select>
                             </div>
                         )}
                         <div>
