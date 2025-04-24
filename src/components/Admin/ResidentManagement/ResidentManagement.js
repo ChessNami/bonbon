@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaSyncAlt, FaTrashAlt } from 'react-icons/fa';
+import { FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaSyncAlt, FaTrashAlt, FaSearch, FaFilter, FaChevronLeft, FaChevronRight, FaVenusMars, FaCalendarAlt, FaMapMarkerAlt, FaHome, FaUsers } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../../supabaseClient';
 import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBarangaysByMunicipality } from '@aivangogh/ph-address';
@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 
 const ResidentManagement = () => {
     const [residents, setResidents] = useState([]);
+    const [filteredResidents, setFilteredResidents] = useState([]);
     const [pendingCount, setPendingCount] = useState(0);
     const [rejectedCount, setRejectedCount] = useState(0);
     const [requestsCount, setRequestsCount] = useState(0);
@@ -28,6 +29,10 @@ const ResidentManagement = () => {
     });
     const [modalStack, setModalStack] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
 
     const viewModalRef = useRef(null);
     const pendingModalRef = useRef(null);
@@ -186,13 +191,14 @@ const ResidentManagement = () => {
                     householdData: household,
                     spouseData: spouse,
                     householdComposition: householdComposition,
-                    censusData: census, // Added censusData
+                    censusData: census,
                     childrenCount: resident.children_count || 0,
                     numberOfHouseholdMembers: resident.number_of_household_members || 0,
                 };
             });
 
             setResidents(formattedResidents);
+            setFilteredResidents(formattedResidents);
             setPendingCount(formattedResidents.filter((r) => r.status === 3).length);
             setRejectedCount(formattedResidents.filter((r) => r.status === 2).length);
             setRequestsCount(formattedResidents.filter((r) => r.status === 4).length);
@@ -212,7 +218,7 @@ const ResidentManagement = () => {
         }
     }, []);
 
-    // Real-time subscription for residents and resident_profile_status
+    // Real-time subscription
     useEffect(() => {
         fetchResidents();
 
@@ -248,7 +254,29 @@ const ResidentManagement = () => {
         };
     }, [fetchResidents]);
 
-    // Disable scroll on body when any modal is open
+    // Handle filters
+    useEffect(() => {
+        let filtered = [...residents];
+
+        // Apply search term
+        if (searchTerm) {
+            filtered = filtered.filter(resident =>
+                resident.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                resident.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                resident.address.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        // Apply status filter
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(resident => resident.status === parseInt(statusFilter));
+        }
+
+        setFilteredResidents(filtered);
+        setCurrentPage(1); // Reset to first page on filter change
+    }, [searchTerm, statusFilter, residents]);
+
+    // Disable scroll on body when modals are open
     useEffect(() => {
         if (viewModalOpen || pendingModalOpen || rejectModalOpen || requestsModalOpen || updateModalOpen) {
             document.body.style.overflow = 'hidden';
@@ -260,7 +288,7 @@ const ResidentManagement = () => {
         };
     }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
 
-    // Update modal stack when modals open/close
+    // Update modal stack
     useEffect(() => {
         const stack = [];
         if (pendingModalOpen) stack.push('pending');
@@ -271,7 +299,7 @@ const ResidentManagement = () => {
         setModalStack(stack);
     }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
 
-    // Handle clicks outside modal to close only the topmost modal
+    // Handle clicks outside modal
     useEffect(() => {
         const handleClickOutside = (event) => {
             const topModal = modalStack[modalStack.length - 1];
@@ -297,6 +325,14 @@ const ResidentManagement = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [modalStack, viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
+
+    // Pagination calculations
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredResidents.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredResidents.length / itemsPerPage);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     const handleView = (resident) => {
         setSelectedResident(resident);
@@ -445,7 +481,6 @@ const ResidentManagement = () => {
         }
     };
 
-
     const handlePending = () => {
         setPendingModalOpen(true);
     };
@@ -469,9 +504,14 @@ const ResidentManagement = () => {
                 title: 'Approving resident...',
                 scrollbarPadding: false,
                 allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    popup: 'rounded-xl shadow-2xl',
+                    title: 'text-gray-800 text-lg font-semibold',
+                },
                 didOpen: () => {
                     Swal.showLoading();
-                }
+                },
             });
 
             const { data: residentData, error: residentError } = await supabase
@@ -481,7 +521,7 @@ const ResidentManagement = () => {
                 .single();
 
             if (residentError || !residentData.user_id) {
-                throw new Error('Failed to fetch resident data');
+                throw new Error(residentError?.message || 'Failed to fetch resident data');
             }
 
             const { error: statusError } = await supabase
@@ -490,7 +530,7 @@ const ResidentManagement = () => {
                 .eq('resident_id', resident.id);
 
             if (statusError) {
-                throw new Error('Failed to accept profile');
+                throw new Error(statusError?.message || 'Failed to accept profile');
             }
 
             try {
@@ -499,35 +539,41 @@ const ResidentManagement = () => {
                 });
             } catch (emailError) {
                 console.error('Failed to send approval email:', emailError.message);
-                Swal.fire({
+                await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'warning',
-                    title: 'Profile approved, but failed to send approval email: ' + emailError.message,
+                    title: `Profile approved, but failed to send approval email: ${emailError.message}`,
                     showConfirmButton: false,
                     timer: 3000,
                     scrollbarPadding: false,
-                    timerProgressBar: true
+                    timerProgressBar: true,
+                    customClass: {
+                        popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
+                        title: 'text-yellow-800 text-sm',
+                    },
                 });
             }
 
-            Swal.close();
-            if (!Swal.isVisible()) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: 'Profile approved successfully',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    scrollbarPadding: false,
-                    timerProgressBar: true
-                });
-            }
+            await Swal.close();
+            await Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Profile approved successfully',
+                showConfirmButton: false,
+                timer: 1500,
+                scrollbarPadding: false,
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-green-50 border border-green-200',
+                    title: 'text-green-800 text-sm',
+                },
+            });
             await fetchResidents();
         } catch (error) {
-            Swal.close();
-            Swal.fire({
+            await Swal.close();
+            await Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
@@ -535,14 +581,18 @@ const ResidentManagement = () => {
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
+                    title: 'text-red-800 text-sm',
+                },
             });
         }
     };
 
     const handleRejectProfile = async (resident) => {
         if (!rejectionReason.trim()) {
-            Swal.fire({
+            await Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'warning',
@@ -550,7 +600,11 @@ const ResidentManagement = () => {
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
+                    title: 'text-yellow-800 text-sm',
+                },
             });
             return;
         }
@@ -560,9 +614,14 @@ const ResidentManagement = () => {
                 title: 'Rejecting resident...',
                 scrollbarPadding: false,
                 allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    popup: 'rounded-xl shadow-2xl',
+                    title: 'text-gray-800 text-lg font-semibold',
+                },
                 didOpen: () => {
                     Swal.showLoading();
-                }
+                },
             });
 
             const { data: residentData, error: residentError } = await supabase
@@ -572,7 +631,7 @@ const ResidentManagement = () => {
                 .single();
 
             if (residentError || !residentData.user_id) {
-                throw new Error('Failed to fetch resident data');
+                throw new Error(residentError?.message || 'Failed to fetch resident data');
             }
 
             const { error: statusError } = await supabase
@@ -585,7 +644,7 @@ const ResidentManagement = () => {
                 .eq('resident_id', resident.id);
 
             if (statusError) {
-                throw new Error('Failed to reject profile');
+                throw new Error(statusError?.message || 'Failed to reject profile');
             }
 
             try {
@@ -595,37 +654,43 @@ const ResidentManagement = () => {
                 });
             } catch (emailError) {
                 console.error('Failed to send rejection email:', emailError.message);
-                Swal.fire({
+                await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'warning',
-                    title: 'Profile rejected, but failed to send rejection email: ' + emailError.message,
+                    title: `Profile rejected, but failed to send rejection email: ${emailError.message}`,
                     showConfirmButton: false,
                     timer: 3000,
                     scrollbarPadding: false,
-                    timerProgressBar: true
+                    timerProgressBar: true,
+                    customClass: {
+                        popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
+                        title: 'text-yellow-800 text-sm',
+                    },
                 });
             }
 
-            Swal.close();
-            if (!Swal.isVisible()) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: 'Profile rejected successfully',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    scrollbarPadding: false,
-                    timerProgressBar: true
-                });
-            }
+            await Swal.close();
+            await Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Profile rejected successfully',
+                showConfirmButton: false,
+                timer: 1500,
+                scrollbarPadding: false,
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-green-50 border border-green-200',
+                    title: 'text-green-800 text-sm',
+                },
+            });
             setShowRejectionForm(null);
             setRejectionReason('');
             await fetchResidents();
         } catch (error) {
-            Swal.close();
-            Swal.fire({
+            await Swal.close();
+            await Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
@@ -633,7 +698,11 @@ const ResidentManagement = () => {
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
+                    title: 'text-red-800 text-sm',
+                },
             });
         }
     };
@@ -644,9 +713,14 @@ const ResidentManagement = () => {
                 title: 'Approving update request...',
                 scrollbarPadding: false,
                 allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    popup: 'rounded-xl shadow-2xl',
+                    title: 'text-gray-800 text-lg font-semibold',
+                },
                 didOpen: () => {
                     Swal.showLoading();
-                }
+                },
             });
 
             const { error: statusError } = await supabase
@@ -654,12 +728,12 @@ const ResidentManagement = () => {
                 .update({
                     status: 5,
                     rejection_reason: null,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
                 })
                 .eq('resident_id', resident.id);
 
             if (statusError) {
-                throw new Error('Failed to accept update request');
+                throw new Error(statusError?.message || 'Failed to accept update request');
             }
 
             try {
@@ -668,35 +742,41 @@ const ResidentManagement = () => {
                 });
             } catch (emailError) {
                 console.error('Failed to send update approval email:', emailError.message);
-                Swal.fire({
+                await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'warning',
-                    title: 'Update request approved, but failed to send approval email: ' + emailError.message,
+                    title: `Update request approved, but failed to send approval email: ${emailError.message}`,
                     showConfirmButton: false,
                     timer: 3000,
                     scrollbarPadding: false,
-                    timerProgressBar: true
+                    timerProgressBar: true,
+                    customClass: {
+                        popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
+                        title: 'text-yellow-800 text-sm',
+                    },
                 });
             }
 
-            Swal.close();
-            if (!Swal.isVisible()) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: 'Update request approved successfully',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    scrollbarPadding: false,
-                    timerProgressBar: true
-                });
-            }
+            await Swal.close();
+            await Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Update request approved successfully',
+                showConfirmButton: false,
+                timer: 1500,
+                scrollbarPadding: false,
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-green-50 border border-green-200',
+                    title: 'text-green-800 text-sm',
+                },
+            });
             await fetchResidents();
         } catch (error) {
-            Swal.close();
-            Swal.fire({
+            await Swal.close();
+            await Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
@@ -704,14 +784,18 @@ const ResidentManagement = () => {
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
+                    title: 'text-red-800 text-sm',
+                },
             });
         }
     };
 
     const handleDeclineRequest = async (resident) => {
         if (!rejectionReason.trim()) {
-            Swal.fire({
+            await Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'warning',
@@ -719,7 +803,11 @@ const ResidentManagement = () => {
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
+                    title: 'text-yellow-800 text-sm',
+                },
             });
             return;
         }
@@ -729,9 +817,14 @@ const ResidentManagement = () => {
                 title: 'Declining update request...',
                 scrollbarPadding: false,
                 allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    popup: 'rounded-xl shadow-2xl',
+                    title: 'text-gray-800 text-lg font-semibold',
+                },
                 didOpen: () => {
                     Swal.showLoading();
-                }
+                },
             });
 
             const { error: statusError } = await supabase
@@ -744,7 +837,7 @@ const ResidentManagement = () => {
                 .eq('resident_id', resident.id);
 
             if (statusError) {
-                throw new Error('Failed to decline update request');
+                throw new Error(statusError?.message || 'Failed to decline update request');
             }
 
             try {
@@ -754,37 +847,43 @@ const ResidentManagement = () => {
                 });
             } catch (emailError) {
                 console.error('Failed to send update rejection email:', emailError.message);
-                Swal.fire({
+                await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'warning',
-                    title: 'Update request declined, but failed to send rejection email: ' + emailError.message,
+                    title: `Update request declined, but failed to send rejection email: ${emailError.message}`,
                     showConfirmButton: false,
                     timer: 3000,
                     scrollbarPadding: false,
-                    timerProgressBar: true
+                    timerProgressBar: true,
+                    customClass: {
+                        popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
+                        title: 'text-yellow-800 text-sm',
+                    },
                 });
             }
 
-            Swal.close();
-            if (!Swal.isVisible()) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: 'Update request declined successfully',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    scrollbarPadding: false,
-                    timerProgressBar: true
-                });
-            }
+            await Swal.close();
+            await Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Update request declined successfully',
+                showConfirmButton: false,
+                timer: 1500,
+                scrollbarPadding: false,
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-green-50 border border-green-200',
+                    title: 'text-green-800 text-sm',
+                },
+            });
             setShowRejectionForm(null);
             setRejectionReason('');
             await fetchResidents();
         } catch (error) {
-            Swal.close();
-            Swal.fire({
+            await Swal.close();
+            await Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
@@ -792,7 +891,11 @@ const ResidentManagement = () => {
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
+                    title: 'text-red-800 text-sm',
+                },
             });
         }
     };
@@ -861,164 +964,286 @@ const ResidentManagement = () => {
         return index >= 0 ? 50 + index * 10 : 50;
     };
 
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case 1:
+                return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Approved</span>;
+            case 2:
+                return <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">Rejected</span>;
+            case 3:
+                return <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">Pending</span>;
+            case 4:
+                return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">Update Requested</span>;
+            case 5:
+                return <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">Update Approved</span>;
+            default:
+                return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">Unknown</span>;
+        }
+    };
+
     return (
         <>
             <AnimatePresence>
                 {isLoading && <Loader />}
             </AnimatePresence>
-            <div className={isLoading ? 'opacity-0' : 'opacity-100'}>
-                <div className="min-h-screen p-2 sm:p-4">
-                    <div className="flex justify-between items-center mb-4 sm:mb-6">
-                        <div className="flex items-center space-x-4">
+            <div className={isLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}>
+                <div className="min-h-screen p-4 mx-auto">
+                    {/* Header Controls */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-6">
+                        <div className="flex flex-wrap items-center gap-4">
                             <motion.button
                                 onClick={handlePending}
-                                className="relative bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
+                                className="relative bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-lg hover:bg-green-700 transition-colors duration-200 flex items-center gap-2"
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                aria-label="View pending residents"
                             >
-                                <div className="flex items-center">
-                                    <FaCheck className="mr-2" />
-                                    <span>Pending</span>
-                                </div>
+                                <FaCheck />
+                                Pending
                                 {pendingCount > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
                                         {pendingCount}
                                     </span>
                                 )}
                             </motion.button>
-
                             <motion.button
                                 onClick={handleRejected}
-                                className="relative bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
+                                className="relative bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-lg hover:bg-red-700 transition-colors duration-200 flex items-center gap-2"
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                aria-label="View rejected residents"
                             >
-                                <div className="flex items-center">
-                                    <FaBan className="mr-2" />
-                                    <span>Rejected</span>
-                                </div>
+                                <FaBan />
+                                Rejected
                                 {rejectedCount > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
+                                    <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
                                         {rejectedCount}
                                     </span>
                                 )}
                             </motion.button>
-
                             <motion.button
                                 onClick={handleRequests}
-                                className="relative bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
+                                className="relative bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                aria-label="View update requests"
                             >
-                                <div className="flex items-center">
-                                    <FaSyncAlt className="mr-2" />
-                                    <span>Requests</span>
-                                </div>
+                                <FaSyncAlt />
+                                Requests
                                 {requestsCount > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
+                                    <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
                                         {requestsCount}
                                     </span>
                                 )}
                             </motion.button>
                         </div>
-
                         <motion.button
                             onClick={handleReload}
-                            className="relative bg-gray-600 text-white p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200 text-sm sm:text-base uppercase font-bold shadow-md"
+                            className="bg-gray-600 text-white p-3 rounded-xl shadow-lg hover:bg-gray-700 transition-colors duration-200"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            aria-label="Reload residents"
+                            title="Reload Residents"
                         >
-                            <div className="flex items-center">
-                                <FaSyncAlt />
-                            </div>
+                            <FaSyncAlt size={18} />
                         </motion.button>
                     </div>
-                    <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-gray-100 text-gray-700 text-xs sm:text-sm">
-                                        <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">First Name</th>
-                                        <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Last Name</th>
-                                        <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b hidden sm:table-cell">Gender</th>
-                                        <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b hidden md:table-cell">Date of Birth</th>
-                                        <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b hidden lg:table-cell">Address</th>
-                                        <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b hidden xl:table-cell">Purok/Zone</th>
-                                        <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {residents.filter((r) => r.status === 1).length > 0 ? (
-                                        residents.filter((r) => r.status === 1).map((resident) => (
-                                            <tr key={resident.id} className="hover:bg-gray-50 transition-colors duration-150 text-xs sm:text-sm">
-                                                <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.firstName}</td>
-                                                <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.lastName}</td>
-                                                <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 hidden sm:table-cell">{resident.gender}</td>
-                                                <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 hidden md:table-cell">{resident.dob}</td>
-                                                <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 hidden lg:table-cell">
-                                                    <div className="relative group w-full">
-                                                        <span className="block truncate max-w-[100px] sm:max-w-[200px]">{resident.address}</span>
-                                                        <span className="absolute bottom-full left-0 mb-2 z-10 invisible group-hover:visible bg-gray-800 text-white text-xs rounded-md px-2 py-1 whitespace-normal max-w-[200px] sm:max-w-[300px] opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                            {resident.address}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 hidden xl:table-cell">{resident.purok}</td>
-                                                <td className="px-2 sm:px-4 py-2 sm:py-3 border-b">
-                                                    <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                                        <motion.button
-                                                            onClick={() => handleView(resident)}
-                                                            className="bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                        >
-                                                            <FaEye />
-                                                            View
-                                                        </motion.button>
-                                                        <motion.button
-                                                            onClick={() => handleOpenUpdateModal(resident)}
-                                                            className="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                        >
-                                                            <FaSyncAlt />
-                                                            Update
-                                                        </motion.button>
-                                                        <motion.button
-                                                            onClick={() => handleDelete(resident.id)}
-                                                            className="bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-600/90 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                        >
-                                                            <FaTrashAlt />
-                                                            Delete
-                                                        </motion.button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="7" className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 text-center">
-                                                <p className="text-sm text-gray-600">No approved residents found.</p>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+
+                    {/* Filters and Search */}
+                    <div className="mb-4 flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search by name or address..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-400"
+                            />
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <FaFilter className="text-gray-600" size={18} />
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="border border-gray-200 rounded-xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700"
+                                >
+                                    <option value="all">All Statuses</option>
+                                    <option value="1">Approved</option>
+                                    <option value="2">Rejected</option>
+                                    <option value="3">Pending</option>
+                                    <option value="4">Update Requested</option>
+                                    <option value="5">Update Approved</option>
+                                </select>
+                            </div>
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                                className="border border-gray-200 rounded-xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700"
+                            >
+                                <option value={5}>5 per page</option>
+                                <option value={10}>10 per page</option>
+                                <option value={20}>20 per page</option>
+                                <option value={50}>50 per page</option>
+                            </select>
                         </div>
                     </div>
 
-                    {/* View Modal */}
+                    {/* Unique Resident Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        {currentItems.length > 0 ? (
+                            currentItems
+                                .filter((resident) => resident.status === 1) // Only display residents with status 1 (Approved)
+                                .map((resident) => (
+                                    <motion.div
+                                        key={resident.id}
+                                        className="relative bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border border-gray-100"
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5, ease: "easeOut" }}
+                                    >
+                                        {/* Dynamic Color Accent */}
+                                        <div
+                                            className="absolute top-0 left-0 w-2 h-full"
+                                            style={{
+                                                background: `linear-gradient(to bottom, #10B981, #34D399)`, // Fixed to green for Approved status
+                                            }}
+                                        />
+
+                                        {/* Card Header with Avatar */}
+                                        <div className="p-6">
+                                            <div className="flex items-center justify-between mb-5">
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-semibold text-xl shadow-md">
+                                                        {resident.firstName[0]}{resident.lastName[0]}
+                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-xl font-extrabold text-gray-900 tracking-wide">
+                                                            {resident.firstName} {resident.lastName}
+                                                        </h3>
+                                                        <div className="mt-1">{getStatusBadge(resident.status)}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Resident Info with Icons */}
+                                            <div className="space-y-3 text-sm text-gray-700">
+                                                <p className="flex items-center gap-3">
+                                                    <FaVenusMars className="text-emerald-500" />
+                                                    <span className="font-medium">Gender: {resident.gender}</span>
+                                                </p>
+                                                <p className="flex items-center gap-3">
+                                                    <FaCalendarAlt className="text-emerald-500" />
+                                                    <span className="font-medium">Date of Birth: {resident.dob}</span>
+                                                </p>
+                                                <p className="flex items-center gap-3 truncate">
+                                                    <FaMapMarkerAlt className="text-emerald-500" />
+                                                    <span className="font-medium">Address: {resident.address}</span>
+                                                </p>
+                                                <p className="flex items-center gap-3">
+                                                    <FaHome className="text-emerald-500" />
+                                                    <span className="font-medium">Purok/Zone: {resident.purok}</span>
+                                                </p>
+                                            </div>
+
+                                            {/* Action Buttons with Vibrant Colors */}
+                                            <div className="flex flex-wrap gap-3 mt-6">
+                                                <motion.button
+                                                    onClick={() => handleView(resident)}
+                                                    className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-full hover:bg-emerald-700 transition-colors duration-300"
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    <FaEye />
+                                                    View
+                                                </motion.button>
+                                                <motion.button
+                                                    onClick={() => handleOpenUpdateModal(resident)}
+                                                    className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-amber-500 rounded-full hover:bg-amber-600 transition-colors duration-300"
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    <FaSyncAlt />
+                                                    Update
+                                                </motion.button>
+                                                <motion.button
+                                                    onClick={() => handleDelete(resident.id)}
+                                                    className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-rose-500 rounded-full hover:bg-rose-600 transition-colors duration-300"
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    <FaTrashAlt />
+                                                    Delete
+                                                </motion.button>
+                                            </div>
+                                        </div>
+
+                                        {/* Interactive Hover Overlay */}
+                                        <motion.div
+                                            className="absolute inset-0 bg-emerald-50 opacity-0 transition-opacity duration-500 pointer-events-none"
+                                            whileHover={{ opacity: 0.15 }}
+                                        />
+                                    </motion.div>
+                                ))
+                        ) : (
+                            <div className="col-span-full text-center py-16">
+                                <motion.div
+                                    className="text-gray-600 text-xl font-semibold"
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ duration: 0.6 }}
+                                >
+                                    <FaUsers className="inline-block text-4xl mb-3 text-emerald-400" />
+                                    <p>No approved residents found at this time.</p>
+                                </motion.div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+                            <div className="text-sm text-gray-600">
+                                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredResidents.length)} of {filteredResidents.length} residents
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <motion.button
+                                    onClick={() => paginate(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`p-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                    whileHover={{ scale: currentPage === 1 ? 1 : 1.05 }}
+                                    whileTap={{ scale: currentPage === 1 ? 1 : 0.95 }}
+                                >
+                                    <FaChevronLeft />
+                                </motion.button>
+                                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                                    <motion.button
+                                        key={page}
+                                        onClick={() => paginate(page)}
+                                        className={`px-4 py-2 rounded-md text-sm ${currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        {page}
+                                    </motion.button>
+                                ))}
+                                <motion.button
+                                    onClick={() => paginate(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className={`p-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                    whileHover={{ scale: currentPage === totalPages ? 1 : 1.05 }}
+                                    whileTap={{ scale: currentPage === totalPages ? 1 : 0.95 }}
+                                >
+                                    <FaChevronRight />
+                                </motion.button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Resident Profile Details Modal */}
                     <AnimatePresence>
                         {viewModalOpen && selectedResident && (
                             <>
                                 <motion.div
-                                    className="fixed inset-0 bg-black"
+                                    className="fixed inset-0 bg-black bg-opacity-60"
                                     style={{ zIndex: getModalZIndex('view') - 10 }}
                                     variants={backdropVariants}
                                     initial="hidden"
@@ -1026,7 +1251,7 @@ const ResidentManagement = () => {
                                     exit="exit"
                                 />
                                 <motion.div
-                                    className="fixed inset-0 flex items-center justify-center p-4"
+                                    className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
                                     style={{ zIndex: getModalZIndex('view') }}
                                     variants={modalVariants}
                                     initial="hidden"
@@ -1035,32 +1260,34 @@ const ResidentManagement = () => {
                                 >
                                     <div
                                         ref={viewModalRef}
-                                        className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+                                        className="bg-white rounded-2xl w-full max-w-5xl h-full flex flex-col overflow-hidden shadow-2xl"
                                     >
-                                        <div className="flex justify-between items-center p-4 border-b">
-                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Resident Profile Details</h2>
+                                        {/* Header */}
+                                        <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
+                                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Resident Profile Details</h2>
                                             <motion.button
                                                 onClick={() => {
                                                     setViewModalOpen(false);
                                                     setSelectedResident(null);
                                                 }}
-                                                className="text-gray-600 hover:text-gray-900"
+                                                className="text-gray-500 hover:text-gray-800 transition-colors duration-200"
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
                                                 aria-label="Close modal"
                                             >
-                                                <FaTimes size={20} />
+                                                <FaTimes size={24} />
                                             </motion.button>
                                         </div>
-                                        <div className="flex-1 overflow-hidden">
-                                            {/* Tabs */}
-                                            <div className="border-b bg-gray-100 flex">
+
+                                        {/* Tab Navigation */}
+                                        <div className="bg-gray-100 border-b border-gray-200">
+                                            <div className="flex flex-wrap gap-3 p-6">
                                                 {['Household Head', 'Spouse', 'Household Composition', 'Census Questions'].map((tab, index) => (
                                                     <button
                                                         key={index}
-                                                        className={`flex-1 px-4 py-2 text-sm font-medium transition-all ${activeProfileTab === index
-                                                            ? 'text-blue-700 border-b-2 border-blue-700'
-                                                            : 'text-gray-600 hover:text-blue-700'
+                                                        className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${activeProfileTab === index
+                                                                ? 'bg-emerald-600 text-white shadow-md'
+                                                                : 'text-gray-600 hover:bg-gray-200 hover:text-emerald-600'
                                                             }`}
                                                         onClick={() => setActiveProfileTab(index)}
                                                     >
@@ -1068,12 +1295,62 @@ const ResidentManagement = () => {
                                                     </button>
                                                 ))}
                                             </div>
-                                            <div className="p-4 overflow-y-auto h-[calc(90vh-120px)]">
-                                                {/* Household Head Tab */}
-                                                {activeProfileTab === 0 && (
-                                                    <fieldset className="border p-4 rounded-lg">
-                                                        <legend className="font-semibold">Household Head</legend>
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                                            {/* Household Head Tab */}
+                                            {activeProfileTab === 0 && (
+                                                <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                                    <legend className="text-lg font-semibold text-gray-800 px-2">Household Head</legend>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                        {[
+                                                            'firstName',
+                                                            'middleName',
+                                                            'lastName',
+                                                            'address',
+                                                            'region',
+                                                            'province',
+                                                            'city',
+                                                            'barangay',
+                                                            'zone',
+                                                            'zipCode',
+                                                            'dob',
+                                                            'age',
+                                                            'gender',
+                                                            'civilStatus',
+                                                            'phoneNumber',
+                                                            'idType',
+                                                            'idNo',
+                                                            'employmentType',
+                                                            'education',
+                                                        ].map((key) => {
+                                                            let label = capitalizeWords(key);
+                                                            if (key === 'dob') label = 'Date of Birth';
+                                                            if (key === 'idType') label = 'ID Type';
+                                                            if (key === 'idNo') label = 'ID Number';
+                                                            if (key === 'zone') label = 'Purok/Zone';
+                                                            return (
+                                                                <div key={key} className="space-y-1">
+                                                                    <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                        {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                            ? addressMappings[key][selectedResident.householdData[key]] || 'N/A'
+                                                                            : selectedResident.householdData[key] || 'N/A'}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </fieldset>
+                                            )}
+
+                                            {/* Spouse Tab */}
+                                            {activeProfileTab === 1 && (
+                                                <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                                    <legend className="text-lg font-semibold text-gray-800 px-2">Spouse</legend>
+                                                    {selectedResident.spouseData ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                                             {[
                                                                 'firstName',
                                                                 'middleName',
@@ -1092,209 +1369,174 @@ const ResidentManagement = () => {
                                                                 'phoneNumber',
                                                                 'idType',
                                                                 'idNo',
-                                                                'employmentType',
                                                                 'education',
+                                                                'employmentType',
                                                             ].map((key) => {
                                                                 let label = capitalizeWords(key);
                                                                 if (key === 'dob') label = 'Date of Birth';
                                                                 if (key === 'idType') label = 'ID Type';
                                                                 if (key === 'idNo') label = 'ID Number';
+                                                                if (key === 'zone') label = 'Purok/Zone';
                                                                 return (
-                                                                    <div key={key}>
-                                                                        <label className="font-medium">{label}:</label>
-                                                                        <p className="p-2 border rounded capitalize">
+                                                                    <div key={key} className="space-y-1">
+                                                                        <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
                                                                             {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                                ? addressMappings[key][selectedResident.householdData[key]] || 'N/A'
-                                                                                : selectedResident.householdData[key] || 'N/A'}
-                                                                        </p>
+                                                                                ? addressMappings[key][selectedResident.spouseData[key]] || 'N/A'
+                                                                                : selectedResident.spouseData[key] || 'N/A'}
+                                                                        </div>
                                                                     </div>
                                                                 );
                                                             })}
                                                         </div>
-                                                    </fieldset>
-                                                )}
-                                                {/* Spouse Tab */}
-                                                {activeProfileTab === 1 && (
-                                                    <fieldset className="border p-4 rounded-lg">
-                                                        <legend className="font-semibold">Spouse</legend>
-                                                        {selectedResident.spouseData ? (
-                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                                {[
-                                                                    'firstName',
-                                                                    'middleName',
-                                                                    'lastName',
-                                                                    'address',
-                                                                    'region',
-                                                                    'province',
-                                                                    'city',
-                                                                    'barangay',
-                                                                    'zone',
-                                                                    'zipCode',
-                                                                    'dob',
-                                                                    'age',
-                                                                    'gender',
-                                                                    'civilStatus',
-                                                                    'phoneNumber',
-                                                                    'idType',
-                                                                    'idNo',
-                                                                    'education',
-                                                                    'employmentType',
-                                                                ].map((key) => {
-                                                                    let label = capitalizeWords(key);
-                                                                    if (key === 'dob') label = 'Date of Birth';
-                                                                    if (key === 'idType') label = 'ID Type';
-                                                                    if (key === 'idNo') label = 'ID Number';
-                                                                    return (
-                                                                        <div key={key}>
-                                                                            <label className="font-medium">{label}:</label>
-                                                                            <p className="p-2 border rounded capitalize">
-                                                                                {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                                    ? addressMappings[key][selectedResident.spouseData[key]] || 'N/A'
-                                                                                    : selectedResident.spouseData[key] || 'N/A'}
-                                                                            </p>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-sm text-gray-600">No spouse data available.</p>
-                                                        )}
-                                                    </fieldset>
-                                                )}
-                                                {/* Household Composition Tab */}
-                                                {activeProfileTab === 2 && (
-                                                    <fieldset className="border p-4 rounded-lg">
-                                                        <legend className="font-semibold">Household Composition</legend>
-                                                        <div className="grid grid-cols-2 gap-4 mb-4">
-                                                            <div>
-                                                                <label className="font-medium">Number of Children:</label>
-                                                                <p className="p-2 border rounded">{selectedResident.childrenCount || 0}</p>
-                                                            </div>
-                                                            <div>
-                                                                <label className="font-medium">Number of Other Household Members:</label>
-                                                                <p className="p-2 border rounded">{selectedResident.numberOfHouseholdMembers || 0}</p>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-500 italic">No spouse data available.</p>
+                                                    )}
+                                                </fieldset>
+                                            )}
+
+                                            {/* Household Composition Tab */}
+                                            {activeProfileTab === 2 && (
+                                                <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                                    <legend className="text-lg font-semibold text-gray-800 px-2">Household Composition</legend>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                                                        <div className="space-y-1">
+                                                            <label className="text-sm font-medium text-gray-700">Number of Children</label>
+                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                                {selectedResident.childrenCount || 0}
                                                             </div>
                                                         </div>
-                                                        {selectedResident.childrenCount > 0 && (
-                                                            <div className="border-t pt-4">
-                                                                <h3 className="font-semibold text-lg mb-2">Children</h3>
-                                                                {selectedResident.householdComposition
-                                                                    .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
-                                                                    .map((member, index) => (
-                                                                        <div key={`child-${index}`} className="border p-4 rounded-lg mb-4">
-                                                                            <h4 className="font-semibold">Child {index + 1}</h4>
-                                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                                                {[
-                                                                                    'firstName',
-                                                                                    'middleName',
-                                                                                    'middleInitial',
-                                                                                    'lastName',
-                                                                                    'relation',
-                                                                                    'gender',
-                                                                                    'customGender',
-                                                                                    'age',
-                                                                                    'dob',
-                                                                                    'education',
-                                                                                    'occupation',
-                                                                                    'isLivingWithParents',
-                                                                                    ...(member.isLivingWithParents === 'No'
-                                                                                        ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
-                                                                                        : []),
-                                                                                ].map((key) => {
-                                                                                    let label = capitalizeWords(key);
-                                                                                    if (key === 'dob') label = 'Date of Birth';
-                                                                                    if (key === 'customGender') label = 'Custom Gender';
-                                                                                    if (key === 'isLivingWithParents') label = 'Is Living with Parents';
-                                                                                    return (
-                                                                                        <div key={key}>
-                                                                                            <label className="font-medium">{label}:</label>
-                                                                                            <p className="p-2 border rounded capitalize">
-                                                                                                {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                                                    ? addressMappings[key][member[key]] || 'N/A'
-                                                                                                    : member[key] || 'N/A'}
-                                                                                            </p>
-                                                                                        </div>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
+                                                        <div className="space-y-1">
+                                                            <label className="text-sm font-medium text-gray-700">Number of Other Household Members</label>
+                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                                {selectedResident.numberOfHouseholdMembers || 0}
                                                             </div>
-                                                        )}
-                                                        {selectedResident.numberOfHouseholdMembers > 0 && (
-                                                            <div className="border-t pt-4">
-                                                                <h3 className="font-semibold text-lg mb-2">Other Household Members</h3>
-                                                                {selectedResident.householdComposition
-                                                                    .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
-                                                                    .map((member, index) => (
-                                                                        <div key={`member-${index}`} className="border p-4 rounded-lg mb-4">
-                                                                            <h4 className="font-semibold">Member {index + 1}</h4>
-                                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                                                {[
-                                                                                    'firstName',
-                                                                                    'middleName',
-                                                                                    'middleInitial',
-                                                                                    'lastName',
-                                                                                    'relation',
-                                                                                    'gender',
-                                                                                    'customGender',
-                                                                                    'age',
-                                                                                    'dob',
-                                                                                    'education',
-                                                                                    'occupation',
-                                                                                ].map((key) => {
-                                                                                    let label = capitalizeWords(key);
-                                                                                    if (key === 'dob') label = 'Date of Birth';
-                                                                                    if (key === 'customGender') label = 'Custom Gender';
-                                                                                    return (
-                                                                                        <div key={key}>
-                                                                                            <label className="font-medium">{label}:</label>
-                                                                                            <p className="p-2 border rounded capitalize">
-                                                                                                {member[key] || 'N/A'}
-                                                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {selectedResident.childrenCount > 0 && (
+                                                        <div className="border-t border-gray-200 pt-6">
+                                                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Children</h3>
+                                                            {selectedResident.householdComposition
+                                                                .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
+                                                                .map((member, index) => (
+                                                                    <div key={`child-${index}`} className="bg-gray-50 p-5 rounded-xl shadow-sm mb-4 border border-gray-200">
+                                                                        <h4 className="text-md font-semibold text-gray-800 mb-3">Child {index + 1}</h4>
+                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                                            {[
+                                                                                'firstName',
+                                                                                'middleName',
+                                                                                'middleInitial',
+                                                                                'lastName',
+                                                                                'relation',
+                                                                                'gender',
+                                                                                'customGender',
+                                                                                'age',
+                                                                                'dob',
+                                                                                'education',
+                                                                                'occupation',
+                                                                                'isLivingWithParents',
+                                                                                ...(member.isLivingWithParents === 'No'
+                                                                                    ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
+                                                                                    : []),
+                                                                            ].map((key) => {
+                                                                                let label = capitalizeWords(key);
+                                                                                if (key === 'dob') label = 'Date of Birth';
+                                                                                if (key === 'customGender') label = 'Custom Gender';
+                                                                                if (key === 'isLivingWithParents') label = 'Is Living with Parents';
+                                                                                if (key === 'zone') label = 'Purok/Zone';
+                                                                                return (
+                                                                                    <div key={key} className="space-y-1">
+                                                                                        <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                                        <div className="bg-white p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                                            {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                                                ? addressMappings[key][member[key]] || 'N/A'
+                                                                                                : member[key] || 'N/A'}
                                                                                         </div>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
                                                                         </div>
-                                                                    ))}
-                                                            </div>
-                                                        )}
-                                                        {selectedResident.childrenCount === 0 && selectedResident.numberOfHouseholdMembers === 0 && (
-                                                            <p>No household members or children added.</p>
-                                                        )}
-                                                    </fieldset>
-                                                )}
-                                                {/* Census Questions Tab */}
-                                                {activeProfileTab === 3 && (
-                                                    <fieldset className="border p-4 rounded-lg">
-                                                        <legend className="font-semibold">Census Questions</legend>
-                                                        {selectedResident.censusData && Object.keys(selectedResident.censusData).length > 0 ? (
-                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                                {[
-                                                                    { key: 'ownsHouse', label: 'Owns House' },
-                                                                    { key: 'isRenting', label: 'Is Renting' },
-                                                                    { key: 'yearsInBarangay', label: 'Years in Barangay' },
-                                                                    { key: 'isRegisteredVoter', label: 'Registered Voter' },
-                                                                    { key: 'voterPrecinctNo', label: 'Voter Precinct Number' },
-                                                                    { key: 'hasOwnComfortRoom', label: 'Own Comfort Room' },
-                                                                    { key: 'hasOwnWaterSupply', label: 'Own Water Supply' },
-                                                                    { key: 'hasOwnElectricity', label: 'Own Electricity' },
-                                                                ].map(({ key, label }) => (
-                                                                    <div key={key}>
-                                                                        <label className="font-medium">{label}:</label>
-                                                                        <p className="p-2 border rounded capitalize">
-                                                                            {selectedResident.censusData[key] || 'N/A'}
-                                                                        </p>
                                                                     </div>
                                                                 ))}
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-sm text-gray-600">No census data available.</p>
-                                                        )}
-                                                    </fieldset>
-                                                )}
-                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {selectedResident.numberOfHouseholdMembers > 0 && (
+                                                        <div className="border-t border-gray-200 pt-6">
+                                                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Other Household Members</h3>
+                                                            {selectedResident.householdComposition
+                                                                .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
+                                                                .map((member, index) => (
+                                                                    <div key={`member-${index}`} className="bg-gray-50 p-5 rounded-xl shadow-sm mb-4 border border-gray-200">
+                                                                        <h4 className="text-md font-semibold text-gray-800 mb-3">Member {index + 1}</h4>
+                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                                            {[
+                                                                                'firstName',
+                                                                                'middleName',
+                                                                                'middleInitial',
+                                                                                'lastName',
+                                                                                'relation',
+                                                                                'gender',
+                                                                                'customGender',
+                                                                                'age',
+                                                                                'dob',
+                                                                                'education',
+                                                                                'occupation',
+                                                                            ].map((key) => {
+                                                                                let label = capitalizeWords(key);
+                                                                                if (key === 'dob') label = 'Date of Birth';
+                                                                                if (key === 'customGender') label = 'Custom Gender';
+                                                                                return (
+                                                                                    <div key={key} className="space-y-1">
+                                                                                        <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                                        <div className="bg-white p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                                            {member[key] || 'N/A'}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                        </div>
+                                                    )}
+
+                                                    {selectedResident.childrenCount === 0 && selectedResident.numberOfHouseholdMembers === 0 && (
+                                                        <p className="text-sm text-gray-500 italic">No household members or children added.</p>
+                                                    )}
+                                                </fieldset>
+                                            )}
+
+                                            {/* Census Questions Tab */}
+                                            {activeProfileTab === 3 && (
+                                                <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                                    <legend className="text-lg font-semibold text-gray-800 px-2">Census Questions</legend>
+                                                    {selectedResident.censusData && Object.keys(selectedResident.censusData).length > 0 ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                            {[
+                                                                { key: 'ownsHouse', label: 'Owns House' },
+                                                                { key: 'isRenting', label: 'Is Renting' },
+                                                                { key: 'yearsInBarangay', label: 'Years in Barangay' },
+                                                                { key: 'isRegisteredVoter', label: 'Registered Voter' },
+                                                                { key: 'voterPrecinctNo', label: 'Voter Precinct Number' },
+                                                                { key: 'hasOwnComfortRoom', label: 'Own Comfort Room' },
+                                                                { key: 'hasOwnWaterSupply', label: 'Own Water Supply' },
+                                                                { key: 'hasOwnElectricity', label: 'Own Electricity' },
+                                                            ].map(({ key, label }) => (
+                                                                <div key={key} className="space-y-1">
+                                                                    <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                        {selectedResident.censusData[key] || 'N/A'}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-500 italic">No census data available.</p>
+                                                    )}
+                                                </fieldset>
+                                            )}
                                         </div>
                                     </div>
                                 </motion.div>
@@ -1315,7 +1557,7 @@ const ResidentManagement = () => {
                                     exit="exit"
                                 />
                                 <motion.div
-                                    className="fixed inset-0 flex items-center justify-center p-4"
+                                    className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
                                     style={{ zIndex: getModalZIndex('pending') }}
                                     variants={modalVariants}
                                     initial="hidden"
@@ -1324,122 +1566,115 @@ const ResidentManagement = () => {
                                 >
                                     <div
                                         ref={pendingModalRef}
-                                        className="bg-white rounded-lg w-full max-w-md sm:max-w-2xl max-h-[90vh] flex flex-col"
+                                        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
                                     >
-                                        <div className="flex justify-between items-center p-4 border-b">
-                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Pending Residents</h2>
+                                        {/* Header */}
+                                        <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
+                                            <h2 className="text-2xl font-semibold text-gray-800">Pending Residents</h2>
                                             <motion.button
                                                 onClick={() => {
                                                     setPendingModalOpen(false);
                                                     setShowRejectionForm(null);
                                                     setRejectionReason('');
                                                 }}
-                                                className="text-gray-600 hover:text-gray-900"
+                                                className="text-gray-500 hover:text-gray-700 transition-colors"
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
-                                                aria-label="Close modal"
                                             >
-                                                <FaTimes size={20} />
+                                                <FaTimes size={22} />
                                             </motion.button>
                                         </div>
-                                        <div className="p-4 overflow-y-auto">
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left border-collapse">
-                                                    <thead>
-                                                        <tr className="bg-gray-100 text-gray-700 text-xs sm:text-sm">
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">First Name</th>
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Last Name</th>
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {residents.filter((r) => r.status === 3).length > 0 ? (
-                                                            residents.filter((r) => r.status === 3).map((resident) => (
-                                                                <tr
-                                                                    key={resident.id}
-                                                                    className="hover:bg-gray-50 transition-colors duration-150 text-xs sm:text-sm"
-                                                                >
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.firstName}</td>
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.lastName}</td>
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b">
-                                                                        {showRejectionForm === resident.id ? (
-                                                                            <div className="space-y-2">
-                                                                                <textarea
-                                                                                    value={rejectionReason}
-                                                                                    onChange={(e) => setRejectionReason(e.target.value)}
-                                                                                    placeholder="Enter reason for rejection"
-                                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                                                                                    rows="3"
-                                                                                    required
-                                                                                />
-                                                                                <div className="flex space-x-2">
-                                                                                    <motion.button
-                                                                                        onClick={() => handleRejectProfile(resident)}
-                                                                                        disabled={!rejectionReason.trim()}
-                                                                                        className={`px-3 py-1 rounded-md transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1 ${!rejectionReason.trim()
-                                                                                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                                                                                            : 'bg-red-600 text-white hover:bg-red-700'
-                                                                                            }`}
-                                                                                        whileHover={{ scale: 1.05 }}
-                                                                                        whileTap={{ scale: 0.95 }}
-                                                                                    >
-                                                                                        <FaBan />
-                                                                                        Submit Rejection
-                                                                                    </motion.button>
-                                                                                    <motion.button
-                                                                                        onClick={() => setShowRejectionForm(null)}
-                                                                                        className="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                        whileHover={{ scale: 1.05 }}
-                                                                                        whileTap={{ scale: 0.95 }}
-                                                                                    >
-                                                                                        <FaTimes />
-                                                                                        Cancel
-                                                                                    </motion.button>
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                                                                <motion.button
-                                                                                    onClick={() => handleViewProfile(resident)}
-                                                                                    className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                    whileHover={{ scale: 1.05 }}
-                                                                                    whileTap={{ scale: 0.95 }}
-                                                                                >
-                                                                                    <FaEye />
-                                                                                    View
-                                                                                </motion.button>
-                                                                                <motion.button
-                                                                                    onClick={() => handleAcceptProfile(resident)}
-                                                                                    className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                    whileHover={{ scale: 1.05 }}
-                                                                                    whileTap={{ scale: 0.95 }}
-                                                                                >
-                                                                                    <FaCheck />
-                                                                                    Accept
-                                                                                </motion.button>
-                                                                                <motion.button
-                                                                                    onClick={() => setShowRejectionForm(resident.id)}
-                                                                                    className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                    whileHover={{ scale: 1.05 }}
-                                                                                    whileTap={{ scale: 0.95 }}
-                                                                                >
-                                                                                    <FaBan />
-                                                                                    Reject
-                                                                                </motion.button>
-                                                                            </div>
-                                                                        )}
-                                                                    </td>
-                                                                </tr>
-                                                            ))
-                                                        ) : (
-                                                            <tr>
-                                                                <td colSpan="3" className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 text-center">
-                                                                    <p className="text-sm text-gray-600">No pending residents found.</p>
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
+
+                                        {/* Content */}
+                                        <div className="p-6 overflow-y-auto bg-gray-50">
+                                            <div className="space-y-4">
+                                                {residents.filter((r) => r.status === 3).length > 0 ? (
+                                                    residents.filter((r) => r.status === 3).map((resident) => (
+                                                        <div
+                                                            key={resident.id}
+                                                            className="bg-white p-5 rounded-lg shadow-sm border border-gray-100"
+                                                        >
+                                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <h3 className="text-lg font-semibold text-gray-800">
+                                                                        {resident.firstName} {resident.lastName}
+                                                                    </h3>
+                                                                    <div>{getStatusBadge(resident.status)}</div>
+                                                                </div>
+                                                                {showRejectionForm === resident.id ? (
+                                                                    <div className="w-full sm:w-auto space-y-3">
+                                                                        <textarea
+                                                                            value={rejectionReason}
+                                                                            onChange={(e) => setRejectionReason(e.target.value)}
+                                                                            placeholder="Enter reason for rejection"
+                                                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-sm resize-none"
+                                                                            rows="4"
+                                                                            required
+                                                                        />
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            <motion.button
+                                                                                onClick={() => handleRejectProfile(resident)}
+                                                                                disabled={!rejectionReason.trim()}
+                                                                                className={`px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${!rejectionReason.trim()
+                                                                                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                                                                    : 'bg-red-600 text-white hover:bg-red-700'
+                                                                                    } transition-colors`}
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                            >
+                                                                                <FaBan />
+                                                                                Submit Rejection
+                                                                            </motion.button>
+                                                                            <motion.button
+                                                                                onClick={() => setShowRejectionForm(null)}
+                                                                                className="bg-gray-500 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-600 transition-colors"
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                            >
+                                                                                <FaTimes />
+                                                                                Cancel
+                                                                            </motion.button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        <motion.button
+                                                                            onClick={() => handleViewProfile(resident)}
+                                                                            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors"
+                                                                            whileHover={{ scale: 1.05 }}
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                        >
+                                                                            <FaEye />
+                                                                            View
+                                                                        </motion.button>
+                                                                        <motion.button
+                                                                            onClick={() => handleAcceptProfile(resident)}
+                                                                            className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-green-700 transition-colors"
+                                                                            whileHover={{ scale: 1.05 }}
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                        >
+                                                                            <FaCheck />
+                                                                            Accept
+                                                                        </motion.button>
+                                                                        <motion.button
+                                                                            onClick={() => setShowRejectionForm(resident.id)}
+                                                                            className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-red-700 transition-colors"
+                                                                            whileHover={{ scale: 1.05 }}
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                        >
+                                                                            <FaBan />
+                                                                            Reject
+                                                                        </motion.button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-gray-500 text-center py-4">
+                                                        No pending residents found.
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1461,7 +1696,7 @@ const ResidentManagement = () => {
                                     exit="exit"
                                 />
                                 <motion.div
-                                    className="fixed inset-0 flex items-center justify-center p-4"
+                                    className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
                                     style={{ zIndex: getModalZIndex('requests') }}
                                     variants={modalVariants}
                                     initial="hidden"
@@ -1470,119 +1705,115 @@ const ResidentManagement = () => {
                                 >
                                     <div
                                         ref={requestsModalRef}
-                                        className="bg-white rounded-lg w-full max-w-md sm:max-w-2xl max-h-[90vh] flex flex-col"
+                                        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
                                     >
-                                        <div className="flex justify-between items-center p-4 border-b">
-                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Update Requests</h2>
+                                        {/* Header */}
+                                        <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
+                                            <h2 className="text-2xl font-semibold text-gray-800">Update Requests</h2>
                                             <motion.button
                                                 onClick={() => {
                                                     setRequestsModalOpen(false);
                                                     setShowRejectionForm(null);
                                                     setRejectionReason('');
                                                 }}
-                                                className="text-gray-600 hover:text-gray-900"
+                                                className="text-gray-500 hover:text-gray-700 transition-colors"
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
-                                                aria-label="Close modal"
                                             >
-                                                <FaTimes size={20} />
+                                                <FaTimes size={22} />
                                             </motion.button>
                                         </div>
-                                        <div className="p-4 overflow-y-auto">
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left border-collapse">
-                                                    <thead>
-                                                        <tr className="bg-gray-100 text-gray-700 text-xs sm:text-sm">
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">First Name</th>
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Last Name</th>
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {residents.filter((r) => r.status === 4).length > 0 ? (
-                                                            residents.filter((r) => r.status === 4).map((resident) => (
-                                                                <tr
-                                                                    key={resident.id}
-                                                                    className="hover:bg-gray-50 transition-colors duration-150 text-xs sm:text-sm"
-                                                                >
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.firstName}</td>
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.lastName}</td>
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b">
-                                                                        {showRejectionForm === resident.id ? (
-                                                                            <div className="space-y-2">
-                                                                                <textarea
-                                                                                    value={rejectionReason}
-                                                                                    onChange={(e) => setRejectionReason(e.target.value)}
-                                                                                    placeholder="Enter reason for declining the update request"
-                                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                                                                                    rows="3"
-                                                                                    required
-                                                                                />
-                                                                                <div className="flex space-x-2">
-                                                                                    <motion.button
-                                                                                        onClick={() => handleDeclineRequest(resident)}
-                                                                                        className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                        whileHover={{ scale: 1.05 }}
-                                                                                        whileTap={{ scale: 0.95 }}
-                                                                                        disabled={!rejectionReason.trim()}
-                                                                                    >
-                                                                                        <FaBan />
-                                                                                        Submit Decline
-                                                                                    </motion.button>
-                                                                                    <motion.button
-                                                                                        onClick={() => setShowRejectionForm(null)}
-                                                                                        className="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                        whileHover={{ scale: 1.05 }}
-                                                                                        whileTap={{ scale: 0.95 }}
-                                                                                    >
-                                                                                        <FaTimes />
-                                                                                        Cancel
-                                                                                    </motion.button>
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                                                                <motion.button
-                                                                                    onClick={() => handleViewProfile(resident)}
-                                                                                    className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                    whileHover={{ scale: 1.05 }}
-                                                                                    whileTap={{ scale: 0.95 }}
-                                                                                >
-                                                                                    <FaEye />
-                                                                                    View
-                                                                                </motion.button>
-                                                                                <motion.button
-                                                                                    onClick={() => handleAcceptRequest(resident)}
-                                                                                    className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                    whileHover={{ scale: 1.05 }}
-                                                                                    whileTap={{ scale: 0.95 }}
-                                                                                >
-                                                                                    <FaCheck />
-                                                                                    Accept
-                                                                                </motion.button>
-                                                                                <motion.button
-                                                                                    onClick={() => setShowRejectionForm(resident.id)}
-                                                                                    className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
-                                                                                    whileHover={{ scale: 1.05 }}
-                                                                                    whileTap={{ scale: 0.95 }}
-                                                                                >
-                                                                                    <FaBan />
-                                                                                    Decline
-                                                                                </motion.button>
-                                                                            </div>
-                                                                        )}
-                                                                    </td>
-                                                                </tr>
-                                                            ))
-                                                        ) : (
-                                                            <tr>
-                                                                <td colSpan="3" className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 text-center">
-                                                                    <p className="text-sm text-gray-600">No update requests found.</p>
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
+
+                                        {/* Content */}
+                                        <div className="p-6 overflow-y-auto bg-gray-50">
+                                            <div className="space-y-4">
+                                                {residents.filter((r) => r.status === 4).length > 0 ? (
+                                                    residents.filter((r) => r.status === 4).map((resident) => (
+                                                        <div
+                                                            key={resident.id}
+                                                            className="bg-white p-5 rounded-lg shadow-sm border border-gray-100"
+                                                        >
+                                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <h3 className="text-lg font-semibold text-gray-800">
+                                                                        {resident.firstName} {resident.lastName}
+                                                                    </h3>
+                                                                    <div>{getStatusBadge(resident.status)}</div>
+                                                                </div>
+                                                                {showRejectionForm === resident.id ? (
+                                                                    <div className="w-full sm:w-auto space-y-3">
+                                                                        <textarea
+                                                                            value={rejectionReason}
+                                                                            onChange={(e) => setRejectionReason(e.target.value)}
+                                                                            placeholder="Enter reason for declining the update request"
+                                                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-sm resize-none"
+                                                                            rows="4"
+                                                                            required
+                                                                        />
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            <motion.button
+                                                                                onClick={() => handleDeclineRequest(resident)}
+                                                                                disabled={!rejectionReason.trim()}
+                                                                                className={`px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${!rejectionReason.trim()
+                                                                                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                                                                    : 'bg-red-600 text-white hover:bg-red-700'
+                                                                                    } transition-colors`}
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                            >
+                                                                                <FaBan />
+                                                                                Submit Decline
+                                                                            </motion.button>
+                                                                            <motion.button
+                                                                                onClick={() => setShowRejectionForm(null)}
+                                                                                className="bg-gray-500 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-600 transition-colors"
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                            >
+                                                                                <FaTimes />
+                                                                                Cancel
+                                                                            </motion.button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        <motion.button
+                                                                            onClick={() => handleViewProfile(resident)}
+                                                                            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors"
+                                                                            whileHover={{ scale: 1.05 }}
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                        >
+                                                                            <FaEye />
+                                                                            View
+                                                                        </motion.button>
+                                                                        <motion.button
+                                                                            onClick={() => handleAcceptRequest(resident)}
+                                                                            className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-green-700 transition-colors"
+                                                                            whileHover={{ scale: 1.05 }}
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                        >
+                                                                            <FaCheck />
+                                                                            Accept
+                                                                        </motion.button>
+                                                                        <motion.button
+                                                                            onClick={() => setShowRejectionForm(resident.id)}
+                                                                            className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-red-700 transition-colors"
+                                                                            whileHover={{ scale: 1.05 }}
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                        >
+                                                                            <FaBan />
+                                                                            Decline
+                                                                        </motion.button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-gray-500 text-center py-4">
+                                                        No update requests found.
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1613,10 +1844,10 @@ const ResidentManagement = () => {
                                 >
                                     <div
                                         ref={updateModalRef}
-                                        className="bg-white rounded-lg w-full max-w-md sm:max-w-lg max-h-[90vh] flex flex-col"
+                                        className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] flex flex-col"
                                     >
                                         <div className="flex justify-between items-center p-4 border-b">
-                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Request Profile Update</h2>
+                                            <h2 className="text-xl font-bold text-gray-900">Request Profile Update</h2>
                                             <motion.button
                                                 onClick={() => {
                                                     setUpdateModalOpen(false);
@@ -1626,7 +1857,6 @@ const ResidentManagement = () => {
                                                 className="text-gray-600 hover:text-gray-900"
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
-                                                aria-label="Close modal"
                                             >
                                                 <FaTimes size={20} />
                                             </motion.button>
@@ -1644,11 +1874,11 @@ const ResidentManagement = () => {
                                                         required
                                                     />
                                                 </div>
-                                                <div className="flex justify-end space-x-2">
+                                                <div className="flex justify-end gap-2">
                                                     <motion.button
                                                         onClick={handleSubmitUpdate}
                                                         disabled={!rejectionReason.trim()}
-                                                        className={`px-4 py-2 rounded-md transition-colors duration-200 text-sm flex items-center gap-1 ${!rejectionReason.trim()
+                                                        className={`px-4 py-2 rounded-md text-sm flex items-center gap-2 ${!rejectionReason.trim()
                                                             ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                                                             : 'bg-yellow-500 text-white hover:bg-yellow-600'
                                                             }`}
@@ -1664,7 +1894,7 @@ const ResidentManagement = () => {
                                                             setSelectedResident(null);
                                                             setRejectionReason('');
                                                         }}
-                                                        className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors duration-200 text-sm flex items-center gap-1"
+                                                        className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 text-sm flex items-center gap-2"
                                                         whileHover={{ scale: 1.05 }}
                                                         whileTap={{ scale: 0.95 }}
                                                     >
@@ -1693,7 +1923,7 @@ const ResidentManagement = () => {
                                     exit="exit"
                                 />
                                 <motion.div
-                                    className="fixed inset-0 flex items-center justify-center p-4"
+                                    className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
                                     style={{ zIndex: getModalZIndex('reject') }}
                                     variants={modalVariants}
                                     initial="hidden"
@@ -1702,66 +1932,57 @@ const ResidentManagement = () => {
                                 >
                                     <div
                                         ref={rejectModalRef}
-                                        className="bg-white rounded-lg w-full max-w-md sm:max-w-2xl max-h-[90vh] flex flex-col"
+                                        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
                                     >
-                                        <div className="flex justify-between items-center p-4 border-b">
-                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Rejected Residents</h2>
+                                        {/* Header */}
+                                        <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
+                                            <h2 className="text-2xl font-semibold text-gray-800">Rejected Residents</h2>
                                             <motion.button
                                                 onClick={() => setRejectModalOpen(false)}
-                                                className="text-gray-600 hover:text-gray-900"
+                                                className="text-gray-500 hover:text-gray-700 transition-colors"
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
-                                                aria-label="Close modal"
                                             >
-                                                <FaTimes size={20} />
+                                                <FaTimes size={22} />
                                             </motion.button>
                                         </div>
-                                        <div className="p-4 overflow-y-auto">
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left border-collapse">
-                                                    <thead>
-                                                        <tr className="bg-gray-100 text-gray-700 text-xs sm:text-sm">
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">First Name</th>
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Last Name</th>
-                                                            <th className="px-2 sm:px-4 py-2 sm:py-3 font-semibold border-b">Rejection Details</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {residents.filter((r) => r.status === 2).length > 0 ? (
-                                                            residents.filter((r) => r.status === 2).map((resident) => (
-                                                                <tr
-                                                                    key={resident.id}
-                                                                    className="hover:bg-gray-50 transition-colors duration-150 text-xs sm:text-sm"
-                                                                >
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.firstName}</td>
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">{resident.lastName}</td>
-                                                                    <td className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900">
-                                                                        <div className="relative group">
-                                                                            <FaExclamationCircle className="text-red-500 inline-block mr-2" />
-                                                                            <span className="truncate">
-                                                                                Rejected on {new Date(resident.rejectionDate).toLocaleString()}
-                                                                            </span>
-                                                                            <div className="absolute bottom-full left-0 mb-2 z-10 invisible group-hover:visible bg-gray-800 text-white text-xs rounded-md px-2 py-1 whitespace-normal max-w-[200px] sm:max-w-[300px] opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                                                <p>
-                                                                                    <strong>Reason:</strong> {resident.rejectionReason || 'No reason provided'}
-                                                                                </p>
-                                                                                <p>
-                                                                                    <strong>Date:</strong> {new Date(resident.rejectionDate).toLocaleString()}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            ))
-                                                        ) : (
-                                                            <tr>
-                                                                <td colSpan="3" className="px-2 sm:px-4 py-2 sm:py-3 border-b text-gray-900 text-center">
-                                                                    <p className="text-sm text-gray-600">No rejected residents found.</p>
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
+
+                                        {/* Content */}
+                                        <div className="p-6 overflow-y-auto bg-gray-50">
+                                            <div className="space-y-4">
+                                                {residents.filter((r) => r.status === 2).length > 0 ? (
+                                                    residents.filter((r) => r.status === 2).map((resident) => (
+                                                        <div
+                                                            key={resident.id}
+                                                            className="bg-white p-5 rounded-lg shadow-sm border border-gray-100"
+                                                        >
+                                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <h3 className="text-lg font-semibold text-gray-800">
+                                                                        {resident.firstName} {resident.lastName}
+                                                                    </h3>
+                                                                    <div>{getStatusBadge(resident.status)}</div>
+                                                                </div>
+                                                                <div className="relative group">
+                                                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                                        <FaExclamationCircle className="text-red-500" />
+                                                                        <span>
+                                                                            Rejected on {new Date(resident.rejectionDate).toLocaleString()}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="absolute bottom-full left-0 mb-2 z-10 invisible group-hover:visible bg-gray-800 text-white text-xs rounded-md px-3 py-2 max-w-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg">
+                                                                        <p><strong>Reason:</strong> {resident.rejectionReason || 'No reason provided'}</p>
+                                                                        <p><strong>Date:</strong> {new Date(resident.rejectionDate).toLocaleString()}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-gray-500 text-center py-4">
+                                                        No rejected residents found.
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

@@ -14,6 +14,9 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     const profileRef = useRef(null);
     const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
 
+    // Determine if the profile picture is still loading
+    const isLoading = profilePicture === placeholderImg;
+
     useEffect(() => {
         const handleResize = () => {
             setIsDisplayNameVisible(window.innerWidth > 1273);
@@ -160,7 +163,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                         <motion.img
                             src={profilePicture}
                             alt="User Profile"
-                            className="w-10 h-10 rounded-full select-none object-cover"
+                            className={`w-10 h-10 rounded-full select-none object-cover ${isLoading ? 'animate-pulse' : ''}`}
                             draggable="false"
                         />
                     </motion.div>
@@ -168,7 +171,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
                         {dropdownOpen && (
                             <motion.div
                                 ref={dropdownRef}
-                                className="absolute right-0 mt-4 w-96 bg-white text-gray-900 rounded-md shadow-lg z-20"
+                                className={`absolute right-0 mt-4 w-96 bg-white text-gray-900 rounded-md shadow-lg z-20 ${isLoading ? 'animate-pulse' : ''}`}
                                 style={{ top: "100%" }}
                                 variants={dropdownVariants}
                                 initial="hidden"

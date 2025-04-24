@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import { supabase } from "../../../supabaseClient";
+import { ClipLoader } from "react-spinners";
 
 const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -237,7 +238,12 @@ const Demographics = () => {
     }, [fetchDemographics]);
 
     return (
-        <div className="p-4">
+        <div className="p-4 relative">
+            {loading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+                    <ClipLoader color="#4f46e5" size={50} />
+                </div>
+            )}
             <motion.h1
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -245,9 +251,7 @@ const Demographics = () => {
             >
             </motion.h1>
 
-            {loading ? (
-                <p className="text-center text-gray-600 text-lg">Loading...</p>
-            ) : error ? (
+            {error ? (
                 <p className="text-center text-red-500 text-lg">{error}</p>
             ) : (
                 <>
@@ -255,9 +259,9 @@ const Demographics = () => {
                         {[
                             { title: "Barangay Population", value: totalResidents.toLocaleString(), color: "bg-indigo-600" },
                             { title: "Total Households Submitted", value: totalHouseholds.toLocaleString(), color: "bg-green-600" },
-                            { title: "Population of Male", value: maleCount.toLocaleString(), color: "bg-blue-600" },
+                            { title: "Male", value: maleCount.toLocaleString(), color: "bg-blue-600" },
                             { title: "Senior Citizens (60+)", value: seniorCitizens.toLocaleString(), color: "bg-purple-600" },
-                            { title: "Population of Female", value: femaleCount.toLocaleString(), color: "bg-teal-600" },
+                            { title: "Female", value: femaleCount.toLocaleString(), color: "bg-teal-600" },
                         ].map((stat, index) => (
                             <motion.div
                                 key={stat.title}

@@ -14,6 +14,9 @@ const Header = ({ onLogout, setCurrentPage }) => {
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
 
+    // Determine if the profile picture is still loading
+    const isLoading = profilePic === placeholderImg;
+
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentTime(new Date());
@@ -143,7 +146,7 @@ const Header = ({ onLogout, setCurrentPage }) => {
                         <img
                             src={profilePic}
                             alt="User Profile"
-                            className="w-10 h-10 rounded-full object-cover select-none"
+                            className={`w-10 h-10 rounded-full object-cover select-none ${isLoading ? 'animate-pulse' : ''}`}
                             draggable="false"
                         />
                     </div>
@@ -151,7 +154,7 @@ const Header = ({ onLogout, setCurrentPage }) => {
                     {dropdownOpen && (
                         <div
                             ref={dropdownRef}
-                            className="absolute right-0 mt-4 w-64 bg-white text-gray-900 rounded-md shadow-lg z-30"
+                            className={`absolute right-0 mt-4 w-64 bg-white text-gray-900 rounded-md shadow-lg z-30 ${isLoading ? 'animate-pulse' : ''}`}
                             style={{ top: "100%" }}
                         >
                             <ul className="p-4 space-y-2">

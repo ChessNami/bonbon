@@ -391,7 +391,7 @@ const HouseholdComposition = ({
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label>
-                                Number of Children <span className="text-red-500">*</span>
+                                No. of Children <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
@@ -405,7 +405,7 @@ const HouseholdComposition = ({
                         </div>
                         <div>
                             <label>
-                                Number of Other Household Members <span className="text-red-500">*</span>
+                                No. of Other Household Members <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"

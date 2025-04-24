@@ -993,7 +993,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 {showProfileModal && residentData && (
                     <>
                         <motion.div
-                            className="fixed inset-0 bg-black"
+                            className="fixed inset-0 bg-black bg-opacity-60"
                             style={{ zIndex: 40 }}
                             variants={backdropVariants}
                             initial="hidden"
@@ -1001,7 +1001,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             exit="exit"
                         />
                         <motion.div
-                            className="fixed inset-0 flex items-center justify-center p-4"
+                            className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
                             style={{ zIndex: 50 }}
                             variants={modalVariants}
                             initial="hidden"
@@ -1010,18 +1010,18 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                         >
                             <div
                                 ref={profileModalRef}
-                                className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+                                className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
                             >
-                                <div className="flex justify-between items-center p-4 border-b">
-                                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">My Resident Profile</h2>
+                                <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
+                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Resident Profile</h2>
                                     <motion.button
                                         onClick={() => setShowProfileModal(false)}
-                                        className="text-gray-600 hover:text-gray-900"
+                                        className="text-gray-500 hover:text-gray-800 transition-colors duration-200"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                         aria-label="Close modal"
                                     >
-                                        <FaTimes size={20} />
+                                        <FaTimes size={24} />
                                     </motion.button>
                                 </div>
                                 <div className="flex-1 overflow-hidden">
@@ -1030,9 +1030,9 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                         {['Household Head', 'Spouse', 'Household Composition', 'Census Questions'].map((tab, index) => (
                                             <button
                                                 key={index}
-                                                className={`flex-1 px-4 py-2 text-sm font-medium transition-all ${activeProfileTab === index
-                                                    ? 'text-blue-700 border-b-2 border-blue-700'
-                                                    : 'text-gray-600 hover:text-blue-700'
+                                                className={`flex-1 px-6 py-3 text-sm font-semibold transition-all ${activeProfileTab === index
+                                                        ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-gray-200'
                                                     }`}
                                                 onClick={() => setActiveProfileTab(index)}
                                             >
@@ -1040,13 +1040,13 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="p-4 overflow-y-auto h-[calc(90vh-120px)]">
+                                    <div className="p-6 overflow-y-auto h-[calc(90vh-140px)]">
                                         {/* Household Head Tab */}
                                         {activeProfileTab === 0 && (
-                                            <fieldset className="border p-4 rounded-lg">
-                                                <legend className="font-semibold">Household Head</legend>
+                                            <fieldset className="border border-gray-200 p-6 rounded-xl bg-white shadow-sm">
+                                                <legend className="text-lg font-semibold text-gray-800 px-2">Household Head</legend>
                                                 {Object.keys(residentData.householdData).length > 0 ? (
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                                         {[
                                                             'firstName',
                                                             'middleName',
@@ -1077,8 +1077,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                             if (key === 'zone') label = 'Purok/Zone';
                                                             return (
                                                                 <div key={key}>
-                                                                    <label className="font-medium">{label}:</label>
-                                                                    <p className="p-2 border rounded capitalize">
+                                                                    <label className="font-medium text-gray-700 text-sm">{label}</label>
+                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                         {['region', 'province', 'city', 'barangay'].includes(key)
                                                                             ? addressMappings[key][residentData.householdData[key]] || 'N/A'
                                                                             : residentData.householdData[key] || 'N/A'}
@@ -1089,20 +1089,20 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                         {residentData.householdData.employmentType === 'employed' && (
                                                             <>
                                                                 <div>
-                                                                    <label className="font-medium">Occupation:</label>
-                                                                    <p className="p-2 border rounded capitalize">
+                                                                    <label className="font-medium text-gray-700 text-sm">Occupation</label>
+                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                         {residentData.householdData.occupation || 'N/A'}
                                                                     </p>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="font-medium">Skills:</label>
-                                                                    <p className="p-2 border rounded capitalize">
+                                                                    <label className="font-medium text-gray-700 text-sm">Skills</label>
+                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                         {residentData.householdData.skills || 'N/A'}
                                                                     </p>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="font-medium">Company Address:</label>
-                                                                    <p className="p-2 border rounded capitalize">
+                                                                    <label className="font-medium text-gray-700 text-sm">Company Address</label>
+                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                         {residentData.householdData.companyAddress || 'N/A'}
                                                                     </p>
                                                                 </div>
@@ -1110,16 +1110,16 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <p className="text-sm text-gray-600">No household head data available.</p>
+                                                    <p className="text-sm text-gray-500 italic">No household head data available.</p>
                                                 )}
                                             </fieldset>
                                         )}
                                         {/* Spouse Tab */}
                                         {activeProfileTab === 1 && (
-                                            <fieldset className="border p-4 rounded-lg">
-                                                <legend className="font-semibold">Spouse</legend>
+                                            <fieldset className="border border-gray-200 p-6 rounded-xl bg-white shadow-sm">
+                                                <legend className="text-lg font-semibold text-gray-800 px-2">Spouse</legend>
                                                 {residentData.spouseData ? (
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                                         {[
                                                             'firstName',
                                                             'middleName',
@@ -1147,8 +1147,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                             if (key === 'idNo') label = 'ID Number';
                                                             return (
                                                                 <div key={key}>
-                                                                    <label className="font-medium">{label}:</label>
-                                                                    <p className="p-2 border rounded capitalize">
+                                                                    <label className="font-medium text-gray-700 text-sm">{label}</label>
+                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                         {['region', 'province', 'city', 'barangay'].includes(key)
                                                                             ? addressMappings[key][residentData.spouseData[key]] || 'N/A'
                                                                             : residentData.spouseData[key] || 'N/A'}
@@ -1159,20 +1159,20 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                         {residentData.spouseData.employmentType === 'employed' && (
                                                             <>
                                                                 <div>
-                                                                    <label className="font-medium">Occupation:</label>
-                                                                    <p className="p-2 border rounded capitalize">
+                                                                    <label className="font-medium text-gray-700 text-sm">Occupation</label>
+                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                         {residentData.spouseData.occupation || 'N/A'}
                                                                     </p>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="font-medium">Skills:</label>
-                                                                    <p className="p-2 border rounded capitalize">
+                                                                    <label className="font-medium text-gray-700 text-sm">Skills</label>
+                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                         {residentData.spouseData.skills || 'N/A'}
                                                                     </p>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="font-medium">Company Address:</label>
-                                                                    <p className="p-2 border rounded capitalize">
+                                                                    <label className="font-medium text-gray-700 text-sm">Company Address</label>
+                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                         {residentData.spouseData.companyAddress || 'N/A'}
                                                                     </p>
                                                                 </div>
@@ -1180,32 +1180,37 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <p className="text-sm text-gray-600">No spouse data available.</p>
+                                                    <p className="text-sm text-gray-500 italic">No spouse data available.</p>
                                                 )}
                                             </fieldset>
                                         )}
+                                        {/* Household Composition Tab */}
                                         {activeProfileTab === 2 && (
-                                            <fieldset className="border p-4 rounded-lg">
-                                                <legend className="font-semibold">Household Composition</legend>
-                                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <fieldset className="border border-gray-200 p-6 rounded-xl bg-white shadow-sm">
+                                                <legend className="text-lg font-semibold text-gray-800 px-2">Household Composition</legend>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                                                     <div>
-                                                        <label className="font-medium">Number of Children:</label>
-                                                        <p className="p-2 border rounded">{residentData.childrenCount || 0}</p>
+                                                        <label className="font-medium text-gray-700 text-sm">Number of Children</label>
+                                                        <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 text-sm">
+                                                            {residentData.childrenCount || 0}
+                                                        </p>
                                                     </div>
                                                     <div>
-                                                        <label className="font-medium">Number of Other Household Members:</label>
-                                                        <p className="p-2 border rounded">{residentData.numberOfHouseholdMembers || 0}</p>
+                                                        <label className="font-medium text-gray-700 text-sm">Number of Other Household Members</label>
+                                                        <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 text-sm">
+                                                            {residentData.numberOfHouseholdMembers || 0}
+                                                        </p>
                                                     </div>
                                                 </div>
                                                 {residentData.childrenCount > 0 && (
-                                                    <div className="border-t pt-4">
-                                                        <h3 className="font-semibold text-lg mb-2">Children</h3>
+                                                    <div className="border-t border-gray-200 pt-6">
+                                                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Children</h3>
                                                         {residentData.householdComposition
                                                             .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
                                                             .map((member, index) => (
-                                                                <div key={`child-${index}`} className="border p-4 rounded-lg mb-4">
-                                                                    <h4 className="font-semibold">Child {index + 1}</h4>
-                                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                                <div key={`child-${index}`} className="border border-gray-200 p-5 rounded-xl mb-4 bg-gray-50 shadow-sm">
+                                                                    <h4 className="text-md font-semibold text-gray-800 mb-3">Child {index + 1}</h4>
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                                                         {[
                                                                             'firstName',
                                                                             'middleName',
@@ -1227,10 +1232,11 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                                             if (key === 'dob') label = 'Date of Birth';
                                                                             if (key === 'customGender') label = 'Custom Gender';
                                                                             if (key === 'isLivingWithParents') label = 'Is Living with Parents';
+                                                                            if (key === 'zone') label = 'Purok/Zone';
                                                                             return (
                                                                                 <div key={key}>
-                                                                                    <label className="font-medium">{label}:</label>
-                                                                                    <p className="p-2 border rounded capitalize">
+                                                                                    <label className="font-medium text-gray-700 text-sm">{label}</label>
+                                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-white text-gray-800 capitalize text-sm">
                                                                                         {['region', 'province', 'city', 'barangay'].includes(key)
                                                                                             ? addressMappings[key][member[key]] || 'N/A'
                                                                                             : member[key] || 'N/A'}
@@ -1244,14 +1250,14 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                     </div>
                                                 )}
                                                 {residentData.numberOfHouseholdMembers > 0 && (
-                                                    <div className="border-t pt-4">
-                                                        <h3 className="font-semibold text-lg mb-2">Other Household Members</h3>
+                                                    <div className="border-t border-gray-200 pt-6">
+                                                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Other Household Members</h3>
                                                         {residentData.householdComposition
                                                             .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
                                                             .map((member, index) => (
-                                                                <div key={`member-${index}`} className="border p-4 rounded-lg mb-4">
-                                                                    <h4 className="font-semibold">Member {index + 1}</h4>
-                                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                                <div key={`member-${index}`} className="border border-gray-200 p-5 rounded-xl mb-4 bg-gray-50 shadow-sm">
+                                                                    <h4 className="text-md font-semibold text-gray-800 mb-3">Member {index + 1}</h4>
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                                                         {[
                                                                             'firstName',
                                                                             'middleName',
@@ -1270,8 +1276,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                                             if (key === 'customGender') label = 'Custom Gender';
                                                                             return (
                                                                                 <div key={key}>
-                                                                                    <label className="font-medium">{label}:</label>
-                                                                                    <p className="p-2 border rounded capitalize">
+                                                                                    <label className="font-medium text-gray-700 text-sm">{label}</label>
+                                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-white text-gray-800 capitalize text-sm">
                                                                                         {member[key] || 'N/A'}
                                                                                     </p>
                                                                                 </div>
@@ -1283,16 +1289,16 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                     </div>
                                                 )}
                                                 {residentData.childrenCount === 0 && residentData.numberOfHouseholdMembers === 0 && (
-                                                    <p>No household members or children added.</p>
+                                                    <p className="text-sm text-gray-500 italic">No household members or children added.</p>
                                                 )}
                                             </fieldset>
                                         )}
                                         {/* Census Questions Tab */}
                                         {activeProfileTab === 3 && (
-                                            <fieldset className="border p-4 rounded-lg">
-                                                <legend className="font-semibold">Census Questions</legend>
+                                            <fieldset className="border border-gray-200 p-6 rounded-xl bg-white shadow-sm">
+                                                <legend className="text-lg font-semibold text-gray-800 px-2">Census Questions</legend>
                                                 {residentData.censusData && Object.keys(residentData.censusData).length > 0 ? (
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                                         {[
                                                             { key: 'ownsHouse', label: 'Owns House' },
                                                             { key: 'isRenting', label: 'Is Renting' },
@@ -1304,15 +1310,15 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                                             { key: 'hasOwnElectricity', label: 'Own Electricity' },
                                                         ].map(({ key, label }) => (
                                                             <div key={key}>
-                                                                <label className="font-medium">{label}:</label>
-                                                                <p className="p-2 border rounded capitalize">
+                                                                <label className="font-medium text-gray-700 text-sm">{label}</label>
+                                                                <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
                                                                     {residentData.censusData[key] || 'N/A'}
                                                                 </p>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <p className="text-sm text-gray-600">No census data available.</p>
+                                                    <p className="text-sm text-gray-500 italic">No census data available.</p>
                                                 )}
                                             </fieldset>
                                         )}
