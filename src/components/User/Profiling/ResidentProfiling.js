@@ -215,34 +215,23 @@ const ResidentProfiling = () => {
 
     const handleSubmit = async () => {
         if (profileStatus === 1) {
-            await Swal.fire({
+            Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'info',
                 title: 'Profile already approved',
-                showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'rounded-lg shadow-lg bg-blue-50 border border-blue-200',
-                    title: 'text-blue-800 text-sm',
-                },
+                showConfirmButton: false,
             });
             return;
         }
 
-        await Swal.fire({
+        const loadingSwal = Swal.fire({
             title: 'Submitting...',
             text: 'Please wait while your profile is being submitted',
             scrollbarPadding: false,
             allowOutsideClick: false,
-            allowEscapeKey: false,
-            customClass: {
-                popup: 'rounded-xl shadow-2xl',
-                title: 'text-gray-800 text-lg font-semibold',
-                htmlContainer: 'text-gray-600 text-sm',
-            },
             didOpen: () => {
                 Swal.showLoading();
             },
@@ -271,40 +260,30 @@ const ResidentProfiling = () => {
             ];
             for (let field of requiredHouseholdFields) {
                 if (!formData.household[field]) {
-                    await Swal.close();
-                    await Swal.fire({
+                    await loadingSwal.close();
+                    Swal.fire({
                         toast: true,
                         position: 'top-end',
                         icon: 'error',
-                        title: `Household form is incomplete: ${capitalizeWords(field)} is required`,
-                        showConfirmButton: false,
+                        title: `Household form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
                         timer: 1500,
                         scrollbarPadding: false,
-                        timerProgressBar: true,
-                        customClass: {
-                            popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                            title: 'text-red-800 text-sm',
-                        },
+                        showConfirmButton: false,
                     });
                     return;
                 }
             }
 
             if (formData.household.civilStatus === 'Married' && !formData.spouse) {
-                await Swal.close();
-                await Swal.fire({
+                await loadingSwal.close();
+                Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
                     title: 'Spouse information is required for married status',
-                    showConfirmButton: false,
                     timer: 1500,
                     scrollbarPadding: false,
-                    timerProgressBar: true,
-                    customClass: {
-                        popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                        title: 'text-red-800 text-sm',
-                    },
+                    showConfirmButton: false,
                 });
                 return;
             }
@@ -331,20 +310,15 @@ const ResidentProfiling = () => {
                 ];
                 for (let field of requiredSpouseFields) {
                     if (!formData.spouse[field]) {
-                        await Swal.close();
-                        await Swal.fire({
+                        await loadingSwal.close();
+                        Swal.fire({
                             toast: true,
                             position: 'top-end',
                             icon: 'error',
-                            title: `Spouse form is incomplete: ${capitalizeWords(field)} is required`,
-                            showConfirmButton: false,
+                            title: `Spouse form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
                             timer: 1500,
                             scrollbarPadding: false,
-                            timerProgressBar: true,
-                            customClass: {
-                                popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                                title: 'text-red-800 text-sm',
-                            },
+                            showConfirmButton: false,
                         });
                         return;
                     }
@@ -370,20 +344,15 @@ const ResidentProfiling = () => {
                     }
                     for (let field of requiredMemberFields) {
                         if (!member[field]) {
-                            await Swal.close();
-                            await Swal.fire({
+                            await loadingSwal.close();
+                            Swal.fire({
                                 toast: true,
                                 position: 'top-end',
                                 icon: 'error',
-                                title: `Household composition is incomplete: ${capitalizeWords(field)} is required for member ${index + 1}`,
-                                showConfirmButton: false,
+                                title: `Household composition is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required for member ${index + 1}`,
                                 timer: 1500,
                                 scrollbarPadding: false,
-                                timerProgressBar: true,
-                                customClass: {
-                                    popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                                    title: 'text-red-800 text-sm',
-                                },
+                                showConfirmButton: false,
                             });
                             return;
                         }
@@ -402,40 +371,30 @@ const ResidentProfiling = () => {
             ];
             for (let field of requiredCensusFields) {
                 if (!formData.census[field]) {
-                    await Swal.close();
-                    await Swal.fire({
+                    await loadingSwal.close();
+                    Swal.fire({
                         toast: true,
                         position: 'top-end',
                         icon: 'error',
-                        title: `Census form is incomplete: ${capitalizeWords(field)} is required`,
-                        showConfirmButton: false,
+                        title: `Census form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
                         timer: 1500,
                         scrollbarPadding: false,
-                        timerProgressBar: true,
-                        customClass: {
-                            popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                            title: 'text-red-800 text-sm',
-                        },
+                        showConfirmButton: false,
                     });
                     return;
                 }
             }
 
             if (formData.census.isRegisteredVoter === 'Yes' && !formData.census.voterPrecinctNo) {
-                await Swal.close();
-                await Swal.fire({
+                await loadingSwal.close();
+                Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
                     title: 'Census form is incomplete: Voter’s Precinct Number is required',
-                    showConfirmButton: false,
                     timer: 1500,
                     scrollbarPadding: false,
-                    timerProgressBar: true,
-                    customClass: {
-                        popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                        title: 'text-red-800 text-sm',
-                    },
+                    showConfirmButton: false,
                 });
                 return;
             }
@@ -459,20 +418,15 @@ const ResidentProfiling = () => {
 
             if (residentError) {
                 console.error('Error saving resident data:', residentError);
-                await Swal.close();
-                await Swal.fire({
+                await loadingSwal.close();
+                Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
                     title: `Failed to save resident data: ${residentError.message}`,
-                    showConfirmButton: false,
                     timer: 1500,
                     scrollbarPadding: false,
-                    timerProgressBar: true,
-                    customClass: {
-                        popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                        title: 'text-red-800 text-sm',
-                    },
+                    showConfirmButton: false,
                 });
                 return;
             }
@@ -491,20 +445,15 @@ const ResidentProfiling = () => {
 
             if (statusError) {
                 console.error('Error setting resident profile status:', statusError);
-                await Swal.close();
-                await Swal.fire({
+                await loadingSwal.close();
+                Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
                     title: `Failed to set resident profile status: ${statusError.message}`,
-                    showConfirmButton: false,
                     timer: 1500,
                     scrollbarPadding: false,
-                    timerProgressBar: true,
-                    customClass: {
-                        popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                        title: 'text-red-800 text-sm',
-                    },
+                    showConfirmButton: false,
                 });
                 return;
             }
@@ -516,8 +465,7 @@ const ResidentProfiling = () => {
                     });
                 } catch (emailError) {
                     console.error('Failed to send pending email:', emailError.message);
-                    await Swal.close();
-                    await Swal.fire({
+                    Swal.fire({
                         toast: true,
                         position: 'top-end',
                         icon: 'warning',
@@ -526,46 +474,33 @@ const ResidentProfiling = () => {
                         timer: 3000,
                         scrollbarPadding: false,
                         timerProgressBar: true,
-                        customClass: {
-                            popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
-                            title: 'text-yellow-800 text-sm',
-                        },
                     });
-                    return; // Exit after warning to avoid showing success toast
                 }
             }
 
-            await Swal.close();
-            await Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: `Form submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
-                showConfirmButton: false,
-                timer: 1500,
-                scrollbarPadding: false,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'rounded-lg shadow-lg bg-green-50 border border-green-200',
-                    title: 'text-green-800 text-sm',
-                },
-            });
+            await loadingSwal.close();
+            if (!Swal.isVisible()) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `Form submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    showConfirmButton: false,
+                });
+            }
         } catch (error) {
             console.error('Unexpected error:', error);
-            await Swal.close();
-            await Swal.fire({
+            await loadingSwal.close();
+            Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
                 title: `An unexpected error occurred: ${error.message || 'Unknown error'}`,
-                showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                    title: 'text-red-800 text-sm',
-                },
+                showConfirmButton: false,
             });
         }
     };

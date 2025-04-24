@@ -40,6 +40,9 @@ const ResidentManagement = () => {
     const requestsModalRef = useRef(null);
     const updateModalRef = useRef(null);
     const [activeProfileTab, setActiveProfileTab] = useState(0);
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [sortOption, setSortOption] = useState('name-asc'); // Default sort: Name A-Z
+    const filterDropdownRef = useRef(null);
 
     // Initialize address mappings
     useEffect(() => {
@@ -263,7 +266,8 @@ const ResidentManagement = () => {
             filtered = filtered.filter(resident =>
                 resident.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 resident.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                resident.address.toLowerCase().includes(searchTerm.toLowerCase())
+                resident.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                resident.purok.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
 
@@ -298,6 +302,25 @@ const ResidentManagement = () => {
         if (viewModalOpen) stack.push('view');
         setModalStack(stack);
     }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target)) {
+                setShowFilterDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleClearFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('all');
+        setSortOption('name-asc');
+        setItemsPerPage(10);
+        setShowFilterDropdown(false);
+    };
 
     // Handle clicks outside modal
     useEffect(() => {
@@ -1046,65 +1069,130 @@ const ResidentManagement = () => {
                     </div>
 
                     {/* Filters and Search */}
-                    <div className="mb-4 flex flex-col sm:flex-row gap-4">
+                    <div className="mb-6 flex flex-col sm:flex-row gap-4 relative">
+                        {/* Search Bar */}
                         <div className="relative flex-1">
                             <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
                             <input
                                 type="text"
-                                placeholder="Search by name or address..."
+                                placeholder="Search by name, address, or zone..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-400"
+                                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm placeholder-gray-400 transition-all duration-200"
                             />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                <FaFilter className="text-gray-600" size={18} />
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="border border-gray-200 rounded-xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700"
-                                >
-                                    <option value="all">All Statuses</option>
-                                    <option value="1">Approved</option>
-                                    <option value="2">Rejected</option>
-                                    <option value="3">Pending</option>
-                                    <option value="4">Update Requested</option>
-                                    <option value="5">Update Approved</option>
-                                </select>
-                            </div>
-                            <select
-                                value={itemsPerPage}
-                                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                                className="border border-gray-200 rounded-xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700"
+
+                        {/* Filter and Sort Dropdown */}
+                        <div className="relative">
+                            <motion.button
+                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                             >
-                                <option value={5}>5 per page</option>
-                                <option value={10}>10 per page</option>
-                                <option value={20}>20 per page</option>
-                                <option value={50}>50 per page</option>
-                            </select>
+                                <FaFilter className="text-emerald-600" size={16} />
+                                Filter & Sort
+                            </motion.button>
+
+                            <AnimatePresence>
+                                {showFilterDropdown && (
+                                    <motion.div
+                                        ref={filterDropdownRef}
+                                        className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        <div className="p-4">
+                                            <h3 className="text-sm font-semibold text-gray-800 mb-3">Filter by Status</h3>
+                                            <select
+                                                value={statusFilter}
+                                                onChange={(e) => setStatusFilter(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                                            >
+                                                <option value="all">All Statuses</option>
+                                                <option value="1">Approved</option>
+                                                <option value="2">Rejected</option>
+                                                <option value="3">Pending</option>
+                                                <option value="4">Update Requested</option>
+                                                <option value="5">Update Approved</option>
+                                            </select>
+                                        </div>
+                                        <div className="p-4 border-t border-gray-100">
+                                            <h3 className="text-sm font-semibold text-gray-800 mb-3">Sort By</h3>
+                                            <select
+                                                value={sortOption}
+                                                onChange={(e) => setSortOption(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                                            >
+                                                <option value="name-asc">Name (A-Z)</option>
+                                                <option value="name-desc">Name (Z-A)</option>
+                                                <option value="status-asc">Status (Ascending)</option>
+                                                <option value="status-desc">Status (Descending)</option>
+                                                <option value="date-asc">Date Added (Oldest)</option>
+                                                <option value="date-desc">Date Added (Newest)</option>
+                                            </select>
+                                        </div>
+                                        <div className="p-4 border-t border-gray-100">
+                                            <h3 className="text-sm font-semibold text-gray-800 mb-3">Items Per Page</h3>
+                                            <select
+                                                value={itemsPerPage}
+                                                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                                            >
+                                                <option value={5}>5 per page</option>
+                                                <option value={10}>10 per page</option>
+                                                <option value={20}>20 per page</option>
+                                                <option value={50}>50 per page</option>
+                                            </select>
+                                        </div>
+                                        <div className="p-4 border-t border-gray-100">
+                                            <motion.button
+                                                onClick={handleClearFilters}
+                                                className="w-full px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                            >
+                                                Clear Filters
+                                            </motion.button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
 
                     {/* Unique Resident Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                         {currentItems.length > 0 ? (
-                            currentItems
-                                .filter((resident) => resident.status === 1) // Only display residents with status 1 (Approved)
-                                .map((resident) => (
+                            currentItems.map((resident) => {
+                                // Define status-based colors
+                                const statusColors = {
+                                    1: { gradient: 'linear-gradient(to bottom, #10B981, #34D399)', pulse: 'bg-green-400' }, // Approved: Green
+                                    2: { gradient: 'linear-gradient(to bottom, #EF4444, #F87171)', pulse: 'bg-red-400' }, // Rejected: Red
+                                    3: { gradient: 'linear-gradient(to bottom, #F59E0B, #FBBF24)', pulse: 'bg-yellow-400' }, // Pending: Yellow
+                                    4: { gradient: 'linear-gradient(to bottom, #3B82F6, #60A5FA)', pulse: 'bg-blue-400' }, // Update Requested: Blue
+                                    5: { gradient: 'linear-gradient(to bottom, #8B5CF6, #A78BFA)', pulse: 'bg-purple-400' }, // Update Approved: Purple
+                                };
+
+                                const { gradient, pulse } = statusColors[resident.status] || {
+                                    gradient: 'linear-gradient(to bottom, #6B7280, #9CA3AF)', // Default: Gray
+                                    pulse: 'bg-gray-400',
+                                };
+
+                                return (
                                     <motion.div
                                         key={resident.id}
                                         className="relative bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border border-gray-100"
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.5, ease: "easeOut" }}
+                                        transition={{ duration: 0.5, ease: 'easeOut' }}
                                     >
                                         {/* Dynamic Color Accent */}
                                         <div
                                             className="absolute top-0 left-0 w-2 h-full"
-                                            style={{
-                                                background: `linear-gradient(to bottom, #10B981, #34D399)`, // Fixed to green for Approved status
-                                            }}
+                                            style={{ background: gradient }}
                                         />
 
                                         {/* Card Header with Avatar */}
@@ -1113,7 +1201,9 @@ const ResidentManagement = () => {
                                                 <div className="flex items-center space-x-4">
                                                     <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-semibold text-xl shadow-md">
                                                         {resident.firstName[0]}{resident.lastName[0]}
-                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+                                                        <div
+                                                            className={`absolute -top-1 -right-1 w-4 h-4 ${pulse} rounded-full border-2 border-white animate-pulse`}
+                                                        />
                                                     </div>
                                                     <div>
                                                         <h3 className="text-xl font-extrabold text-gray-900 tracking-wide">
@@ -1128,19 +1218,19 @@ const ResidentManagement = () => {
                                             <div className="space-y-3 text-sm text-gray-700">
                                                 <p className="flex items-center gap-3">
                                                     <FaVenusMars className="text-emerald-500" />
-                                                    <span className="font-medium">Gender: {resident.gender}</span>
+                                                    <span className="font-medium"><span className="font-bold">Gender:</span> {resident.gender}</span>
                                                 </p>
                                                 <p className="flex items-center gap-3">
                                                     <FaCalendarAlt className="text-emerald-500" />
-                                                    <span className="font-medium">Date of Birth: {resident.dob}</span>
+                                                    <span className="font-medium"><span className="font-bold">Date of Birth:</span> {resident.dob}</span>
                                                 </p>
                                                 <p className="flex items-center gap-3 truncate">
                                                     <FaMapMarkerAlt className="text-emerald-500" />
-                                                    <span className="font-medium">Address: {resident.address}</span>
+                                                    <span className="font-medium"><span className="font-bold">Address:</span> {resident.address}</span>
                                                 </p>
                                                 <p className="flex items-center gap-3">
                                                     <FaHome className="text-emerald-500" />
-                                                    <span className="font-medium">Purok/Zone: {resident.purok}</span>
+                                                    <span className="font-medium"><span className="font-bold">Purok/Zone:</span> {resident.purok}</span>
                                                 </p>
                                             </div>
 
@@ -1182,7 +1272,8 @@ const ResidentManagement = () => {
                                             whileHover={{ opacity: 0.15 }}
                                         />
                                     </motion.div>
-                                ))
+                                );
+                            })
                         ) : (
                             <div className="col-span-full text-center py-16">
                                 <motion.div
@@ -1192,7 +1283,7 @@ const ResidentManagement = () => {
                                     transition={{ duration: 0.6 }}
                                 >
                                     <FaUsers className="inline-block text-4xl mb-3 text-emerald-400" />
-                                    <p>No approved residents found at this time.</p>
+                                    <p>No residents found at this time.</p>
                                 </motion.div>
                             </div>
                         )}
@@ -1286,8 +1377,8 @@ const ResidentManagement = () => {
                                                     <button
                                                         key={index}
                                                         className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${activeProfileTab === index
-                                                                ? 'bg-emerald-600 text-white shadow-md'
-                                                                : 'text-gray-600 hover:bg-gray-200 hover:text-emerald-600'
+                                                            ? 'bg-emerald-600 text-white shadow-md'
+                                                            : 'text-gray-600 hover:bg-gray-200 hover:text-emerald-600'
                                                             }`}
                                                         onClick={() => setActiveProfileTab(index)}
                                                     >

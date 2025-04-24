@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaChevronLeft, FaChevronRight, FaTimes, FaPlus, FaEdit, FaTrash, FaEraser } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaTimes, FaPlus, FaEdit, FaTrash, FaEraser, FaMousePointer } from "react-icons/fa";
 import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import Compressor from "compressorjs";
@@ -887,10 +887,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 ))}
             </motion.div>
 
-            <motion.div
-                className="mt-4 border-t pt-4"
-                variants={itemVariants}
-            >
+            <motion.div className="mt-4 border-t pt-4" variants={itemVariants}>
                 <h3 className="text-lg font-bold mb-2">Legend</h3>
                 <motion.div
                     className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm"
@@ -913,6 +910,25 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     <motion.div className="flex items-center gap-2" variants={itemVariants}>
                         <div className="w-4 h-4 bg-blue-200 border border-blue-500 rounded"></div>
                         <span>Selected Date</span>
+                    </motion.div>
+                </motion.div>
+
+                <motion.div className="mt-4 border-t pt-4" variants={itemVariants}>
+                    <h3 className="text-lg font-bold mb-2">Control Guides</h3>
+                    <motion.div
+                        className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        <motion.div className="flex items-center gap-2" variants={itemVariants}>
+                            <FaMousePointer size={16} />
+                            <span><strong>Left Click:</strong> Select Dates</span>
+                        </motion.div>
+                        <motion.div className="flex items-center gap-2" variants={itemVariants}>
+                            <FaMousePointer size={16} />
+                            <span><strong>Right Click:</strong> Show Events</span>
+                        </motion.div>
                     </motion.div>
                 </motion.div>
             </motion.div>
