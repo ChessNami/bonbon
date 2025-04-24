@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaSyncAlt, FaTrashAlt, FaSearch, FaFilter, FaChevronLeft, FaChevronRight, FaVenusMars, FaCalendarAlt, FaMapMarkerAlt, FaHome, FaUsers } from 'react-icons/fa';
+import { FaTimes, FaEye, FaCheck, FaBan, FaExclamationCircle, FaSyncAlt, FaTrashAlt, FaSearch, FaFilter, FaChevronLeft, FaChevronRight, FaVenusMars, FaCalendarAlt, FaMapMarkerAlt, FaHome, FaUsers, FaExclamationTriangle } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../../supabaseClient';
 import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBarangaysByMunicipality } from '@aivangogh/ph-address';
@@ -189,7 +189,8 @@ const ResidentManagement = () => {
                     purok: household.zone || 'Unknown',
                     householdHead: `${household.firstName || 'Unknown'} ${household.lastName || 'Unknown'}`,
                     status: resident.resident_profile_status?.status || 3,
-                    rejectionReason: resident.resident_profile_status?.rejection_reason,
+                    updateReason: resident.resident_profile_status?.status === 4 ? resident.resident_profile_status?.rejection_reason : null,
+                    rejectionReason: resident.resident_profile_status?.status !== 4 ? resident.resident_profile_status?.rejection_reason : null,
                     rejectionDate: resident.resident_profile_status?.updated_at,
                     householdData: household,
                     spouseData: spouse,
@@ -376,17 +377,17 @@ const ResidentManagement = () => {
             const { error: statusError } = await supabase
                 .from('resident_profile_status')
                 .update({
-                    status: 4,
+                    status: 6, // Update Profiling
                     rejection_reason: reason,
                     updated_at: new Date().toISOString()
                 })
                 .eq('resident_id', resident.id);
 
             if (statusError) {
-                throw new Error('Failed to update profile status to Update Requested');
+                throw new Error('Failed to update profile status to Update Profiling');
             }
 
-            await axios.post('http://localhost:5000/api/email/send-update-request', {
+            await axios.post('http://localhost:5000/api/email/send-update-profiling', {
                 userId: resident.userId,
                 updateReason: reason,
             });
@@ -396,7 +397,7 @@ const ResidentManagement = () => {
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Profile status updated to Update Requested',
+                title: 'Profile status updated to Update Profiling',
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
@@ -999,6 +1000,8 @@ const ResidentManagement = () => {
                 return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">Update Requested</span>;
             case 5:
                 return <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">Update Approved</span>;
+            case 6:
+                return <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">Update Profiling</span>;
             default:
                 return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">Unknown</span>;
         }
@@ -1174,6 +1177,7 @@ const ResidentManagement = () => {
                                     3: { gradient: 'linear-gradient(to bottom, #F59E0B, #FBBF24)', pulse: 'bg-yellow-400' }, // Pending: Yellow
                                     4: { gradient: 'linear-gradient(to bottom, #3B82F6, #60A5FA)', pulse: 'bg-blue-400' }, // Update Requested: Blue
                                     5: { gradient: 'linear-gradient(to bottom, #8B5CF6, #A78BFA)', pulse: 'bg-purple-400' }, // Update Approved: Purple
+                                    6: { gradient: 'linear-gradient(to bottom, #F97316, #FBBF24)', pulse: 'bg-orange-400' }, // Update Profiling: Orange
                                 };
 
                                 const { gradient, pulse } = statusColors[resident.status] || {
@@ -1232,6 +1236,12 @@ const ResidentManagement = () => {
                                                     <FaHome className="text-emerald-500" />
                                                     <span className="font-medium"><span className="font-bold">Purok/Zone:</span> {resident.purok}</span>
                                                 </p>
+                                                {resident.status === 6 && resident.rejection_reason && (
+                                                    <p className="flex items-center gap-3 text-orange-600">
+                                                        <FaExclamationTriangle className="text-orange-500" />
+                                                        <span className="font-medium"><span className="font-bold">Reason:</span> {resident.rejection_reason}</span>
+                                                    </p>
+                                                )}
                                             </div>
 
                                             {/* Action Buttons with Vibrant Colors */}
@@ -1809,7 +1819,7 @@ const ResidentManagement = () => {
                                                 }}
                                                 className="text-gray-500 hover:text-gray-700 transition-colors"
                                                 whileHover={{ scale: 1.1 }}
-                                                whileTap={{ scale: 0.9 }}
+                                                whileTap={{ scale: 0.95 }}
                                             >
                                                 <FaTimes size={22} />
                                             </motion.button>
@@ -1830,6 +1840,11 @@ const ResidentManagement = () => {
                                                                         {resident.firstName} {resident.lastName}
                                                                     </h3>
                                                                     <div>{getStatusBadge(resident.status)}</div>
+                                                                    {resident.updateReason && (
+                                                                        <p className="text-sm text-gray-600 italic mt-1">
+                                                                            <span className="font-semibold">Reason for Request:</span> {resident.updateReason}
+                                                                        </p>
+                                                                    )}
                                                                 </div>
                                                                 {showRejectionForm === resident.id ? (
                                                                     <div className="w-full sm:w-auto space-y-3">

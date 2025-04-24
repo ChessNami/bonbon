@@ -127,6 +127,33 @@ router.post('/send-update-request', async (req, res) => {
     }
 });
 
+// Send Update Profiling Email
+router.post('/send-update-profiling', async (req, res) => {
+    const { userId, updateReason } = req.body;
+
+    try {
+        // Fetch user email from Supabase auth
+        const { data: user, error: userError } = await supabase.auth.admin.getUserById(userId);
+        if (userError || !user.user.email) {
+            return res.status(400).json({ error: 'User not found or email not available' });
+        }
+
+        const mailOptions = {
+            from: process.env.SMTP_USER,
+            to: user.user.email,
+            subject: 'Resident Profile Update Profiling Requested',
+            text: `Dear Resident,\n\nAn update to your resident profile is required.\nReason: ${updateReason}\n\nPlease update your profile in the Resident Profiling section.\n\nThank you,\nResident Management Team`,
+            html: `<p>Dear Resident,</p><p>An update to your resident profile is <strong>required</strong>.</p><p><strong>Reason:</strong> ${updateReason}</p><p>Please update your profile in the Resident Profiling section.</p><p>Thank you,<br>Resident Management Team</p>`,
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: 'Update profiling email sent successfully' });
+    } catch (error) {
+        console.error('Error sending update profiling email:', error);
+        res.status(500).json({ error: 'Failed to send update profiling email' });
+    }
+});
+
 // Send Update Request Approval Email
 router.post('/send-update-approval', async (req, res) => {
     const { userId } = req.body;

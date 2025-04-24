@@ -569,96 +569,112 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         if (!user || !residentData) {
             Swal.fire({
                 toast: true,
-                position: "top-end",
-                icon: "error",
-                title: "Error",
-                text: "User or resident data not found.",
-                timer: 1500,
+                position: 'top-end',
+                icon: 'error',
+                title: 'User or resident data not found',
                 showConfirmButton: false,
+                timer: 2000,
                 scrollbarPadding: false,
+                timerProgressBar: true,
             });
             return;
         }
 
         const result = await Swal.fire({
-            title: "Request Profile Update",
-            text: "Do you want to request an update to your resident profile? This will require admin approval.",
-            icon: "warning",
+            title: 'Request Profile Update',
+            html: `
+                <p class="text-sm text-gray-600 mb-4">Do you want to request an update to your resident profile? This will require admin approval.</p>
+                <textarea id="updateReason" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" rows="4" placeholder="Enter reason for requesting profile update"></textarea>
+            `,
+            icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Yes, request update",
-            cancelButtonText: "Cancel",
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Submit Request',
+            cancelButtonText: 'Cancel',
             scrollbarPadding: false,
+            preConfirm: () => {
+                const updateReason = document.getElementById('updateReason').value;
+                if (!updateReason.trim()) {
+                    Swal.showValidationMessage('Please provide a reason for the update request');
+                    return false;
+                }
+                return updateReason;
+            },
         });
 
         if (result.isConfirmed) {
+            const updateReason = result.value;
             try {
                 Swal.fire({
-                    title: "Submitting request...",
-                    text: "Please wait while your request is being processed.",
+                    title: 'Submitting request...',
+                    text: 'Please wait while your request is being processed',
                     allowOutsideClick: false,
                     scrollbarPadding: false,
                     didOpen: () => Swal.showLoading(),
                 });
 
                 const { error: statusError } = await supabase
-                    .from("resident_profile_status")
-                    .update({ status: 4, rejection_reason: null })
-                    .eq("resident_id", residentData.id);
+                    .from('resident_profile_status')
+                    .update({
+                        status: 4,
+                        rejection_reason: updateReason,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('resident_id', residentData.id);
 
                 if (statusError) {
-                    console.error("Error requesting profile update:", statusError);
-                    throw statusError;
+                    throw new Error('Failed to request profile update: ' + statusError.message);
                 }
 
                 setResidentProfileStatus(4);
+                setRejectionReason(updateReason);
 
                 try {
                     await axios.post('http://localhost:5000/api/email/send-update-request', {
                         userId: user.id,
-                        updateReason: "User requested profile update",
+                        updateReason,
                     });
                 } catch (emailError) {
                     console.error('Failed to send update request email:', emailError.message);
+                    Swal.close();
                     Swal.fire({
                         toast: true,
-                        position: "top-end",
-                        icon: "warning",
-                        title: "Update requested, but failed to send notification email: " + emailError.message,
+                        position: 'top-end',
+                        icon: 'warning',
+                        title: `Update requested, but failed to send notification email: ${emailError.message}`,
                         showConfirmButton: false,
                         timer: 3000,
                         scrollbarPadding: false,
-                        timerProgressBar: true
+                        timerProgressBar: true,
                     });
+                    return;
                 }
 
                 Swal.close();
-                if (!Swal.isVisible()) {
-                    Swal.fire({
-                        toast: true,
-                        position: "top-end",
-                        icon: "success",
-                        title: "Update Requested",
-                        text: "Your request to update your profile has been submitted. Please wait for admin approval.",
-                        showConfirmButton: false,
-                        timer: 1500,
-                        scrollbarPadding: false,
-                        timerProgressBar: true
-                    });
-                }
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Update Requested',
+                    text: 'Your request to update your profile has been submitted. Please wait for admin approval.',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    scrollbarPadding: false,
+                    timerProgressBar: true,
+                });
             } catch (error) {
                 Swal.close();
                 Swal.fire({
                     toast: true,
-                    position: "top-end",
-                    icon: "error",
-                    title: "Request Failed",
-                    text: error.message || "Failed to request profile update",
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Request Failed',
+                    text: error.message || 'Failed to request profile update',
                     showConfirmButton: false,
-                    timer: 1500,
+                    timer: 2000,
                     scrollbarPadding: false,
-                    timerProgressBar: true
+                    timerProgressBar: true,
                 });
             }
         }
@@ -739,6 +755,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 return "Update Requested";
             case 5:
                 return "Update Approved";
+            case 6:
+                return "Update Profiling";
             case "not_submitted":
                 return "Not yet submitted";
             default:
@@ -1031,8 +1049,8 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                             <button
                                                 key={index}
                                                 className={`flex-1 px-6 py-3 text-sm font-semibold transition-all ${activeProfileTab === index
-                                                        ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
-                                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-gray-200'
+                                                    ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-gray-200'
                                                     }`}
                                                 onClick={() => setActiveProfileTab(index)}
                                             >
@@ -1380,7 +1398,9 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                             ? "text-blue-600"
                                             : residentProfileStatus === 5
                                                 ? "text-purple-600"
-                                                : "text-gray-600"
+                                                : residentProfileStatus === 6
+                                                    ? "text-orange-600"
+                                                    : "text-gray-600"
                                 }`}
                         >
                             {getStatusText()}
@@ -1408,7 +1428,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             </>
                         )}
                     </div>
-                    {(residentProfileStatus === 2 || residentProfileStatus === 4) && rejectionReason && (
+                    {(residentProfileStatus === 2 || residentProfileStatus === 4 || residentProfileStatus === 6) && rejectionReason && (
                         <p className="mt-2 text-sm text-gray-600 italic">
                             <span className="font-semibold">Reason:</span> {rejectionReason}
                         </p>
