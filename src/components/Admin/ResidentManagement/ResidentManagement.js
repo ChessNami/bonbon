@@ -387,7 +387,7 @@ const ResidentManagement = () => {
                 throw new Error('Failed to update profile status to Update Profiling');
             }
 
-            await axios.post('http://localhost:5000/api/email/send-update-profiling', {
+            await axios.post('http://barangay-bonbon.vercel.app/api/email/send-update-profiling', {
                 userId: resident.userId,
                 updateReason: reason,
             });
@@ -558,7 +558,7 @@ const ResidentManagement = () => {
             }
 
             try {
-                await axios.post('http://localhost:5000/api/email/send-approval', {
+                await axios.post('http://barangay-bonbon.vercel.app/api/email/send-approval', {
                     userId: residentData.user_id,
                 });
             } catch (emailError) {
@@ -672,7 +672,7 @@ const ResidentManagement = () => {
             }
 
             try {
-                await axios.post('http://localhost:5000/api/email/send-rejection', {
+                await axios.post('http://barangay-bonbon.vercel.app/api/email/send-rejection', {
                     userId: residentData.user_id,
                     rejectionReason,
                 });
@@ -761,7 +761,7 @@ const ResidentManagement = () => {
             }
 
             try {
-                await axios.post('http://localhost:5000/api/email/send-update-approval', {
+                await axios.post('http://barangay-bonbon.vercel.app/api/email/send-update-approval', {
                     userId: resident.userId,
                 });
             } catch (emailError) {
@@ -865,7 +865,7 @@ const ResidentManagement = () => {
             }
 
             try {
-                await axios.post('http://localhost:5000/api/email/send-update-rejection', {
+                await axios.post('http://barangay-bonbon.vercel.app/api/email/send-update-rejection', {
                     userId: resident.userId,
                     rejectionReason,
                 });
