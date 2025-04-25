@@ -1,7 +1,6 @@
-// Feedback.js
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { FaStar, FaPaperPlane, FaCommentAlt } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaStar, FaPaperPlane, FaComment } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { supabase } from "../../../supabaseClient";
 
@@ -12,7 +11,6 @@ const Feedback = () => {
     const [submitted, setSubmitted] = useState(false);
     const [user, setUser] = useState(null);
 
-    // Fetch logged-in user
     useEffect(() => {
         const fetchUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -24,7 +22,6 @@ const Feedback = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validation
         if (!user) {
             Swal.fire({
                 toast: true,
@@ -61,7 +58,6 @@ const Feedback = () => {
             return;
         }
 
-        // Submit to Supabase
         const { error } = await supabase
             .from("feedback")
             .insert({
@@ -83,7 +79,6 @@ const Feedback = () => {
             return;
         }
 
-        // Success
         Swal.fire({
             toast: true,
             position: "top-end",
@@ -100,65 +95,81 @@ const Feedback = () => {
     };
 
     return (
-        <motion.div
-            className="bg-gradient-to-br from-blue-100 to-purple-100 p-8 rounded-xl shadow-lg max-w-md mx-auto mt-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-        >
-            <div className="flex items-center justify-center mb-6">
-                <FaCommentAlt className="text-blue-500 mr-2" size={24} />
-                <h2 className="text-2xl font-bold text-gray-800">
-                    Share Your Feedback
-                </h2>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Star Rating */}
-                <div className="flex justify-center space-x-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <motion.div
-                            key={star}
-                            whileHover={{ scale: 1.2 }}
-                            whileTap={{ scale: 0.9 }}
-                        >
-                            <FaStar
-                                size={30}
-                                className={`cursor-pointer transition-colors duration-200 ${(hoverRating || rating) >= star
-                                        ? "text-yellow-400"
-                                        : "text-gray-300"
-                                    }`}
-                                onClick={() => !submitted && setRating(star)}
-                                onMouseEnter={() => !submitted && setHoverRating(star)}
-                                onMouseLeave={() => !submitted && setHoverRating(0)}
-                            />
-                        </motion.div>
-                    ))}
+        <div className="p-4">
+            <motion.div
+                className="bg-white p-6 rounded-2xl shadow-xl max-w-lg mx-auto"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+            >
+                <div className="flex items-center gap-3 mb-6 select-none">
+                    <FaComment className="text-indigo-500" size={24} />
+                    <h2 className="text-xl font-semibold text-gray-900">
+                        Your Feedback
+                    </h2>
                 </div>
 
-                {/* Feedback Textarea */}
-                <textarea
-                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-800 resize-none"
-                    rows="5"
-                    placeholder="Tell us your thoughts..."
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    disabled={submitted}
-                />
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="flex justify-center gap-2 select-none">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <motion.div
+                                key={star}
+                                whileHover={{ scale: 1.3, rotate: 10 }}
+                                whileTap={{ scale: 0.9 }}
+                            >
+                                <FaStar
+                                    size={28}
+                                    className={`cursor-pointer transition-colors duration-200 ${(hoverRating || rating) >= star
+                                        ? "text-yellow-400"
+                                        : "text-gray-200"
+                                        }`}
+                                    onClick={() => !submitted && setRating(star)}
+                                    onMouseEnter={() => !submitted && setHoverRating(star)}
+                                    onMouseLeave={() => !submitted && setHoverRating(0)}
+                                />
+                            </motion.div>
+                        ))}
+                    </div>
 
-                {/* Submit Button */}
-                <button
-                    type="submit"
-                    className={`w-full py-3 rounded-lg font-semibold text-white transition-all duration-300 flex items-center justify-center space-x-2 ${submitted
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-500 hover:bg-blue-600"
-                        }`}
-                    disabled={submitted}
-                >
-                    <FaPaperPlane size={18} />
-                    <span>{submitted ? "Submitted!" : "Submit Feedback"}</span>
-                </button>
-            </form>
-        </motion.div>
+                    <textarea
+                        className="w-full p-4 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 text-gray-900 resize-none transition-all duration-200"
+                        rows="4"
+                        placeholder="Share your thoughts..."
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        disabled={submitted}
+                    />
+
+                    <motion.button
+                        type="submit"
+                        className={`w-full py-3 rounded-lg font-medium text-white flex items-center justify-center gap-2 transition-all duration-300 ${submitted
+                            ? "bg-gray-300 cursor-not-allowed"
+                            : "bg-indigo-500 hover:bg-indigo-600"
+                            }`}
+                        disabled={submitted}
+                        whileHover={{ scale: submitted ? 1 : 1.05 }}
+                        whileTap={{ scale: submitted ? 1 : 0.95 }}
+                    >
+                        <FaPaperPlane size={16} />
+                        <span>{submitted ? "Submitted" : "Submit"}</span>
+                    </motion.button>
+                </form>
+
+                <AnimatePresence>
+                    {submitted && (
+                        <motion.div
+                            className="mt-4 text-center text-green-600 font-medium"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            Thank you for your feedback!
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
+        </div>
     );
 };
 

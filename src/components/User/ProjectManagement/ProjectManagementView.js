@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { MapContainer, TileLayer, Popup, Polygon, LayersControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { FaTimes, FaMap, FaTag, FaInfoCircle, FaImage, FaBan } from "react-icons/fa";
+import { FaTimes, FaMap, FaTag, FaInfoCircle, FaImage } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import { supabase } from "../../../supabaseClient";
+import PhoneFilters from "./PhoneFilters";
+import FullFilters from "./FullFilters";
 
 const ProjectManagementView = () => {
     const bonbonCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);
@@ -207,7 +209,7 @@ const ProjectManagementView = () => {
     ]);
 
     return (
-        <div className="p-4 mx-auto">
+        <div className="p-4 mx-auto container max-w-7xl">
             {/* Buttons Section */}
             <div className="flex flex-wrap gap-3 mb-6">
                 <motion.button
@@ -303,7 +305,7 @@ const ProjectManagementView = () => {
 
                 {/* Legends Section */}
                 <div className="bg-white p-4 rounded-lg shadow">
-                    <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+                    <h3 className="text-base font-semibold mb-3 flex items-center gap redefine-2">
                         <FaTag className="text-blue-600" />
                         Project Statuses & Types
                     </h3>
@@ -327,10 +329,10 @@ const ProjectManagementView = () => {
                             <div className="w-4 h-4 border-2 border-green-500 border-dotted"></div> Completed
                         </li>
                         <li className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-red-500" style={{ borderStyle: 'dashed', borderDashOffset: '3, 10' }}></div> Terminated
+                            <div className="w-4 h-4 border-2 border-red-500" style={{ borderStyle: "dashed", borderDashOffset: "3, 10" }}></div> Terminated
                         </li>
                         <li className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-gray-500" style={{ borderStyle: 'dashed', borderDashOffset: '15, 5' }}></div> Cancelled
+                            <div className="w-4 h-4 border-2 border-gray-500" style={{ borderStyle: "dashed", borderDashOffset: "15, 5" }}></div> Cancelled
                         </li>
                     </ul>
                 </div>
@@ -348,12 +350,13 @@ const ProjectManagementView = () => {
                     >
                         <motion.div
                             ref={modalRef}
-                            className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col z-[100]"
-                            initial={{ scale: 0.8, y: 50 }}
+                            className="bg-white rounded-lg w-full h-full max-w-6xl flex flex-col z-[100] overflow-hidden"
+                            initial={{ scale: 0.95, y: 50 }}
                             animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.8, y: 50 }}
+                            exit={{ scale: 0.95, y: 50 }}
                             transition={{ duration: 0.15 }}
                         >
+                            {/* Header */}
                             <div className="flex justify-between items-center p-4 border-b">
                                 <h2 className="text-xl font-semibold flex items-center gap-2">
                                     <FaMap className="text-blue-600" />
@@ -368,110 +371,45 @@ const ProjectManagementView = () => {
                                     <FaTimes size={24} />
                                 </motion.button>
                             </div>
-                            {/* Filter Section */}
-                            <div className="p-4 border-b">
-                                <div className="flex flex-wrap gap-4">
-                                    <div className="flex-1 min-w-[200px]">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Search by Title</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter project title"
-                                            value={filterTitle}
-                                            onChange={(e) => setFilterTitle(e.target.value)}
-                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-[150px]">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Update Status</label>
-                                        <select
-                                            value={filterStatus}
-                                            onChange={(e) => setFilterStatus(e.target.value)}
-                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                        >
-                                            <option value="">All Statuses</option>
-                                            <option value="Planned">Planned</option>
-                                            <option value="In Progress">In Progress</option>
-                                            <option value="Completed">Completed</option>
-                                            <option value="Terminated">Terminated</option>
-                                            <option value="Cancelled">Cancelled</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex-1 min-w-[150px]">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                                        <select
-                                            value={filterColor}
-                                            onChange={(e) => setFilterColor(e.target.value)}
-                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                        >
-                                            <option value="">All Colors</option>
-                                            <option value="Satisfactory">Satisfactory</option>
-                                            <option value="With Minor Deficiencies">With Minor Deficiencies</option>
-                                            <option value="With Serious Deficiencies">With Serious Deficiencies</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex-1 min-w-[150px]">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Completion Rate (%)</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="number"
-                                                placeholder="Min"
-                                                value={filterCompletionMin}
-                                                onChange={(e) => setFilterCompletionMin(e.target.value)}
-                                                min="0"
-                                                max="100"
-                                                className="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="Max"
-                                                value={filterCompletionMax}
-                                                onChange={(e) => setFilterCompletionMax(e.target.value)}
-                                                min="0"
-                                                max="100"
-                                                className="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 min-w-[200px]">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Monitoring Date Range</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="date"
-                                                value={filterDateStart}
-                                                onChange={(e) => setFilterDateStart(e.target.value)}
-                                                className="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                            />
-                                            <input
-                                                type="date"
-                                                value={filterDateEnd}
-                                                onChange={(e) => setFilterDateEnd(e.target.value)}
-                                                className="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 flex items-end min-w-[150px]">
-                                        <motion.button
-                                            onClick={() => {
-                                                setFilterTitle("");
-                                                setFilterStatus("");
-                                                setFilterColor("");
-                                                setFilterCompletionMin("");
-                                                setFilterCompletionMax("");
-                                                setFilterDateStart("");
-                                                setFilterDateEnd("");
-                                            }}
-                                            className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm"
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                        >
-                                            <FaBan />
-                                            Clear Filters
-                                        </motion.button>
-                                    </div>
-                                </div>
-                            </div>
-                            {/* Projects Grid */}
+
+                            {/* Scrollable Content Area */}
+                            {/* Filters */}
+                            <PhoneFilters
+                                filterTitle={filterTitle}
+                                setFilterTitle={setFilterTitle}
+                                filterStatus={filterStatus}
+                                setFilterStatus={setFilterStatus}
+                                filterColor={filterColor}
+                                setFilterColor={setFilterColor}
+                                filterCompletionMin={filterCompletionMin}
+                                setFilterCompletionMin={setFilterCompletionMin}
+                                filterCompletionMax={filterCompletionMax}
+                                setFilterCompletionMax={setFilterCompletionMax}
+                                filterDateStart={filterDateStart}
+                                setFilterDateStart={setFilterDateStart}
+                                filterDateEnd={filterDateEnd}
+                                setFilterDateEnd={setFilterDateEnd}
+                            />
+                            <FullFilters
+                                filterTitle={filterTitle}
+                                setFilterTitle={setFilterTitle}
+                                filterStatus={filterStatus}
+                                setFilterStatus={setFilterStatus}
+                                filterColor={filterColor}
+                                setFilterColor={setFilterColor}
+                                filterCompletionMin={filterCompletionMin}
+                                setFilterCompletionMin={setFilterCompletionMin}
+                                filterCompletionMax={filterCompletionMax}
+                                setFilterCompletionMax={setFilterCompletionMax}
+                                filterDateStart={filterDateStart}
+                                setFilterDateStart={setFilterDateStart}
+                                filterDateEnd={filterDateEnd}
+                                setFilterDateEnd={setFilterDateEnd}
+                            />
+
                             <div className="flex-1 overflow-y-auto p-4">
+
+                                {/* Projects Grid */}
                                 {filteredPolygons.length === 0 ? (
                                     <p className="text-gray-500 text-center">No projects match the filters.</p>
                                 ) : (
@@ -496,14 +434,14 @@ const ProjectManagementView = () => {
                                                             <LayersControl.BaseLayer checked name="Street Map">
                                                                 <TileLayer
                                                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                                                                     maxZoom={19}
                                                                 />
                                                             </LayersControl.BaseLayer>
                                                             <LayersControl.BaseLayer name="Satellite">
                                                                 <TileLayer
                                                                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                                                                    attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                                    attribution='Tiles © Esri, USGS, etc.'
                                                                     maxZoom={20}
                                                                 />
                                                             </LayersControl.BaseLayer>
@@ -661,7 +599,7 @@ const ProjectManagementView = () => {
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-gray-500 italic">No images available</p>
+                                        <p className="text-sm text-gray-600 italic">No images available</p>
                                     )}
                                 </div>
                             </div>

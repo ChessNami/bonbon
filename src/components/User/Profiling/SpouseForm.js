@@ -197,62 +197,62 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
     };
 
     return (
-        <div className="p-4 shadow-lg rounded-lg">
-            <form className="space-y-6">
-                <fieldset className="border p-4 rounded-lg">
-                    <legend className="font-semibold">Name of Spouse</legend>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="p-4 sm:p-6 md:p-8 shadow-lg rounded-lg max-w-4xl mx-auto">
+            <form className="space-y-4 sm:space-y-6">
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Name of Spouse</legend>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 First Name <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
                                 name="firstName"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.firstName || ''}
                                 onChange={handleChange}
                                 required
                             />
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Last Name <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
                                 name="lastName"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.lastName || ''}
                                 onChange={handleChange}
                                 required
                             />
                         </div>
                         <div>
-                            <label>Middle Name</label>
+                            <label className="block text-xs sm:text-sm font-medium">Middle Name</label>
                             <input
                                 type="text"
                                 name="middleName"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.middleName || ''}
                                 onChange={handleChange}
                             />
                         </div>
                         <div>
-                            <label>Middle Initial</label>
+                            <label className="block text-xs sm:text-sm font-medium">Middle Initial</label>
                             <input
                                 type="text"
                                 name="middleInitial"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.middleInitial || ''}
                                 readOnly
                             />
                         </div>
                         <div>
-                            <label>Extension</label>
+                            <label className="block text-xs sm:text-sm font-medium">Extension</label>
                             <select
                                 name="extension"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.extension || ''}
                                 onChange={handleChange}
                             >
@@ -268,29 +268,29 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     </div>
                 </fieldset>
 
-                <fieldset className="border p-4 rounded-lg">
-                    <legend className="font-semibold">Address</legend>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="col-span-2">
-                            <label>
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Address</legend>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                        <div className="sm:col-span-2">
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Address <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
                                 name="address"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.address || ''}
                                 onChange={handleChange}
                                 required
                             />
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Region <span className="text-red-500">*</span>
                             </label>
                             <select
                                 name="region"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.region || ''}
                                 onChange={handleChange}
                                 required
@@ -304,12 +304,12 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             </select>
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Province <span className="text-red-500">*</span>
                             </label>
                             <select
                                 name="province"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.province || ''}
                                 onChange={handleChange}
                                 required
@@ -323,12 +323,12 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             </select>
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 City <span className="text-red-500">*</span>
                             </label>
                             <select
                                 name="city"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.city || ''}
                                 onChange={handleChange}
                                 required
@@ -342,12 +342,12 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             </select>
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Barangay <span className="text-red-500">*</span>
                             </label>
                             <select
                                 name="barangay"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.barangay || ''}
                                 onChange={handleChange}
                                 required
@@ -365,10 +365,10 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             formData.city === '104305000' &&
                             formData.barangay === '104305040' && (
                                 <div>
-                                    <label>Zone#</label>
+                                    <label className="block text-xs sm:text-sm font-medium">Zone#</label>
                                     <select
                                         name="zone"
-                                        className="input-style"
+                                        className="input-style text-sm sm:text-base"
                                         value={formData.zone || ''}
                                         onChange={handleChange}
                                     >
@@ -382,13 +382,13 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 </div>
                             )}
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Zip Code <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
                                 name="zipCode"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.zipCode || ''}
                                 onChange={handleChange}
                                 required
@@ -397,41 +397,41 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     </div>
                 </fieldset>
 
-                <fieldset className="border p-4 rounded-lg">
-                    <legend className="font-semibold">Personal Information</legend>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Personal Information</legend>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Date of Birth <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="date"
                                 name="dob"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.dob || ''}
                                 onChange={handleChange}
                                 required
                             />
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Age <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
                                 name="age"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.age || ''}
                                 disabled
                             />
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Gender <span className="text-red-500">*</span>
                             </label>
                             <select
                                 name="gender"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={gender}
                                 onChange={handleGenderChange}
                                 required
@@ -444,10 +444,10 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                         </div>
                         {gender === 'Other' && (
                             <div>
-                                <label>Specify Gender</label>
+                                <label className="block text-xs sm:text-sm font-medium">Specify Gender</label>
                                 <select
                                     name="customGender"
-                                    className="input-style"
+                                    className="input-style text-sm sm:text-base"
                                     value={customGender}
                                     onChange={(e) => {
                                         setCustomGender(e.target.value);
@@ -469,12 +469,12 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             </div>
                         )}
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Civil Status <span className="text-red-500">*</span>
                             </label>
                             <select
                                 name="civilStatus"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.civilStatus || ''}
                                 onChange={handleChange}
                                 required
@@ -490,11 +490,11 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             </select>
                         </div>
                         <div>
-                            <label>Religion</label>
+                            <label className="block text-xs sm:text-sm font-medium">Religion</label>
                             <input
                                 type="text"
                                 name="religion"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.religion || ''}
                                 onChange={handleChange}
                             />
@@ -502,16 +502,16 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     </div>
                 </fieldset>
 
-                <fieldset className="border p-4 rounded-lg">
-                    <legend className="font-semibold">Identification</legend>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Identification</legend>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Type of ID <span className="text-red-500">*</span>
                             </label>
                             <select
                                 name="idType"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.idType || ''}
                                 onChange={handleChange}
                                 required
@@ -532,13 +532,13 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             </select>
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 ID No. <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
                                 name="idNo"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.idNo || ''}
                                 onChange={handleChange}
                                 required
@@ -546,13 +546,13 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             />
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 Phone Number <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
                                 name="phoneNumber"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={formData.phoneNumber || ''}
                                 onChange={handleChange}
                                 required
@@ -561,15 +561,15 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     </div>
                 </fieldset>
 
-                <fieldset className="border p-4 rounded-lg">
-                    <legend className="font-semibold">Employment</legend>
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Employment</legend>
                     <div className="mb-4">
-                        <label>
+                        <label className="block text-xs sm:text-sm font-medium">
                             Employment Type <span className="text-red-500">*</span>
                         </label>
                         <select
                             name="employmentType"
-                            className="input-style"
+                            className="input-style text-sm sm:text-base"
                             value={employmentType}
                             onChange={handleEmploymentChange}
                             required
@@ -583,33 +583,33 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                         </select>
                     </div>
                     {employmentType === 'employed' && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                             <div>
-                                <label>Occupation</label>
+                                <label className="block text-xs sm:text-sm font-medium">Occupation</label>
                                 <input
                                     type="text"
                                     name="occupation"
-                                    className="input-style"
+                                    className="input-style text-sm sm:text-base"
                                     value={formData.occupation || ''}
                                     onChange={handleChange}
                                 />
                             </div>
                             <div>
-                                <label>Skills</label>
+                                <label className="block text-xs sm:text-sm font-medium">Skills</label>
                                 <input
                                     type="text"
                                     name="skills"
-                                    className="input-style"
+                                    className="input-style text-sm sm:text-base"
                                     value={formData.skills || ''}
                                     onChange={handleChange}
                                 />
                             </div>
                             <div>
-                                <label>Company Address</label>
+                                <label className="block text-xs sm:text-sm font-medium">Company Address</label>
                                 <input
                                     type="text"
                                     name="companyAddress"
-                                    className="input-style"
+                                    className="input-style text-sm sm:text-base"
                                     value={formData.companyAddress || ''}
                                     onChange={handleChange}
                                 />
@@ -618,15 +618,15 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     )}
                 </fieldset>
 
-                <fieldset className="border p-4 rounded-lg">
-                    <legend className="font-semibold">Educational Attainment</legend>
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Educational Attainment</legend>
                     <div>
-                        <label>
+                        <label className="block text-xs sm:text-sm font-medium">
                             Education Level <span className="text-red-500">*</span>
                         </label>
                         <select
                             name="education"
-                            className="input-style"
+                            className="input-style text-sm sm:text-base"
                             value={formData.education || ''}
                             onChange={handleChange}
                             required
@@ -640,17 +640,17 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     </div>
                 </fieldset>
 
-                <div className="flex justify-between mt-4">
+                <div className="flex flex-col sm:flex-row justify-between mt-4 gap-4">
                     <button
                         type="button"
-                        className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 transform hover:scale-105 active:scale-95"
+                        className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={handleBackClick}
                     >
                         Back
                     </button>
                     <button
                         type="button"
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 transform hover:scale-105 active:scale-95"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={handleSubmit}
                     >
                         Next

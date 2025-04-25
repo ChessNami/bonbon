@@ -10,12 +10,10 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     const [profilePicture, setProfilePicture] = useState(placeholderImg);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); // New state for loading
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
     const [isDisplayNameVisible, setIsDisplayNameVisible] = useState(true);
-
-    // Determine if the profile picture is still loading
-    const isLoading = profilePicture === placeholderImg;
 
     useEffect(() => {
         const handleResize = () => {
@@ -30,12 +28,14 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
     useEffect(() => {
         let unsubscribe;
         const fetchUserData = async () => {
+            setIsLoading(true); // Set loading to true when fetching starts
             const { data: { user }, error } = await supabase.auth.getUser();
 
             if (error || !user) {
                 console.error("Error fetching user:", error?.message || "No user found");
                 setProfilePicture(placeholderImg);
                 setDisplayName("Admin");
+                setIsLoading(false); // Stop loading when fetch is complete
                 return;
             }
 
@@ -43,6 +43,7 @@ const AdminHeader = ({ onLogout, setCurrentPage }) => {
 
             const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
             setProfilePicture(profilePicUrl || placeholderImg);
+            setIsLoading(false); // Stop loading when fetch is complete
 
             // Subscribe to photo changes
             unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {

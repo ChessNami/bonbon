@@ -20,9 +20,11 @@ code {
     monospace;
 }
 
-/* INPUT FIELDS */
+/* Input Fields */
 .input-style {
-  @apply w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary;
+  @apply w-full p-2 sm:p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base;
+  min-height: 40px;
+  /* Ensures touch-friendly height */
 }
 
 /* CARDS */

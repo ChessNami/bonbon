@@ -5,6 +5,7 @@ import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser, FaCalendarAlt } from "re
 import Swal from "sweetalert2";
 import { useUser } from "./contexts/UserContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const Auth = ({ onLoginSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -18,16 +19,17 @@ const Auth = ({ onLoginSuccess }) => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isResetPassword, setIsResetPassword] = useState(false);
     const { setDisplayName } = useUser();
+    const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         Swal.fire({
-            title: 'Processing...',
-            text: 'Please wait while we log you in.',
+            title: "Processing...",
+            text: "Please wait while we log you in.",
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
-            }
+            },
         });
         const { data: { user }, error } = await supabase.auth.signInWithPassword({
             email,
@@ -36,42 +38,43 @@ const Auth = ({ onLoginSuccess }) => {
         Swal.close();
         if (error) {
             Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
+                icon: "error",
+                title: "Oops...",
                 text: error.message,
                 timer: 1500,
                 timerProgressBar: true,
                 showConfirmButton: false,
-                background: '#ffe4e6',
+                background: "#ffe4e6",
             });
         } else {
             const { data: userRoleData, error: roleError } = await supabase
-                .from('user_roles')
-                .select('role_id')
-                .eq('user_id', user.id)
+                .from("user_roles")
+                .select("role_id")
+                .eq("user_id", user.id)
                 .single();
             if (roleError) {
                 Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
+                    icon: "error",
+                    title: "Oops...",
                     text: roleError.message,
                     timer: 1500,
                     timerProgressBar: true,
                     showConfirmButton: false,
-                    background: '#ffe4e6',
+                    background: "#ffe4e6",
                 });
             } else {
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: 'User logged in successfully',
+                    icon: "success",
+                    title: "Success",
+                    text: "User logged in successfully",
                     timer: 1500,
                     timerProgressBar: true,
                     showConfirmButton: false,
-                    background: '#f0f9ff',
+                    background: "#f0f9ff",
                 });
                 setDisplayName(user.user_metadata.display_name);
                 onLoginSuccess(userRoleData.role_id, user.user_metadata.display_name);
+                navigate("/");
             }
         }
     };
@@ -80,23 +83,23 @@ const Auth = ({ onLoginSuccess }) => {
         e.preventDefault();
         if (password !== confirmPassword) {
             Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
-                text: 'Passwords do not match',
+                icon: "error",
+                title: "Oops...",
+                text: "Passwords do not match",
                 timer: 1500,
                 timerProgressBar: true,
                 showConfirmButton: false,
-                background: '#ffe4e6',
+                background: "#ffe4e6",
             });
             return;
         }
         Swal.fire({
-            title: 'Processing...',
-            text: 'Please wait while we register your account.',
+            title: "Processing...",
+            text: "Please wait while we register your account.",
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
-            }
+            },
         });
         const { data, error } = await supabase.auth.signUp({
             email,
@@ -111,37 +114,37 @@ const Auth = ({ onLoginSuccess }) => {
         Swal.close();
         if (error) {
             Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
+                icon: "error",
+                title: "Oops...",
                 text: error.message,
                 timer: 1500,
                 timerProgressBar: true,
                 showConfirmButton: false,
-                background: '#ffe4e6',
+                background: "#ffe4e6",
             });
         } else if (data.user) {
             const { error: roleError } = await supabase
-                .from('user_roles')
+                .from("user_roles")
                 .insert([{ user_id: data.user.id, role_id: 2 }]);
             if (roleError) {
                 Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
+                    icon: "error",
+                    title: "Oops...",
                     text: roleError.message,
                     timer: 1500,
                     timerProgressBar: true,
                     showConfirmButton: false,
-                    background: '#ffe4e6',
+                    background: "#ffe4e6",
                 });
             } else {
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: 'Registration successful. Please check your email to verify your account.',
+                    icon: "success",
+                    title: "Success",
+                    text: "Registration successful. Please check your email to verify your account.",
                     timer: 1500,
                     timerProgressBar: true,
                     showConfirmButton: false,
-                    background: '#f0f9ff',
+                    background: "#f0f9ff",
                 });
                 switchToLogin();
             }
@@ -151,34 +154,38 @@ const Auth = ({ onLoginSuccess }) => {
     const handleResetPassword = async (e) => {
         e.preventDefault();
         Swal.fire({
-            title: 'Processing...',
-            text: 'Please wait while we reset your password.',
+            title: "Processing...",
+            text: "Please wait while we send the reset link.",
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
-            }
+            },
         });
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const redirectTo = `${window.location.origin}/reset-password`;
+        console.log("RedirectTo URL:", redirectTo);
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: redirectTo,
+        });
         Swal.close();
         if (error) {
             Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
+                icon: "error",
+                title: "Oops...",
                 text: error.message,
                 timer: 1500,
                 timerProgressBar: true,
                 showConfirmButton: false,
-                background: '#ffe4e6',
+                background: "#ffe4e6",
             });
         } else {
             Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: 'Password reset email sent',
+                icon: "success",
+                title: "Success",
+                text: "Password reset email sent. Please check your inbox.",
                 timer: 1500,
                 timerProgressBar: true,
                 showConfirmButton: false,
-                background: '#f0f9ff',
+                background: "#f0f9ff",
             });
             switchToLogin();
         }
@@ -199,24 +206,27 @@ const Auth = ({ onLoginSuccess }) => {
         clearForm();
         setIsLogin(true);
         setIsResetPassword(false);
+        navigate("/auth");
     };
 
     const switchToRegister = () => {
         clearForm();
         setIsLogin(false);
         setIsResetPassword(false);
+        navigate("/auth");
     };
 
     const switchToResetPassword = () => {
         clearForm();
         setIsResetPassword(true);
+        navigate("/auth");
     };
 
     // Animation variants for form
     const formVariants = {
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-        exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: "easeIn" } }
+        exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: "easeIn" } },
     };
 
     // Animation variants for input fields
@@ -225,8 +235,8 @@ const Auth = ({ onLoginSuccess }) => {
         visible: (i) => ({
             opacity: 1,
             x: 0,
-            transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" }
-        })
+            transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" },
+        }),
     };
 
     return (
@@ -345,7 +355,7 @@ const Auth = ({ onLoginSuccess }) => {
                                             initial="hidden"
                                             animate="visible"
                                         >
-                                            <FaLock className="absolute left-3 top-3.5 text-gray [18:01] text-gray-400" />
+                                            <FaLock className="absolute left-3 top-3.5 text-gray-400" />
                                             <input
                                                 type={showPassword ? "text" : "password"}
                                                 placeholder="Password"
@@ -392,14 +402,12 @@ const Auth = ({ onLoginSuccess }) => {
                                 )}
                                 <motion.button
                                     type="submit"
-                                    className={`w-full py-2 text-white font-bold rounded-lg uppercase transition duration-200 shadow-md ${isLogin
-                                            ? "bg-blue-500 hover:bg-blue-600"
-                                            : "bg-green-500 hover:bg-green-600"
+                                    className={`w-full py-2 text-white font-bold rounded-lg uppercase transition duration-200 shadow-md ${isLogin ? "bg-blue-500 hover:bg-blue-600" : "bg-green-500 hover:bg-green-600"
                                         }`}
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
-                                    {isResetPassword ? "Reset Password" : isLogin ? "Login" : "Register"}
+                                    {isResetPassword ? "Send Reset Link" : isLogin ? "Login" : "Register"}
                                 </motion.button>
                             </form>
                             <div className="mt-4 text-center text-sm text-gray-600 space-y-2">
@@ -443,7 +451,7 @@ const Auth = ({ onLoginSuccess }) => {
                                         <motion.button
                                             onClick={switchToLogin}
                                             className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200"
-                                            whileHover={{ scale: 1.01 }}
+                                            whileHover={{ scale: 1.05 }}
                                         >
                                             Login
                                         </motion.button>

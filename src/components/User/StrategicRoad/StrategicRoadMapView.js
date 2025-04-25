@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { MapContainer, TileLayer, Popup, Polyline, LayersControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { FaTimes, FaMap, FaTag, FaInfoCircle, FaBan } from "react-icons/fa";
+import { FaTimes, FaMap, FaTag, FaInfoCircle } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import { supabase } from "../../../supabaseClient";
+import PhoneFilters from "./PhoneFilters";
+import FullFilters from "./FullFilters";
 
 const StrategicRoadMapView = () => {
     const centerCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);
@@ -156,7 +158,7 @@ const StrategicRoadMapView = () => {
     }, [roads, filterTitle, filterType, filterColor]);
 
     return (
-        <div className="p-4 mx-auto">
+        <div className="p-4 mx-auto container max-w-7xl">
             <div className="flex flex-wrap gap-3 mb-6">
                 <motion.button
                     onClick={() => setIsModalOpen(true)}
@@ -250,7 +252,7 @@ const StrategicRoadMapView = () => {
                     >
                         <motion.div
                             ref={modalRef}
-                            className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col z-[100]"
+                            className="bg-white rounded-lg w-full max-w-6xl h-[90vh] max-h-[90vh] flex flex-col z-[100]"
                             initial={{ scale: 0.8, y: 50 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.8, y: 50 }}
@@ -271,65 +273,28 @@ const StrategicRoadMapView = () => {
                                 </motion.button>
                             </div>
                             {/* Filter Section */}
-                            <div className="p-4 border-b">
-                                <div className="flex flex-wrap gap-4">
-                                    <div className="flex-1 min-w-[200px]">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Search by Title</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter road title"
-                                            value={filterTitle}
-                                            onChange={(e) => setFilterTitle(e.target.value)}
-                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-[150px]">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Road Type</label>
-                                        <select
-                                            value={filterType}
-                                            onChange={(e) => setFilterType(e.target.value)}
-                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                        >
-                                            <option value="">All Types</option>
-                                            <option value="Concrete">Concrete</option>
-                                            <option value="Improvement">Improvement</option>
-                                            <option value="Widening">Widening</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex-1 min-w-[150px]">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                                        <select
-                                            value={filterColor}
-                                            onChange={(e) => setFilterColor(e.target.value)}
-                                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                        >
-                                            <option value="">All Colors</option>
-                                            <option value="gray">Gray</option>
-                                            <option value="yellow">Yellow</option>
-                                            <option value="blue">Blue</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex-1 flex items-end min-w-[150px]">
-                                        <motion.button
-                                            onClick={() => {
-                                                setFilterTitle("");
-                                                setFilterType("");
-                                                setFilterColor("");
-                                            }}
-                                            className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm"
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                        >
-                                            <FaBan />
-                                            Clear Filters
-                                        </motion.button>
-                                    </div>
-                                </div>
-                            </div>
+                            <PhoneFilters
+                                filterTitle={filterTitle}
+                                setFilterTitle={setFilterTitle}
+                                filterType={filterType}
+                                setFilterType={setFilterType}
+                                filterColor={filterColor}
+                                setFilterColor={setFilterColor}
+                            />
+                            <FullFilters
+                                filterTitle={filterTitle}
+                                setFilterTitle={setFilterTitle}
+                                filterType={filterType}
+                                setFilterType={setFilterType}
+                                filterColor={filterColor}
+                                setFilterColor={setFilterColor}
+                            />
                             {/* Roads Grid */}
-                            <div className="flex-1 overflow-y-auto p-4">
+                            <div className="flex-1 overflow-y-auto p-4 min-h-0">
                                 {filteredRoads.length === 0 ? (
-                                    <p className="text-gray-500 text-center">No roads match the filters.</p>
+                                    <div className="h-full flex items-center justify-center">
+                                        <p className="text-gray-500 text-center">No roads match the filters.</p>
+                                    </div>
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {filteredRoads.map((road) => (
@@ -475,7 +440,7 @@ const StrategicRoadMapView = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 };
 

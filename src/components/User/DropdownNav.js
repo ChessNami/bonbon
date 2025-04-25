@@ -18,9 +18,7 @@ const DropdownNav = ({ handleNavClick, currentPage }) => {
         };
 
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     const navItems = [
@@ -34,14 +32,13 @@ const DropdownNav = ({ handleNavClick, currentPage }) => {
 
     const handleItemClick = (name) => {
         handleNavClick(name);
-        setDropdownOpen(false); // Close the dropdown after selecting a navlink
+        setDropdownOpen(false);
     };
 
     const toggleDropdown = () => {
         setDropdownOpen((prev) => !prev);
     };
 
-    // Framer Motion variants for dropdown animation
     const dropdownVariants = {
         hidden: { opacity: 0, y: -10, scale: 0.95 },
         visible: {
@@ -58,7 +55,6 @@ const DropdownNav = ({ handleNavClick, currentPage }) => {
         }
     };
 
-    // Framer Motion variants for nav items
     const itemVariants = {
         rest: { x: 0 },
         hover: { x: 5, transition: { duration: 0.2 } }
@@ -73,12 +69,12 @@ const DropdownNav = ({ handleNavClick, currentPage }) => {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
             >
-                <FaBars className="w-8 h-auto transition-all duration-200" />
+                <FaBars className="w-8 sm:w-10 h-auto transition-all duration-200" />
             </motion.button>
             <AnimatePresence>
                 {dropdownOpen && (
                     <motion.ul
-                        className="absolute left-0 mt-4 p-4 w-72 bg-white text-black rounded-md shadow-lg z-20"
+                        className="absolute left-0 mt-4 p-3 w-56 sm:w-64 bg-white text-black rounded-md shadow-lg z-20"
                         variants={dropdownVariants}
                         initial="hidden"
                         animate="visible"
@@ -87,7 +83,7 @@ const DropdownNav = ({ handleNavClick, currentPage }) => {
                         {navItems.map((item) => (
                             <motion.li
                                 key={item.name}
-                                className="px-4 py-2 hover:bg-gray-200 rounded-md cursor-pointer"
+                                className="px-3 py-2 hover:bg-gray-200 rounded-md cursor-pointer text-sm sm:text-base"
                                 onClick={() => handleItemClick(item.name)}
                                 variants={itemVariants}
                                 initial="rest"

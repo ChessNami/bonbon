@@ -151,58 +151,58 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
     };
 
     return (
-        <div className="p-4 shadow-lg rounded-lg w-full max-w-4xl mx-auto">
-            <form className="space-y-6">
-                <fieldset className="border p-4 rounded-lg">
-                    <legend className="font-semibold text-lg">Household Census Questions</legend>
-                    <div className="space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 shadow-lg rounded-lg max-w-4xl mx-auto">
+            <form className="space-y-4 sm:space-y-6">
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Household Census Questions</legend>
+                    <div className="space-y-4 sm:space-y-6">
                         {/* Question 1: Own the house */}
                         <div>
-                            <label className="block font-medium">
+                            <label className="block text-sm sm:text-base font-medium">
                                 1. Do you own the house you are living in? <span className="text-red-500">*</span>
                             </label>
-                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2">
-                                <label className="flex items-center">
+                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2 gap-2 sm:gap-0">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="ownsHouse"
                                         value="Yes"
                                         checked={formData.ownsHouse === 'Yes'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     Yes
                                 </label>
-                                <label className="flex items-center">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="ownsHouse"
                                         value="No"
                                         checked={formData.ownsHouse === 'No'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     No
                                 </label>
-                                <label className="flex items-center">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="isRenting"
                                         value="Yes"
                                         checked={formData.isRenting === 'Yes'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     Renting
                                 </label>
-                                <label className="flex items-center">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="isRenting"
                                         value="No"
                                         checked={formData.isRenting === 'No'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     Not Renting
                                 </label>
@@ -211,7 +211,7 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
 
                         {/* Question 2: Years in Barangay Bonbon */}
                         <div>
-                            <label className="block font-medium">
+                            <label className="block text-sm sm:text-base font-medium">
                                 2. How long have you been staying in Barangay Bonbon? <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -219,7 +219,7 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
                                 name="yearsInBarangay"
                                 value={formData.yearsInBarangay || ''}
                                 onChange={handleChange}
-                                className="input-style mt-2 w-full sm:w-32"
+                                className="input-style mt-2 w-full sm:w-32 text-sm sm:text-base"
                                 placeholder="Enter years"
                                 min="0"
                                 required
@@ -228,36 +228,36 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
 
                         {/* Question 3: Registered voter */}
                         <div>
-                            <label className="block font-medium">
+                            <label className="block text-sm sm:text-base font-medium">
                                 3. Are you a registered voter in Barangay Bonbon? <span className="text-red-500">*</span>
                             </label>
-                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2">
-                                <label className="flex items-center">
+                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2 gap-2 sm:gap-0">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="isRegisteredVoter"
                                         value="Yes"
                                         checked={formData.isRegisteredVoter === 'Yes'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     Yes
                                 </label>
-                                <label className="flex items-center">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="isRegisteredVoter"
                                         value="No"
                                         checked={formData.isRegisteredVoter === 'No'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     No
                                 </label>
                             </div>
                             {formData.isRegisteredVoter === 'Yes' && (
                                 <div className="mt-2">
-                                    <label className="block font-medium">
+                                    <label className="block text-sm sm:text-base font-medium">
                                         Voter’s Precinct No. <span className="text-red-500">*</span>
                                     </label>
                                     <input
@@ -265,7 +265,7 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
                                         name="voterPrecinctNo"
                                         value={formData.voterPrecinctNo || ''}
                                         onChange={handleChange}
-                                        className="input-style mt-1 w-full sm:w-48"
+                                        className="input-style mt-1 w-full sm:w-48 text-sm sm:text-base"
                                         placeholder="Enter precinct number"
                                         required
                                     />
@@ -275,29 +275,29 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
 
                         {/* Question 4: Own Comfort Room */}
                         <div>
-                            <label className="block font-medium">
+                            <label className="block text-sm sm:text-base font-medium">
                                 4. Do you have your own Comfort Room (C.R.)? <span className="text-red-500">*</span>
                             </label>
-                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2">
-                                <label className="flex items-center">
+                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2 gap-2 sm:gap-0">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="hasOwnComfortRoom"
                                         value="Yes"
                                         checked={formData.hasOwnComfortRoom === 'Yes'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     Yes
                                 </label>
-                                <label className="flex items-center">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="hasOwnComfortRoom"
                                         value="No"
                                         checked={formData.hasOwnComfortRoom === 'No'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     No
                                 </label>
@@ -306,29 +306,29 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
 
                         {/* Question 5: Own water supply */}
                         <div>
-                            <label className="block font-medium">
+                            <label className="block text-sm sm:text-base font-medium">
                                 5. Do you have your own source of water supply? <span className="text-red-500">*</span>
                             </label>
-                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2">
-                                <label className="flex items-center">
+                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2 gap-2 sm:gap-0">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="hasOwnWaterSupply"
                                         value="Yes"
                                         checked={formData.hasOwnWaterSupply === 'Yes'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     Yes
                                 </label>
-                                <label className="flex items-center">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="hasOwnWaterSupply"
                                         value="No"
                                         checked={formData.hasOwnWaterSupply === 'No'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     No
                                 </label>
@@ -337,29 +337,29 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
 
                         {/* Question 6: Own electricity */}
                         <div>
-                            <label className="block font-medium">
+                            <label className="block text-sm sm:text-base font-medium">
                                 6. Do you have your own electricity? <span className="text-red-500">*</span>
                             </label>
-                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2">
-                                <label className="flex items-center">
+                            <div className="flex flex-col sm:flex-row sm:space-x-4 mt-2 gap-2 sm:gap-0">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="hasOwnElectricity"
                                         value="Yes"
                                         checked={formData.hasOwnElectricity === 'Yes'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     Yes
                                 </label>
-                                <label className="flex items-center">
+                                <label className="flex items-center text-sm sm:text-base">
                                     <input
                                         type="radio"
                                         name="hasOwnElectricity"
                                         value="No"
                                         checked={formData.hasOwnElectricity === 'No'}
                                         onChange={handleChange}
-                                        className="mr-2 h-4 w-4"
+                                        className="mr-2 h-5 w-5"
                                     />
                                     No
                                 </label>
@@ -368,17 +368,17 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
                     </div>
                 </fieldset>
 
-                <div className="flex flex-col sm:flex-row justify-between mt-4 space-y-3 sm:space-y-0 sm:space-x-3">
+                <div className="flex flex-col sm:flex-row justify-between mt-4 gap-4">
                     <button
                         type="button"
-                        className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
+                        className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={handleBackClick}
                     >
                         Back
                     </button>
                     <button
                         type="button"
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={handleSubmit}
                     >
                         Next

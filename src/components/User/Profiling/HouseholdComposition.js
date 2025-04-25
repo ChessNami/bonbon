@@ -384,19 +384,19 @@ const HouseholdComposition = ({
     };
 
     return (
-        <div className="p-4 shadow-lg rounded-lg">
-            <form className="space-y-6">
-                <fieldset className="border p-4 rounded-lg">
-                    <legend className="font-semibold">Household Composition</legend>
-                    <div className="grid grid-cols-2 gap-4">
+        <div className="p-4 sm:p-6 md:p-8 shadow-lg rounded-lg max-w-4xl mx-auto">
+            <form className="space-y-4 sm:space-y-6">
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Household Composition</legend>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 No. of Children <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
                                 name="childrenCount"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={localChildrenCount}
                                 onChange={handleChildrenCountChange}
                                 min="0"
@@ -404,13 +404,13 @@ const HouseholdComposition = ({
                             />
                         </div>
                         <div>
-                            <label>
+                            <label className="block text-xs sm:text-sm font-medium">
                                 No. of Other Household Members <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
                                 name="numberOfhouseholdMembers"
-                                className="input-style"
+                                className="input-style text-sm sm:text-base"
                                 value={localNumberOfhouseholdMembers}
                                 onChange={handleHouseholdChange}
                                 min="0"
@@ -421,65 +421,65 @@ const HouseholdComposition = ({
                 </fieldset>
 
                 {Array.isArray(children) && children.length > 0 && (
-                    <fieldset className="border p-4 rounded-lg">
-                        <legend className="font-semibold">Children Composition</legend>
+                    <fieldset className="border p-3 sm:p-4 rounded-lg">
+                        <legend className="font-semibold text-sm sm:text-base">Children Composition</legend>
                         {children.map((child, index) => (
-                            <fieldset key={`child-${index}`} className="border p-4 rounded-lg mt-4">
-                                <legend className="font-semibold">Child {index + 1}</legend>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <fieldset key={`child-${index}`} className="border p-3 sm:p-4 rounded-lg mt-4">
+                                <legend className="font-semibold text-sm sm:text-base">Child {index + 1}</legend>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             First Name <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
                                             name="firstName"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.firstName || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Last Name <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
                                             name="lastName"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.lastName || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label>Middle Name</label>
+                                        <label className="block text-xs sm:text-sm font-medium">Middle Name</label>
                                         <input
                                             type="text"
                                             name="middleName"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.middleName || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                         />
                                     </div>
                                     <div>
-                                        <label>Middle Initial</label>
+                                        <label className="block text-xs sm:text-sm font-medium">Middle Initial</label>
                                         <input
                                             type="text"
                                             name="middleInitial"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.middleInitial || ''}
                                             readOnly
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Relation <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             name="relation"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.relation || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                             required
@@ -489,12 +489,12 @@ const HouseholdComposition = ({
                                         </select>
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Gender <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             name="gender"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.gender || ''}
                                             onChange={(e) => handleChildGenderChange(index, e)}
                                             required
@@ -506,49 +506,49 @@ const HouseholdComposition = ({
                                     </div>
                                     {child.gender === 'Other' && (
                                         <div>
-                                            <label>Specify Gender</label>
+                                            <label className="block text-xs sm:text-sm font-medium">Specify Gender</label>
                                             <input
                                                 type="text"
                                                 name="customGender"
-                                                className="input-style"
+                                                className="input-style text-sm sm:text-base"
                                                 value={child.customGender || ''}
                                                 onChange={(e) => handleChildChange(index, e)}
                                             />
                                         </div>
                                     )}
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Date of Birth <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="date"
                                             name="dob"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.dob || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Age <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
                                             name="age"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.age || ''}
                                             disabled
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Education <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             name="education"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.education || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                             required
@@ -562,22 +562,22 @@ const HouseholdComposition = ({
                                         </select>
                                     </div>
                                     <div>
-                                        <label>Occupation</label>
+                                        <label className="block text-xs sm:text-sm font-medium">Occupation</label>
                                         <input
                                             type="text"
                                             name="occupation"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.occupation || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Is Living with Parent/s? <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             name="isLivingWithParents"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={child.isLivingWithParents || 'Yes'}
                                             onChange={(e) => handleChildChange(index, e)}
                                             required
@@ -588,26 +588,26 @@ const HouseholdComposition = ({
                                     </div>
                                     {child.isLivingWithParents === 'No' && (
                                         <>
-                                            <div className="col-span-2">
-                                                <label>
+                                            <div className="sm:col-span-2">
+                                                <label className="block text-xs sm:text-sm font-medium">
                                                     Address <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
                                                     name="address"
-                                                    className="input-style"
+                                                    className="input-style text-sm sm:text-base"
                                                     value={child.address || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
                                                     required
                                                 />
                                             </div>
                                             <div>
-                                                <label>
+                                                <label className="block text-xs sm:text-sm font-medium">
                                                     Region <span className="text-red-500">*</span>
                                                 </label>
                                                 <select
                                                     name="region"
-                                                    className="input-style"
+                                                    className="input-style text-sm sm:text-base"
                                                     value={child.region || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
                                                     required
@@ -621,12 +621,12 @@ const HouseholdComposition = ({
                                                 </select>
                                             </div>
                                             <div>
-                                                <label>
+                                                <label className="block text-xs sm:text-sm font-medium">
                                                     Province <span className="text-red-500">*</span>
                                                 </label>
                                                 <select
                                                     name="province"
-                                                    className="input-style"
+                                                    className="input-style text-sm sm:text-base"
                                                     value={child.province || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
                                                     required
@@ -640,12 +640,12 @@ const HouseholdComposition = ({
                                                 </select>
                                             </div>
                                             <div>
-                                                <label>
+                                                <label className="block text-xs sm:text-sm font-medium">
                                                     City <span className="text-red-500">*</span>
                                                 </label>
                                                 <select
                                                     name="city"
-                                                    className="input-style"
+                                                    className="input-style text-sm sm:text-base"
                                                     value={child.city || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
                                                     required
@@ -659,12 +659,12 @@ const HouseholdComposition = ({
                                                 </select>
                                             </div>
                                             <div>
-                                                <label>
+                                                <label className="block text-xs sm:text-sm font-medium">
                                                     Barangay <span className="text-red-500">*</span>
                                                 </label>
                                                 <select
                                                     name="barangay"
-                                                    className="input-style"
+                                                    className="input-style text-sm sm:text-base"
                                                     value={child.barangay || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
                                                     required
@@ -678,13 +678,13 @@ const HouseholdComposition = ({
                                                 </select>
                                             </div>
                                             <div>
-                                                <label>
+                                                <label className="block text-xs sm:text-sm font-medium">
                                                     Zip Code <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
                                                     name="zipCode"
-                                                    className="input-style"
+                                                    className="input-style text-sm sm:text-base"
                                                     value={child.zipCode || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
                                                     required
@@ -695,10 +695,10 @@ const HouseholdComposition = ({
                                                 child.city === '104305000' &&
                                                 child.barangay === '104305040' && (
                                                     <div>
-                                                        <label>Zone#</label>
+                                                        <label className="block text-xs sm:text-sm font-medium">Zone#</label>
                                                         <select
                                                             name="zone"
-                                                            className="input-style"
+                                                            className="input-style text-sm sm:text-base"
                                                             value={child.zone || ''}
                                                             onChange={(e) => handleChildChange(index, e)}
                                                         >
@@ -720,65 +720,65 @@ const HouseholdComposition = ({
                 )}
 
                 {Array.isArray(householdMembers) && householdMembers.length > 0 && (
-                    <fieldset className="border p-4 rounded-lg">
-                        <legend className="font-semibold">Other Household Members</legend>
+                    <fieldset className="border p-3 sm:p-4 rounded-lg">
+                        <legend className="font-semibold text-sm sm:text-base">Other Household Members</legend>
                         {householdMembers.map((member, index) => (
-                            <fieldset key={`member-${index}`} className="border p-4 rounded-lg mt-4">
-                                <legend className="font-semibold">Household Member {index + 1}</legend>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <fieldset key={`member-${index}`} className="border p-3 sm:p-4 rounded-lg mt-4">
+                                <legend className="font-semibold text-sm sm:text-base">Household Member {index + 1}</legend>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             First Name <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
                                             name="firstName"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.firstName || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Last Name <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
                                             name="lastName"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.lastName || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label>Middle Name</label>
+                                        <label className="block text-xs sm:text-sm font-medium">Middle Name</label>
                                         <input
                                             type="text"
                                             name="middleName"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.middleName || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                         />
                                     </div>
                                     <div>
-                                        <label>Middle Initial</label>
+                                        <label className="block text-xs sm:text-sm font-medium">Middle Initial</label>
                                         <input
                                             type="text"
                                             name="middleInitial"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.middleInitial || ''}
                                             readOnly
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Relation <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             name="relation"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.relation || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                             required
@@ -801,12 +801,12 @@ const HouseholdComposition = ({
                                         </select>
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Gender <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             name="gender"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.gender || ''}
                                             onChange={(e) => handleMemberGenderChange(index, e)}
                                             required
@@ -819,10 +819,10 @@ const HouseholdComposition = ({
                                     </div>
                                     {member.gender === 'Other' && (
                                         <div>
-                                            <label>Specify Gender</label>
+                                            <label className="block text-xs sm:text-sm font-medium">Specify Gender</label>
                                             <select
                                                 name="customGender"
-                                                className="input-style"
+                                                className="input-style text-sm sm:text-base"
                                                 value={member.customGender || ''}
                                                 onChange={(e) => handleMemberChange(index, e)}
                                             >
@@ -841,38 +841,38 @@ const HouseholdComposition = ({
                                         </div>
                                     )}
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Date of Birth <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="date"
                                             name="dob"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.dob || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Age <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
                                             name="age"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.age || ''}
                                             disabled
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label>
+                                        <label className="block text-xs sm:text-sm font-medium">
                                             Education <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             name="education"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.education || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                             required
@@ -886,11 +886,11 @@ const HouseholdComposition = ({
                                         </select>
                                     </div>
                                     <div>
-                                        <label>Occupation</label>
+                                        <label className="block text-xs sm:text-sm font-medium">Occupation</label>
                                         <input
                                             type="text"
                                             name="occupation"
-                                            className="input-style"
+                                            className="input-style text-sm sm:text-base"
                                             value={member.occupation || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                         />
@@ -901,17 +901,17 @@ const HouseholdComposition = ({
                     </fieldset>
                 )}
 
-                <div className="flex justify-between mt-4">
+                <div className="flex flex-col sm:flex-row justify-between mt-4 gap-4">
                     <button
                         type="button"
-                        className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 transform hover:scale-105 active:scale-95"
+                        className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-gray-600 active:bg-gray-700 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={handleBackClick}
                     >
                         Back
                     </button>
                     <button
                         type="button"
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 transform hover:scale-105 active:scale-95"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={handleSubmit}
                     >
                         Next

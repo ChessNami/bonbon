@@ -70,14 +70,12 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
-    // Framer Motion variants for dropdown animation
     const dropdownVariants = {
         hidden: { opacity: 0, y: -10, scale: 0.95 },
         visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
         exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } }
     };
 
-    // Framer Motion variants for profile image hover
     const profileVariants = {
         rest: { scale: 1 },
         hover: { scale: 1.05, transition: { duration: 0.2 } }
@@ -89,19 +87,18 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                 {/* Left Side - Logo and Navigation */}
                 <div className="flex items-center">
                     <DropdownNav handleNavClick={setCurrentPage} currentPage={currentPage} />
-                    <button onClick={() => setCurrentPage("Home")} className="ml-4">
-                        <img src={logo} alt="Bonbon Logo" className="w-20 h-auto select-none" draggable="false" />
+                    <button onClick={() => setCurrentPage("Home")} className="ml-2 sm:ml-4">
+                        <img src={logo} alt="Bonbon Logo" className="w-16 sm:w-20 h-auto select-none" draggable="false" />
                     </button>
-                    <div className="ml-2">
-                        <div className="uppercase text-xl text-gray-700 font-bold">Barangay Bonbon</div>
-                        <div className="capitalize text-gray-500">Cagayan de Oro City</div>
+                    <div className="ml-2 hidden sm:block">
+                        <div className="uppercase text-lg sm:text-xl text-gray-700 font-bold">Barangay Bonbon</div>
+                        <div className="capitalize text-sm sm:text-base text-gray-500">Cagayan de Oro City</div>
                     </div>
                 </div>
 
                 {/* Right Side - Full Navigation OR Profile Section */}
-                <div className="flex-1 flex justify-end">
+                <div className="flex-1 flex justify-end items-center">
                     {isSmallScreen ? (
-                        // Show Profile Section in Navbar when screen width < 1160px
                         <div className="relative">
                             <motion.div
                                 className="flex items-center p-1 cursor-pointer rounded-full active:bg-blue-400 hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
@@ -116,7 +113,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                 <motion.img
                                     src={profilePic}
                                     alt="User Profile"
-                                    className="w-16 h-16 rounded-full object-cover select-none"
+                                    className="w-14 sm:w-16 h-14 sm:h-16 rounded-full object-cover select-none"
                                     draggable="false"
                                 />
                             </motion.div>
@@ -125,36 +122,40 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                 {dropdownOpen && (
                                     <motion.div
                                         ref={dropdownRef}
-                                        className="absolute right-0 mt-4 min-w-96 bg-white text-gray-900 rounded-md shadow-lg z-20"
+                                        className="absolute right-0 mt-4 w-64 sm:w-80 bg-white text-gray-900 rounded-md shadow-lg z-20"
                                         variants={dropdownVariants}
                                         initial="hidden"
                                         animate="visible"
                                         exit="exit"
                                     >
-                                        <ul className="p-4 space-y-2">
+                                        <ul className="p-3 sm:p-4 space-y-2">
                                             <motion.li
-                                                className="px-4 py-2 flex items-center cursor-pointer active:bg-blue-200 hover:bg-blue-100 rounded-md transition"
+                                                className="px-3 py-2 flex items-center cursor-pointer active:bg-blue-200 hover:bg-blue-100 rounded-md transition"
                                                 onClick={() => {
                                                     setCurrentPage("Profile");
                                                     setDropdownOpen(false);
                                                 }}
                                                 whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
                                             >
-                                                <img src={profilePic} className="w-14 h-14 rounded-full object-cover mr-2" alt="User Profile" />
-                                                <span className="text-xl font-semibold">{displayName}</span>
+                                                <img src={profilePic} className="w-10 sm:w-14 h-10 sm:h-14 rounded-full object-cover mr-2" alt="User Profile" />
+                                                <span className="text-base sm:text-xl font-semibold">{displayName}</span>
                                             </motion.li>
                                             <motion.li
-                                                className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition"
+                                                className="px-3 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition"
+                                                onClick={() => {
+                                                    setCurrentPage("Feedback");
+                                                    setDropdownOpen(false);
+                                                }}
                                                 whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
                                             >
-                                                <FaCommentDots className="mr-2 text-gray-700" /> Give Feedback
+                                                <FaCommentDots className="mr-2 text-gray-700 text-base sm:text-lg" /> Give Feedback
                                             </motion.li>
                                             <motion.li
-                                                className="px-4 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition text-red-600"
+                                                className="px-3 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition text-red-600"
                                                 onClick={onLogout}
                                                 whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
                                             >
-                                                <FaSignOutAlt className="mr-2 text-red-600" /> Logout
+                                                <FaSignOutAlt className="mr-2 text-red-600 text-base sm:text-lg" /> Logout
                                             </motion.li>
                                         </ul>
                                     </motion.div>
@@ -162,7 +163,6 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                             </AnimatePresence>
                         </div>
                     ) : (
-                        // Show Full Navigation when screen width >= 1160px
                         <FullNav handleNavClick={setCurrentPage} currentPage={currentPage} />
                     )}
                 </div>

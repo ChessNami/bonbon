@@ -11,11 +11,9 @@ const Header = ({ onLogout, setCurrentPage }) => {
     const [isSmallScreen, setIsSmallScreen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [profilePic, setProfilePic] = useState(placeholderImg);
+    const [isLoading, setIsLoading] = useState(true); // New state for loading
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
-
-    // Determine if the profile picture is still loading
-    const isLoading = profilePic === placeholderImg;
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -54,16 +52,19 @@ const Header = ({ onLogout, setCurrentPage }) => {
     useEffect(() => {
         let unsubscribe;
         const fetchProfilePic = async () => {
+            setIsLoading(true); // Set loading to true when fetching starts
             const { data: { user }, error } = await supabase.auth.getUser();
 
             if (error || !user) {
                 console.error("Error fetching user:", error?.message || "No user found");
                 setProfilePic(placeholderImg);
+                setIsLoading(false); // Stop loading when fetch is complete
                 return;
             }
 
             const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
             setProfilePic(profilePicUrl || placeholderImg);
+            setIsLoading(false); // Stop loading when fetch is complete
 
             // Subscribe to photo changes
             unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {

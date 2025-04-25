@@ -58,15 +58,15 @@ const Footer = () => {
         return (
             <footer className="bg-gray-800 text-white p-4">
                 <div className="container mx-auto">
-                    <div className="flex flex-col space-y-6 sm:flex-row sm:space-y-0 sm:space-x-4">
-                        <div className="w-full sm:w-1/3 animate-pulse">
-                            <h3 className="font-semibold">Contact Information</h3>
-                            <p className="h-4 bg-gray-300 rounded w-3/4 mb-2"></p>
-                            <p className="h-4 bg-gray-300 rounded w-1/2 mb-2"></p>
-                            <p className="h-4 bg-gray-300 rounded w-2/3"></p>
+                    <div className="flex flex-col items-center space-y-6">
+                        <div className="w-full text-center animate-pulse">
+                            <h3 className="font-semibold text-lg mb-2">Contact Information</h3>
+                            <p className="h-4 bg-gray-300 rounded w-3/4 mx-auto mb-2"></p>
+                            <p className="h-4 bg-gray-300 rounded w-1/2 mx-auto mb-2"></p>
+                            <p className="h-4 bg-gray-300 rounded w-2/3 mx-auto"></p>
                         </div>
-                        <div className="w-full sm:w-1/3 flex justify-center animate-pulse">
-                            <div className="flex flex-wrap gap-4">
+                        <div className="w-full flex justify-center animate-pulse">
+                            <div className="flex flex-wrap gap-4 justify-center">
                                 {[1, 2, 3].map((_, index) => (
                                     <div key={index} className="flex items-center space-x-2">
                                         <div className="w-8 h-8 bg-gray-300 rounded"></div>
@@ -75,8 +75,8 @@ const Footer = () => {
                                 ))}
                             </div>
                         </div>
-                        <div className="w-full sm:w-1/3 flex justify-end animate-pulse">
-                            <div className="flex flex-wrap gap-4">
+                        <div className="w-full flex justify-center animate-pulse">
+                            <div className="flex flex-wrap gap-4 justify-center">
                                 {[1, 2].map((_, index) => (
                                     <div key={index} className="w-16 h-16 bg-gray-300 rounded"></div>
                                 ))}
@@ -91,11 +91,11 @@ const Footer = () => {
     return (
         <footer className="bg-gray-800 text-white p-4">
             <div className="container mx-auto">
-                <div className="flex flex-col space-y-6 sm:flex-row sm:space-y-0 sm:space-x-4">
+                <div className="flex flex-col items-center space-y-6 sm:flex-row sm:items-start sm:space-y-0 sm:space-x-4">
                     {/* Left Section */}
-                    <div className="w-full sm:w-1/3">
-                        <h3 className="font-semibold text-xl mb-2">Contact Information</h3>
-                        <address className="text-md space-y-2">
+                    <div className="w-full text-center sm:w-1/3 sm:text-left">
+                        <h3 className="font-semibold text-lg sm:text-xl mb-2">Contact Information</h3>
+                        <address className="text-sm sm:text-md space-y-2 not-italic">
                             {footerData.left_info.address ? (
                                 <p>{footerData.left_info.address}</p>
                             ) : (
@@ -107,7 +107,7 @@ const Footer = () => {
                                 <p className="text-gray-400">No telephone provided</p>
                             )}
                             {footerData.left_info.email ? (
-                                <p>Email Address: {footerData.left_info.email}</p>
+                                <p>Email: {footerData.left_info.email}</p>
                             ) : (
                                 <p className="text-gray-400">No email provided</p>
                             )}
@@ -115,8 +115,8 @@ const Footer = () => {
                     </div>
 
                     {/* Center Section */}
-                    <div className="w-full sm:w-1/3 flex justify-center">
-                        <div className="flex flex-wrap gap-4">
+                    <div className="w-full flex justify-center sm:w-1/3">
+                        <div className="flex flex-wrap gap-4 justify-center">
                             {footerData.center_info.length > 0 ? (
                                 footerData.center_info.map((social, index) => (
                                     <a
@@ -129,20 +129,20 @@ const Footer = () => {
                                         {social.imgUrl ? (
                                             <img src={social.imgUrl} alt={social.name} className="w-8 h-8" />
                                         ) : (
-                                            <div className="w-8 h-8 bg-gray-300"></div>
+                                            <div className="w-8 h-8 bg-gray-300 rounded"></div>
                                         )}
-                                        <span className="text-md">{social.name || "Social Name"}</span>
+                                        <span className="text-sm sm:text-md">{social.name || "Social Name"}</span>
                                     </a>
                                 ))
                             ) : (
-                                <p className="text-gray-400">No social media links provided</p>
+                                <p className="text-gray-400 text-sm sm:text-md">No social media links provided</p>
                             )}
                         </div>
                     </div>
 
                     {/* Right Section */}
-                    <div className="w-full sm:w-1/3 flex justify-end">
-                        <div className="flex flex-wrap gap-4 items-center">
+                    <div className="w-full flex justify-center sm:w-1/3 sm:justify-end">
+                        <div className="flex flex-wrap gap-4 justify-center items-center">
                             {footerData.right_info.some(logo => logo?.imgUrl) ? (
                                 footerData.right_info.map((logo, index) => (
                                     logo?.imgUrl ? (
@@ -155,7 +155,7 @@ const Footer = () => {
                                     ) : null
                                 ))
                             ) : (
-                                <p className="text-gray-400">No logos provided</p>
+                                <p className="text-gray-400 text-sm sm:text-md">No logos provided</p>
                             )}
                         </div>
                     </div>
