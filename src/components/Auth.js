@@ -181,8 +181,8 @@ const Auth = ({ onLoginSuccess }) => {
             Swal.fire({
                 icon: "success",
                 title: "Success",
-                text: "Password reset email sent. Please check your inbox.",
-                timer: 1500,
+                text: "Password reset email sent. Please check your inbox, spam, and spamn folders.",
+                timer: 2000,
                 timerProgressBar: true,
                 showConfirmButton: false,
                 background: "#f0f9ff",
@@ -240,7 +240,7 @@ const Auth = ({ onLoginSuccess }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 sm:p-6">
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 sm:p-6 overscroll-y-none touch-auto">
             <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg flex flex-col md:flex-row overflow-hidden">
                 {/* Logo and Welcome Section */}
                 <motion.div
@@ -269,7 +269,7 @@ const Auth = ({ onLoginSuccess }) => {
                                 {isResetPassword ? "Reset Password" : isLogin ? "Login" : "Register"}
                             </h2>
                             <form
-                                className="w-full space-y-4"
+                                className="w-full space-y-4 touch-auto"
                                 onSubmit={isResetPassword ? handleResetPassword : isLogin ? handleLogin : handleRegister}
                             >
                                 {!isLogin && !isResetPassword && (
@@ -286,7 +286,7 @@ const Auth = ({ onLoginSuccess }) => {
                                                 <input
                                                     type="text"
                                                     placeholder="First Name"
-                                                    className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                                    className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
                                                     value={firstName}
                                                     onChange={(e) => setFirstName(e.target.value)}
                                                     required
@@ -303,7 +303,7 @@ const Auth = ({ onLoginSuccess }) => {
                                                 <input
                                                     type="text"
                                                     placeholder="Last Name"
-                                                    className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                                    className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
                                                     value={lastName}
                                                     onChange={(e) => setLastName(e.target.value)}
                                                     required
@@ -321,7 +321,7 @@ const Auth = ({ onLoginSuccess }) => {
                                             <input
                                                 type="date"
                                                 placeholder="Date of Birth"
-                                                className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                                className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none text-gray-700"
                                                 value={dateOfBirth}
                                                 onChange={(e) => setDateOfBirth(e.target.value)}
                                                 required
@@ -340,7 +340,7 @@ const Auth = ({ onLoginSuccess }) => {
                                     <input
                                         type="email"
                                         placeholder="Email"
-                                        className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                        className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
@@ -359,14 +359,14 @@ const Auth = ({ onLoginSuccess }) => {
                                             <input
                                                 type={showPassword ? "text" : "password"}
                                                 placeholder="Password"
-                                                className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                                className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
                                                 required
                                             />
                                             <button
                                                 type="button"
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 touch-auto"
                                                 onClick={() => setShowPassword(!showPassword)}
                                             >
                                                 {showPassword ? <FaEye /> : <FaEyeSlash />}
@@ -384,14 +384,14 @@ const Auth = ({ onLoginSuccess }) => {
                                                 <input
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     placeholder="Confirm Password"
-                                                    className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
+                                                    className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
                                                     value={confirmPassword}
                                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                                     required
                                                 />
                                                 <button
                                                     type="button"
-                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 touch-auto"
                                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                                 >
                                                     {showConfirmPassword ? <FaEye /> : <FaEyeSlash />}
@@ -402,7 +402,7 @@ const Auth = ({ onLoginSuccess }) => {
                                 )}
                                 <motion.button
                                     type="submit"
-                                    className={`w-full py-2 text-white font-bold rounded-lg uppercase transition duration-200 shadow-md ${isLogin ? "bg-blue-500 hover:bg-blue-600" : "bg-green-500 hover:bg-green-600"
+                                    className={`w-full py-2 text-white font-bold rounded-lg uppercase transition duration-200 shadow-md touch-auto ${isLogin ? "bg-blue-500 hover:bg-blue-600" : "bg-green-500 hover:bg-green-600"
                                         }`}
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
@@ -416,7 +416,7 @@ const Auth = ({ onLoginSuccess }) => {
                                         Remembered your password?{" "}
                                         <motion.button
                                             onClick={switchToLogin}
-                                            className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200"
+                                            className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto"
                                             whileHover={{ scale: 1.05 }}
                                         >
                                             Login
@@ -428,7 +428,7 @@ const Auth = ({ onLoginSuccess }) => {
                                             Don't have an account?{" "}
                                             <motion.button
                                                 onClick={switchToRegister}
-                                                className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200"
+                                                className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto"
                                                 whileHover={{ scale: 1.05 }}
                                             >
                                                 Register
@@ -438,7 +438,7 @@ const Auth = ({ onLoginSuccess }) => {
                                             Forgot your password?{" "}
                                             <motion.button
                                                 onClick={switchToResetPassword}
-                                                className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200"
+                                                className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto"
                                                 whileHover={{ scale: 1.05 }}
                                             >
                                                 Reset Password
@@ -450,7 +450,7 @@ const Auth = ({ onLoginSuccess }) => {
                                         Already have an account?{" "}
                                         <motion.button
                                             onClick={switchToLogin}
-                                            className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200"
+                                            className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto"
                                             whileHover={{ scale: 1.05 }}
                                         >
                                             Login
