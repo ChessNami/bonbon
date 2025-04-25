@@ -387,7 +387,7 @@ const ResidentManagement = () => {
                 throw new Error('Failed to update profile status to Update Profiling');
             }
 
-            await axios.post('http://localhost:5000/api/email/send-update-profiling', {
+            await axios.post('http://bonbon-express.vercel.app/api/email/send-update-profiling', {
                 userId: resident.userId,
                 updateReason: reason,
             });
@@ -558,7 +558,7 @@ const ResidentManagement = () => {
             }
 
             try {
-                await axios.post('http://localhost:5000/api/email/send-approval', {
+                await axios.post('http://bonbon-express.vercel.app/api/email/send-approval', {
                     userId: residentData.user_id,
                 });
             } catch (emailError) {
@@ -672,7 +672,7 @@ const ResidentManagement = () => {
             }
 
             try {
-                await axios.post('http://localhost:5000/api/email/send-rejection', {
+                await axios.post('http://bonbon-express.vercel.app/api/email/send-rejection', {
                     userId: residentData.user_id,
                     rejectionReason,
                 });
@@ -761,7 +761,7 @@ const ResidentManagement = () => {
             }
 
             try {
-                await axios.post('http://localhost:5000/api/email/send-update-approval', {
+                await axios.post('http://bonbon-express.vercel.app/api/email/send-update-approval', {
                     userId: resident.userId,
                 });
             } catch (emailError) {
@@ -865,7 +865,7 @@ const ResidentManagement = () => {
             }
 
             try {
-                await axios.post('http://localhost:5000/api/email/send-update-rejection', {
+                await axios.post('http://bonbon-express.vercel.app/api/email/send-update-rejection', {
                     userId: resident.userId,
                     rejectionReason,
                 });
@@ -1204,20 +1204,19 @@ const ResidentManagement = () => {
                                             <div className="flex items-center justify-between mb-5">
                                                 <div className="flex items-center space-x-4">
                                                     <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-semibold text-xl shadow-md">
-                                                        {resident.firstName[0]}{resident.lastName[0]}
+                                                        {resident.firstName.charAt(0).toUpperCase()}{resident.lastName.charAt(0).toUpperCase()}
                                                         <div
                                                             className={`absolute -top-1 -right-1 w-4 h-4 ${pulse} rounded-full border-2 border-white animate-pulse`}
                                                         />
                                                     </div>
                                                     <div>
                                                         <h3 className="text-xl font-extrabold text-gray-900 tracking-wide">
-                                                            {resident.firstName} {resident.lastName}
+                                                            {resident.firstName.charAt(0).toUpperCase() + resident.firstName.slice(1)} {resident.lastName.charAt(0).toUpperCase() + resident.lastName.slice(1)}
                                                         </h3>
                                                         <div className="mt-1">{getStatusBadge(resident.status)}</div>
                                                     </div>
                                                 </div>
                                             </div>
-
                                             {/* Resident Info with Icons */}
                                             <div className="space-y-3 text-sm text-gray-700">
                                                 <p className="flex items-center gap-3">
