@@ -631,7 +631,7 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 setRejectionReason(updateReason);
 
                 try {
-                    await axios.post('http://bonbon-express.vercel.app/api/email/send-update-request', {
+                    await axios.post('https://bonbon-express.vercel.app/api/email/send-update-request', {
                         userId: user.id,
                         updateReason,
                     });

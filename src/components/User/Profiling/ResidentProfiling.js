@@ -485,7 +485,7 @@ const ResidentProfiling = () => {
 
             if (newStatus === 3) {
                 try {
-                    await axios.post('http://bonbon-express.vercel.app/api/email/send-pending', {
+                    await axios.post('https://bonbon-express.vercel.app/api/email/send-pending', {
                         userId,
                     });
                 } catch (emailError) {
