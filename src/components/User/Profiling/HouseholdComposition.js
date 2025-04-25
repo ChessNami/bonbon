@@ -214,12 +214,42 @@ const HouseholdComposition = ({
     }, [localNumberOfhouseholdMembers]);
 
     const handleChildrenCountChange = (e) => {
-        const count = Math.max(0, parseInt(e.target.value, 10) || 0);
+        const value = e.target.value;
+        // Parse the input value, allowing empty string for user typing
+        const parsedValue = value === '' ? 0 : parseInt(value, 10) || 0;
+        const count = Math.max(0, Math.min(40, parsedValue));
+
+        if (parsedValue > 40) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Maximum of 40 children allowed.',
+                timer: 1500,
+                showConfirmButton: false,
+            });
+        }
+
         setLocalChildrenCount(count);
     };
 
     const handleHouseholdChange = (e) => {
-        const count = Math.max(0, parseInt(e.target.value, 10) || 0);
+        const value = e.target.value;
+        // Parse the input value, allowing empty string for user typing
+        const parsedValue = value === '' ? 0 : parseInt(value, 10) || 0;
+        const count = Math.max(0, Math.min(60, parsedValue));
+
+        if (parsedValue > 60) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Maximum of 60 other household members allowed.',
+                timer: 1500,
+                showConfirmButton: false,
+            });
+        }
+
         setLocalNumberOfhouseholdMembers(count);
     };
 
@@ -397,9 +427,10 @@ const HouseholdComposition = ({
                                 type="number"
                                 name="childrenCount"
                                 className="input-style text-sm sm:text-base"
-                                value={localChildrenCount}
+                                value={localChildrenCount === 0 ? '' : localChildrenCount}
                                 onChange={handleChildrenCountChange}
                                 min="0"
+                                max="40"
                                 required
                             />
                         </div>
@@ -411,9 +442,10 @@ const HouseholdComposition = ({
                                 type="number"
                                 name="numberOfhouseholdMembers"
                                 className="input-style text-sm sm:text-base"
-                                value={localNumberOfhouseholdMembers}
+                                value={localNumberOfhouseholdMembers === 0 ? '' : localNumberOfhouseholdMembers}
                                 onChange={handleHouseholdChange}
                                 min="0"
+                                max="60"
                                 required
                             />
                         </div>

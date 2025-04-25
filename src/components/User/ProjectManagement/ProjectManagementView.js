@@ -306,7 +306,7 @@ const ProjectManagementView = () => {
                 {/* Legends Section */}
                 <div className="bg-white p-4 rounded-lg shadow">
                     <h3 className="text-base font-semibold mb-3 flex items-center gap redefine-2">
-                        <FaTag className="text-blue-600" />
+                        <FaTag className="text-blue-600 mr-2" />
                         Project Statuses & Types
                     </h3>
                     <ul className="text-sm text-gray-600 space-y-2">
