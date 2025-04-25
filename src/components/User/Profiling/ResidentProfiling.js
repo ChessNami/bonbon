@@ -35,6 +35,8 @@ const ResidentProfiling = () => {
     });
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [profileStatus, setProfileStatus] = useState(null);
+    const [rejectionReason, setRejectionReason] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
 
     const tabs = [
         { key: 'householdForm', label: 'Household Head Form' },
@@ -46,7 +48,7 @@ const ResidentProfiling = () => {
 
     const confirmationTabs = [
         { key: 'householdHead', label: 'Household Head' },
-        { key: 'spouse', label: 'Spouse', disabled: !formData.spouse },
+        { key: 'spouse', label: 'Spouse' },
         { key: 'householdComposition', label: 'Household Composition' },
         { key: 'census', label: 'Census Questions' },
     ];
@@ -76,7 +78,7 @@ const ResidentProfiling = () => {
                 setUserId(user.id);
                 const { data, error } = await supabase
                     .from('residents')
-                    .select('*, resident_profile_status(status)')
+                    .select('*, resident_profile_status(status, rejection_reason)')
                     .eq('user_id', user.id)
                     .single();
 
@@ -92,15 +94,9 @@ const ResidentProfiling = () => {
                         numberOfhouseholdMembers: data.number_of_household_members || 0,
                     });
                     setProfileStatus(data.resident_profile_status?.status || null);
-                    if (data.resident_profile_status?.status === 2) {
-                        setFormData({
-                            household: {},
-                            spouse: null,
-                            householdComposition: [],
-                            census: {},
-                            childrenCount: 0,
-                            numberOfhouseholdMembers: 0,
-                        });
+                    setRejectionReason(data.resident_profile_status?.rejection_reason || null);
+                    if (data.resident_profile_status?.status === 2 || data.resident_profile_status?.status === 6) {
+                        setIsEditing(true);
                     }
                 } else {
                     setFormData({
@@ -112,6 +108,7 @@ const ResidentProfiling = () => {
                         numberOfhouseholdMembers: 0,
                     });
                     setProfileStatus(null);
+                    setRejectionReason(null);
                 }
             } catch (error) {
                 console.error('Unexpected error in fetchUserAndData:', error.message);
@@ -162,10 +159,9 @@ const ResidentProfiling = () => {
         return () => clearInterval(intervalId);
     }, []);
 
-    const handleNext = (data, nextTab, childrenCount, numberOfhouseholdMembers) => {
+    const handleNext = async (data, nextTab, childrenCount, numberOfhouseholdMembers) => {
         setFormData((prev) => {
             if (activeTab === 'householdForm') {
-                // Check civilStatus to determine the next tab
                 const isMarried = data.civilStatus === 'Married';
                 return {
                     ...prev,
@@ -187,19 +183,48 @@ const ResidentProfiling = () => {
             } else if (nextTab === 'confirmation') {
                 return { ...prev, census: data };
             } else {
-                // Fallback for unexpected cases
                 return prev;
             }
         });
 
-        // Determine the next tab
+        if (activeTab === 'householdForm' && data.civilStatus !== 'Married') {
+            try {
+                const { error } = await supabase
+                    .from('residents')
+                    .update({ spouse: null })
+                    .eq('user_id', userId);
+
+                if (error) {
+                    console.error('Error clearing spouse data:', error.message);
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: `Failed to clear spouse data: ${error.message}`,
+                        timer: 1500,
+                        scrollbarPadding: false,
+                        showConfirmButton: false,
+                    });
+                }
+            } catch (error) {
+                console.error('Unexpected error clearing spouse data:', error.message);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: `An unexpected error occurred: ${error.message || 'Unknown error'}`,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    showConfirmButton: false,
+                });
+            }
+        }
+
         if (activeTab === 'householdForm') {
-            // If civilStatus is Married, go to spouseForm; otherwise, go to householdComposition
             setActiveTab(data.civilStatus === 'Married' ? 'spouseForm' : 'householdComposition');
         } else if (nextTab) {
             setActiveTab(nextTab);
         } else {
-            // Move to the next tab in the defined order
             const currentIndex = tabs.findIndex((t) => t.key === activeTab);
             setActiveTab(tabs[Math.min(currentIndex + 1, tabs.length - 1)].key);
         }
@@ -215,7 +240,7 @@ const ResidentProfiling = () => {
 
     const handleSubmit = async () => {
         if (profileStatus === 1) {
-            Swal.fire({
+            await Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'info',
@@ -261,7 +286,7 @@ const ResidentProfiling = () => {
             for (let field of requiredHouseholdFields) {
                 if (!formData.household[field]) {
                     await loadingSwal.close();
-                    Swal.fire({
+                    await Swal.fire({
                         toast: true,
                         position: 'top-end',
                         icon: 'error',
@@ -276,7 +301,7 @@ const ResidentProfiling = () => {
 
             if (formData.household.civilStatus === 'Married' && !formData.spouse) {
                 await loadingSwal.close();
-                Swal.fire({
+                await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
@@ -311,7 +336,7 @@ const ResidentProfiling = () => {
                 for (let field of requiredSpouseFields) {
                     if (!formData.spouse[field]) {
                         await loadingSwal.close();
-                        Swal.fire({
+                        await Swal.fire({
                             toast: true,
                             position: 'top-end',
                             icon: 'error',
@@ -345,7 +370,7 @@ const ResidentProfiling = () => {
                     for (let field of requiredMemberFields) {
                         if (!member[field]) {
                             await loadingSwal.close();
-                            Swal.fire({
+                            await Swal.fire({
                                 toast: true,
                                 position: 'top-end',
                                 icon: 'error',
@@ -372,7 +397,7 @@ const ResidentProfiling = () => {
             for (let field of requiredCensusFields) {
                 if (!formData.census[field]) {
                     await loadingSwal.close();
-                    Swal.fire({
+                    await Swal.fire({
                         toast: true,
                         position: 'top-end',
                         icon: 'error',
@@ -387,7 +412,7 @@ const ResidentProfiling = () => {
 
             if (formData.census.isRegisteredVoter === 'Yes' && !formData.census.voterPrecinctNo) {
                 await loadingSwal.close();
-                Swal.fire({
+                await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
@@ -419,7 +444,7 @@ const ResidentProfiling = () => {
             if (residentError) {
                 console.error('Error saving resident data:', residentError);
                 await loadingSwal.close();
-                Swal.fire({
+                await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
@@ -446,7 +471,7 @@ const ResidentProfiling = () => {
             if (statusError) {
                 console.error('Error setting resident profile status:', statusError);
                 await loadingSwal.close();
-                Swal.fire({
+                await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
@@ -465,7 +490,8 @@ const ResidentProfiling = () => {
                     });
                 } catch (emailError) {
                     console.error('Failed to send pending email:', emailError.message);
-                    Swal.fire({
+                    await loadingSwal.close();
+                    await Swal.fire({
                         toast: true,
                         position: 'top-end',
                         icon: 'warning',
@@ -475,25 +501,25 @@ const ResidentProfiling = () => {
                         scrollbarPadding: false,
                         timerProgressBar: true,
                     });
+                    return;
                 }
             }
 
             await loadingSwal.close();
-            if (!Swal.isVisible()) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: `Form submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
-                    timer: 1500,
-                    scrollbarPadding: false,
-                    showConfirmButton: false,
-                });
-            }
+            await Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: `Profile submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
+                timer: 1500,
+                scrollbarPadding: false,
+                showConfirmButton: false,
+            });
+            setIsEditing(false);
         } catch (error) {
             console.error('Unexpected error:', error);
             await loadingSwal.close();
-            Swal.fire({
+            await Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
@@ -505,7 +531,6 @@ const ResidentProfiling = () => {
         }
     };
 
-    // Helper function to capitalize field names for better readability
     const capitalizeWords = (str) => {
         return str
             .replace(/([A-Z])/g, ' $1')
@@ -546,6 +571,38 @@ const ResidentProfiling = () => {
             );
         }
 
+        if ((profileStatus === 2 || profileStatus === 6) && !isEditing) {
+            return (
+                <div className="relative flex flex-col items-center justify-center min-h-[50vh] w-full px-4">
+                    <div className="absolute inset-0 bg-orange-100 opacity-50 rounded-lg"></div>
+                    <div className="relative z-10 text-center">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-orange-600">
+                            {profileStatus === 2 ? 'Profile Rejected' : 'Update Profiling Requested'}
+                        </h2>
+                        <p className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-gray-600">
+                            {profileStatus === 2
+                                ? 'Your resident profile was rejected. You can edit your information and resubmit.'
+                                : 'You are requested to update your resident profile. Please edit your information and resubmit.'}
+                        </p>
+                        {rejectionReason && (
+                            <p className="mt-2 text-sm text-gray-600 italic">
+                                <span className="font-semibold">Reason:</span> {rejectionReason}
+                            </p>
+                        )}
+                        <button
+                            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 transform hover:scale-105 active:scale-95"
+                            onClick={() => {
+                                setIsEditing(true);
+                                setActiveTab('householdForm');
+                            }}
+                        >
+                            Edit Profile
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         if (profileStatus === 4) {
             return (
                 <div className="relative flex items-center justify-center min-h-[50vh] w-full px-4">
@@ -555,17 +612,26 @@ const ResidentProfiling = () => {
                         <p className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-gray-600">
                             Your request to update your resident profile is pending admin approval.
                         </p>
+                        {rejectionReason && (
+                            <p className="mt-2 text-sm text-gray-600 italic">
+                                <span className="font-semibold">Reason:</span> {rejectionReason}
+                            </p>
+                        )}
                     </div>
                 </div>
             );
         }
 
+        return renderFormTabs();
+    };
+
+    const renderFormTabs = () => {
         switch (activeTab) {
             case 'householdForm':
                 return (
                     <HouseholdForm
                         data={formData.household}
-                        onNext={(data) => handleNext(data)} // Remove hardcoded nextTab
+                        onNext={(data) => handleNext(data)}
                         onBack={null}
                         userId={userId}
                     />
@@ -608,11 +674,11 @@ const ResidentProfiling = () => {
                             {confirmationTabs.map((tab) => (
                                 <div
                                     key={tab.key}
-                                    onClick={() => !tab.disabled && setActiveConfirmationTab(tab.key)}
+                                    onClick={() => setActiveConfirmationTab(tab.key)}
                                     className={`cursor-pointer px-3 py-2 text-xs sm:text-sm font-medium flex-shrink-0 ${activeConfirmationTab === tab.key
                                         ? 'border-b-2 border-blue-700 text-blue-700'
                                         : 'text-gray-600 hover:text-blue-700'
-                                        } ${tab.disabled ? 'pointer-events-none opacity-50' : ''}`}
+                                        }`}
                                 >
                                     {tab.label}
                                 </div>
@@ -665,46 +731,50 @@ const ResidentProfiling = () => {
                                 </fieldset>
                             )}
 
-                            {activeConfirmationTab === 'spouse' && formData.spouse && (
+                            {activeConfirmationTab === 'spouse' && (
                                 <fieldset className="border p-3 sm:p-4 rounded-lg">
                                     <legend className="font-semibold text-sm sm:text-base">Spouse</legend>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                        {[
-                                            'firstName',
-                                            'middleName',
-                                            'lastName',
-                                            'address',
-                                            'region',
-                                            'province',
-                                            'city',
-                                            'barangay',
-                                            'dob',
-                                            'age',
-                                            'gender',
-                                            'civilStatus',
-                                            'phoneNumber',
-                                            'idType',
-                                            'idNo',
-                                            'education',
-                                            'employmentType',
-                                        ].map((key) => {
-                                            let label = capitalizeWords(key);
-                                            if (key === 'dob') label = 'Date of Birth';
-                                            if (key === 'idType') label = 'ID Type';
-                                            if (key === 'idNo') label = 'ID Number';
+                                    {formData.spouse ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                            {[
+                                                'firstName',
+                                                'middleName',
+                                                'lastName',
+                                                'address',
+                                                'region',
+                                                'province',
+                                                'city',
+                                                'barangay',
+                                                'dob',
+                                                'age',
+                                                'gender',
+                                                'civilStatus',
+                                                'phoneNumber',
+                                                'idType',
+                                                'idNo',
+                                                'education',
+                                                'employmentType',
+                                            ].map((key) => {
+                                                let label = capitalizeWords(key);
+                                                if (key === 'dob') label = 'Date of Birth';
+                                                if (key === 'idType') label = 'ID Type';
+                                                if (key === 'idNo') label = 'ID Number';
 
-                                            return (
-                                                <div key={key}>
-                                                    <label className="font-medium text-xs sm:text-sm">{label}:</label>
-                                                    <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
-                                                        {['region', 'province', 'city', 'barangay'].includes(key)
-                                                            ? addressMappings[key][formData.spouse[key]] || 'N/A'
-                                                            : formData.spouse[key] || 'N/A'}
-                                                    </p>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                return (
+                                                    <div key={key}>
+                                                        <label className="font-medium text-xs sm:text-sm">{label}:</label>
+                                                        <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
+                                                            {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                ? addressMappings[key][formData.spouse[key]] || 'N/A'
+                                                                : formData.spouse[key] || 'N/A'}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs sm:text-sm text-gray-600">No spouse data provided.</p>
+                                    )}
                                 </fieldset>
                             )}
 
@@ -874,7 +944,12 @@ const ResidentProfiling = () => {
                     {tabs.map((tab) => (
                         <div
                             key={tab.key}
-                            onClick={() => (profileStatus !== 1 && profileStatus !== 4) && setActiveTab(tab.key)}
+                            onClick={() => {
+                                if (profileStatus !== 1 && profileStatus !== 4) {
+                                    setActiveTab(tab.key);
+                                    setIsEditing(true);
+                                }
+                            }}
                             className={`cursor-pointer px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium flex-shrink-0 ${activeTab === tab.key
                                 ? 'border-b-2 border-blue-700 text-blue-700'
                                 : 'text-gray-600 hover:text-blue-700'
@@ -898,7 +973,7 @@ const ResidentProfiling = () => {
                     </AnimatePresence>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

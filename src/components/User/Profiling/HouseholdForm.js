@@ -23,7 +23,6 @@ const calculateAge = (dob) => {
 };
 
 const HouseholdForm = ({ data, onNext, onBack, userId }) => {
-    // Initialize form state with calculated age if DOB exists
     const [formData, setFormData] = useState({
         ...data,
         age: data?.dob ? calculateAge(data.dob) : data?.age || '',
@@ -37,7 +36,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
     const [employmentType, setEmploymentType] = useState(data?.employmentType || '');
     const [isAlertVisible, setIsAlertVisible] = useState(false);
 
-    // Fetch household data from Supabase
     const fetchUserData = useCallback(async () => {
         if (!userId) {
             console.log('No userId provided, skipping fetch.');
@@ -73,20 +71,17 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         }
     }, [userId]);
 
-    // Load regions and fetch user data on mount
     useEffect(() => {
         setRegions(getAllRegions());
         fetchUserData();
     }, [fetchUserData]);
 
-    // Update address dropdowns when region, province, or city changes
     useEffect(() => {
         if (formData.region) setProvinces(getProvincesByRegion(formData.region));
         if (formData.province) setCities(getMunicipalitiesByProvince(formData.province));
         if (formData.city) setBarangays(getBarangaysByMunicipality(formData.city));
     }, [formData.region, formData.province, formData.city]);
 
-    // Handle input changes
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => {
@@ -103,7 +98,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             return updatedData;
         });
 
-        // Update address dropdowns
         if (name === 'region') {
             setProvinces(getProvincesByRegion(value));
             setCities([]);
@@ -128,7 +122,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         handleChange(e);
     };
 
-    // Show error alert with throttling
     const showAlert = (message) => {
         if (!isAlertVisible) {
             setIsAlertVisible(true);
@@ -144,7 +137,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         }
     };
 
-    // Handle form submission
     const handleSubmit = async () => {
         const requiredFields = [
             'firstName',
@@ -186,13 +178,25 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 employmentType,
             };
 
-            const { error } = await supabase
+            const { error: householdError } = await supabase
                 .from('residents')
                 .upsert({ user_id: userId, household: updatedData }, { onConflict: 'user_id' });
 
-            if (error) {
-                showAlert(`An error occurred while saving the data: ${error.message}`);
+            if (householdError) {
+                showAlert(`An error occurred while saving household data: ${householdError.message}`);
                 return;
+            }
+
+            if (formData.civilStatus !== 'Married') {
+                const { error: spouseError } = await supabase
+                    .from('residents')
+                    .update({ spouse: null })
+                    .eq('user_id', userId);
+
+                if (spouseError) {
+                    showAlert(`An error occurred while clearing spouse data: ${spouseError.message}`);
+                    return;
+                }
             }
 
             const nextTab = formData.civilStatus === 'Married' ? 'spouseForm' : 'householdComposition';

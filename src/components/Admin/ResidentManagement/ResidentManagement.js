@@ -1953,7 +1953,9 @@ const ResidentManagement = () => {
                                         className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] flex flex-col"
                                     >
                                         <div className="flex justify-between items-center p-4 border-b">
-                                            <h2 className="text-xl font-bold text-gray-900">Request Profile Update</h2>
+                                            <h2 className="text-xl font-bold text-gray-900">
+                                                Request Profile Update
+                                            </h2>
                                             <motion.button
                                                 onClick={() => {
                                                     setUpdateModalOpen(false);
@@ -1970,16 +1972,45 @@ const ResidentManagement = () => {
                                         <div className="p-4">
                                             <div className="space-y-4">
                                                 <div>
-                                                    <label className="font-medium">Reason for Update Request:</label>
+                                                    <label className="font-medium">
+                                                        Reason for requesting profile update:
+                                                    </label>
                                                     <textarea
                                                         value={rejectionReason}
                                                         onChange={(e) => setRejectionReason(e.target.value)}
-                                                        placeholder="Enter reason for requesting profile update"
+                                                        placeholder="State the reason why the user needs to update their profile"
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
                                                         rows="4"
                                                         required
                                                     />
                                                 </div>
+
+                                                {/* Quick Select Options */}
+                                                <div className="flex flex-wrap gap-2 text-sm">
+                                                    {[
+                                                        "Update contact number",
+                                                        "Update home address",
+                                                        "Clarify identification details",
+                                                        "Incomplete personal information",
+                                                    ].map((choice, index) => (
+                                                        <button
+                                                            key={index}
+                                                            onClick={() =>
+                                                                setRejectionReason((prev) =>
+                                                                    prev
+                                                                        ? prev.trim().endsWith('.') || prev.trim().endsWith(',')
+                                                                            ? `${prev} ${choice}`
+                                                                            : `${prev}, ${choice}`
+                                                                        : choice
+                                                                )
+                                                            }
+                                                            className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full hover:bg-yellow-200 transition"
+                                                        >
+                                                            {choice}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
                                                 <div className="flex justify-end gap-2">
                                                     <motion.button
                                                         onClick={handleSubmitUpdate}
@@ -1992,7 +2023,7 @@ const ResidentManagement = () => {
                                                         whileTap={{ scale: 0.95 }}
                                                     >
                                                         <FaSyncAlt />
-                                                        Submit
+                                                        Send Request
                                                     </motion.button>
                                                     <motion.button
                                                         onClick={() => {
