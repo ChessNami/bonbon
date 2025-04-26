@@ -162,7 +162,7 @@ const BarangayOfficials = () => {
         try {
             Swal.fire({
                 title: 'Processing...',
-                text: 'Please wait while we save the official.',
+                text: `Please wait while we ${modalMode === "create" ? "add" : "update"} the official.`,
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 didOpen: () => {
@@ -247,33 +247,17 @@ const BarangayOfficials = () => {
                     .eq('id', currentOfficial.id);
 
                 if (updateError) throw new Error(`Error updating official: ${updateError.message}`);
-
-                Swal.close();
-                Swal.fire({
-                    toast: true,
-                    position: "top-end",
-                    icon: "success",
-                    title: "Official updated successfully",
-                    showConfirmButton: false,
-                    timer: 1500,
-                });
-
-                fetchOfficials();
-                setIsModalOpen(false);
-                return;
             }
 
-            if (modalMode === "create") {
-                Swal.close();
-                Swal.fire({
-                    toast: true,
-                    position: "top-end",
-                    icon: "success",
-                    title: "Official added successfully",
-                    showConfirmButton: false,
-                    timer: 1500,
-                });
-            }
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: `Official ${modalMode === "create" ? "added" : "updated"} successfully`,
+                showConfirmButton: false,
+                timer: 1500,
+            });
 
             await fetchOfficials();
             setIsModalOpen(false);
@@ -291,21 +275,32 @@ const BarangayOfficials = () => {
 
     const handleDeleteConfirm = async () => {
         if (currentOfficial) {
-            if (currentOfficial.image_url) {
-                const filePath = currentOfficial.image_url.split('/barangayofficials/')[1] || `public/official_${currentOfficial.id}.jpg`;
-                await supabase.storage
-                    .from('barangayofficials')
-                    .remove([filePath]);
-            }
+            try {
+                Swal.fire({
+                    title: 'Processing...',
+                    text: 'Please wait while we delete the official.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-            const { error } = await supabase
-                .from('barangay_officials')
-                .delete()
-                .eq('id', currentOfficial.id);
+                if (currentOfficial.image_url) {
+                    const filePath = currentOfficial.image_url.split('/barangayofficials/')[1] || `public/official_${currentOfficial.id}.jpg`;
+                    await supabase.storage
+                        .from('barangayofficials')
+                        .remove([filePath]);
+                }
 
-            if (error) {
-                console.error('Error deleting official:', error);
-            } else {
+                const { error } = await supabase
+                    .from('barangay_officials')
+                    .delete()
+                    .eq('id', currentOfficial.id);
+
+                if (error) throw new Error(`Error deleting official: ${error.message}`);
+
+                Swal.close();
                 Swal.fire({
                     toast: true,
                     position: "top-end",
@@ -314,7 +309,16 @@ const BarangayOfficials = () => {
                     showConfirmButton: false,
                     timer: 1500,
                 });
-                fetchOfficials();
+
+                await fetchOfficials();
+            } catch (error) {
+                Swal.close();
+                console.error('Error deleting official:', error);
+                Swal.fire({
+                    icon: "error",
+                    title: "Delete Failed",
+                    text: error.message || "An unexpected error occurred. Please try again.",
+                });
             }
         }
         setIsModalOpen(false);
@@ -448,8 +452,8 @@ const BarangayOfficials = () => {
                             onClick={() => paginate(currentPage - 1)}
                             disabled={currentPage === 1}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === 1
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-500 text-white hover:bg-blue-600'
                                 }`}
                         >
                             <FaArrowLeft size={16} />
@@ -460,8 +464,8 @@ const BarangayOfficials = () => {
                                     key={page}
                                     onClick={() => paginate(page)}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${currentPage === page
-                                        ? 'bg-blue-500 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                 >
                                     {page}
@@ -472,8 +476,8 @@ const BarangayOfficials = () => {
                             onClick={() => paginate(currentPage + 1)}
                             disabled={currentPage === totalPages}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === totalPages
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-500 text-white hover:bg-blue-600'
                                 }`}
                         >
                             <FaArrowRight size={16} />
@@ -521,7 +525,8 @@ const BarangayOfficials = () => {
                                                 name="name"
                                                 value={formData.name}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
@@ -533,10 +538,13 @@ const BarangayOfficials = () => {
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
-                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
+                                            {errors.position && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.position}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Official Type</label>
@@ -545,10 +553,13 @@ const BarangayOfficials = () => {
                                                 name="official_type"
                                                 value={formData.official_type}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
-                                            {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
+                                            {errors.official_type && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Image (PNG/JPEG)</label>
@@ -556,7 +567,8 @@ const BarangayOfficials = () => {
                                                 type="file"
                                                 accept="image/png, image/jpeg"
                                                 onChange={handleImageChange}
-                                                className={`w-full p-2 border rounded ${errors.image ? "border-red-500" : "border-gray-300"}`}
+                                                className={`w-full p-2 border rounded ${errors.image ? "border-red-500" : "border-gray-300"
+                                                    }`}
                                             />
                                             {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
                                         </div>
@@ -608,7 +620,8 @@ const BarangayOfficials = () => {
                                                 name="name"
                                                 value={formData.name}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
@@ -620,10 +633,13 @@ const BarangayOfficials = () => {
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
-                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
+                                            {errors.position && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.position}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Official Type</label>
@@ -632,10 +648,13 @@ const BarangayOfficials = () => {
                                                 name="official_type"
                                                 value={formData.official_type}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
-                                            {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
+                                            {errors.official_type && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>
+                                            )}
                                         </div>
                                     </div>
 

@@ -162,7 +162,7 @@ const SKOfficials = () => {
         try {
             Swal.fire({
                 title: 'Processing...',
-                text: 'Please wait while we save the official.',
+                text: `Please wait while we ${modalMode === "create" ? "add" : "update"} the SK official.`,
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 didOpen: () => {
@@ -249,39 +249,23 @@ const SKOfficials = () => {
                     .eq('id', currentOfficial.id);
 
                 if (updateError) throw new Error(`Error updating SK official: ${updateError.message}`);
-
-                Swal.close(); // Close loader before showing success
-                Swal.fire({
-                    toast: true,
-                    position: "top-end",
-                    icon: "success",
-                    title: "SK Official updated successfully",
-                    showConfirmButton: false,
-                    timer: 1500,
-                });
-
-                fetchOfficials();
-                setIsModalOpen(false);
-                return;
             }
 
-            if (modalMode === "create") {
-                Swal.close(); // Close loader before showing success
-                Swal.fire({
-                    toast: true,
-                    position: "top-end",
-                    icon: "success",
-                    title: "SK Official added successfully",
-                    showConfirmButton: false,
-                    timer: 1500,
-                });
-            }
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: `SK Official ${modalMode === "create" ? "added" : "updated"} successfully`,
+                showConfirmButton: false,
+                timer: 1500,
+            });
 
             await fetchOfficials();
             setIsModalOpen(false);
 
         } catch (error) {
-            Swal.close(); // Close loader on error
+            Swal.close();
             console.error('Error in handleSubmit:', error);
             Swal.fire({
                 icon: "error",
@@ -293,22 +277,32 @@ const SKOfficials = () => {
 
     const handleDeleteConfirm = async () => {
         if (currentOfficial) {
-            // Delete the image from storage if it exists
-            if (currentOfficial.image_url) {
-                const filePath = currentOfficial.image_url.split('/skofficials/')[1] || `public/sk_official_${currentOfficial.id}.jpg`;
-                await supabase.storage
-                    .from('skofficials')
-                    .remove([filePath]);
-            }
+            try {
+                Swal.fire({
+                    title: 'Processing...',
+                    text: 'Please wait while we delete the SK official.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-            const { error } = await supabase
-                .from('sk_officials')
-                .delete()
-                .eq('id', currentOfficial.id);
+                if (currentOfficial.image_url) {
+                    const filePath = currentOfficial.image_url.split('/skofficials/')[1] || `public/sk_official_${currentOfficial.id}.jpg`;
+                    await supabase.storage
+                        .from('skofficials')
+                        .remove([filePath]);
+                }
 
-            if (error) {
-                console.error('Error deleting SK official:', error);
-            } else {
+                const { error } = await supabase
+                    .from('sk_officials')
+                    .delete()
+                    .eq('id', currentOfficial.id);
+
+                if (error) throw new Error(`Error deleting SK official: ${error.message}`);
+
+                Swal.close();
                 Swal.fire({
                     toast: true,
                     position: "top-end",
@@ -317,7 +311,16 @@ const SKOfficials = () => {
                     showConfirmButton: false,
                     timer: 1500,
                 });
-                fetchOfficials();
+
+                await fetchOfficials();
+            } catch (error) {
+                Swal.close();
+                console.error('Error deleting SK official:', error);
+                Swal.fire({
+                    icon: "error",
+                    title: "Delete Failed",
+                    text: error.message || "An unexpected error occurred. Please try again.",
+                });
             }
         }
         setIsModalOpen(false);
@@ -349,7 +352,7 @@ const SKOfficials = () => {
 
     const handleItemsPerPageChange = (e) => {
         setItemsPerPage(Number(e.target.value));
-        setCurrentPage(1); // Reset to first page when items per page changes
+        setCurrentPage(1);
     };
 
     const modalVariants = {
@@ -525,7 +528,8 @@ const SKOfficials = () => {
                                                 name="name"
                                                 value={formData.name}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
@@ -537,10 +541,13 @@ const SKOfficials = () => {
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
-                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
+                                            {errors.position && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.position}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Official Type</label>
@@ -549,10 +556,13 @@ const SKOfficials = () => {
                                                 name="official_type"
                                                 value={formData.official_type}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
-                                            {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
+                                            {errors.official_type && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Image (PNG/JPEG)</label>
@@ -560,7 +570,8 @@ const SKOfficials = () => {
                                                 type="file"
                                                 accept="image/png, image/jpeg"
                                                 onChange={handleImageChange}
-                                                className={`w-full p-2 border rounded ${errors.image ? "border-red-500" : "border-gray-300"}`}
+                                                className={`w-full p-2 border rounded ${errors.image ? "border-red-500" : "border-gray-300"
+                                                    }`}
                                             />
                                             {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
                                         </div>
@@ -612,7 +623,8 @@ const SKOfficials = () => {
                                                 name="name"
                                                 value={formData.name}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.name ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
                                             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
@@ -624,10 +636,13 @@ const SKOfficials = () => {
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
-                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
+                                            {errors.position && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.position}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Official Type</label>
@@ -636,10 +651,13 @@ const SKOfficials = () => {
                                                 name="official_type"
                                                 value={formData.official_type}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.official_type ? "border-red-500" : "border-gray-300"
+                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
                                             />
-                                            {errors.official_type && <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>}
+                                            {errors.official_type && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.official_type}</p>
+                                            )}
                                         </div>
                                     </div>
 

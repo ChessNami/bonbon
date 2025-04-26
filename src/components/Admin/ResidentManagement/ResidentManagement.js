@@ -363,6 +363,7 @@ const ResidentManagement = () => {
         setViewModalOpen(true);
     };
 
+    // UPDATE RESIDENT PROFILE FUNCTION
     const handleUpdateStatus = async (resident, reason) => {
         try {
             Swal.fire({
@@ -445,6 +446,7 @@ const ResidentManagement = () => {
         setRejectionReason('');
     };
 
+    // DELETE RESIDENT PROFILE FUNCTION
     const handleDelete = async (id) => {
         const result = await Swal.fire({
             title: 'Are you sure?',
@@ -491,6 +493,7 @@ const ResidentManagement = () => {
                 scrollbarPadding: false,
                 timerProgressBar: true
             });
+            await fetchResidents();
         } catch (error) {
             Swal.fire({
                 toast: true,
@@ -522,6 +525,7 @@ const ResidentManagement = () => {
         setViewModalOpen(true);
     };
 
+    // ACCEPT RESIDENT PROFILE FUNCTION
     const handleAcceptProfile = async (resident) => {
         try {
             Swal.fire({
@@ -614,6 +618,7 @@ const ResidentManagement = () => {
         }
     };
 
+    // REJECT RESIDENT REQUEST FUNCTION
     const handleRejectProfile = async (resident) => {
         if (!rejectionReason.trim()) {
             await Swal.fire({
@@ -731,6 +736,7 @@ const ResidentManagement = () => {
         }
     };
 
+    // ACCEPT RESIDENT REQUEST FUNCTION
     const handleAcceptRequest = async (resident) => {
         try {
             Swal.fire({
@@ -817,6 +823,7 @@ const ResidentManagement = () => {
         }
     };
 
+    // DECLINE REQUEST FUNCTION
     const handleDeclineRequest = async (resident) => {
         if (!rejectionReason.trim()) {
             await Swal.fire({
