@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 import logo from "../img/Logo/bonbon-logo.png";
-import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser, FaCalendarAlt } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { useUser } from "./contexts/UserContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,7 +14,6 @@ const Auth = ({ onLoginSuccess }) => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
-    const [dateOfBirth, setDateOfBirth] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isResetPassword, setIsResetPassword] = useState(false);
@@ -107,7 +106,6 @@ const Auth = ({ onLoginSuccess }) => {
             options: {
                 data: {
                     display_name: `${firstName} ${lastName}`,
-                    date_of_birth: dateOfBirth,
                 },
             },
         });
@@ -197,7 +195,6 @@ const Auth = ({ onLoginSuccess }) => {
         setConfirmPassword("");
         setFirstName("");
         setLastName("");
-        setDateOfBirth("");
         setShowPassword(false);
         setShowConfirmPassword(false);
     };
@@ -310,23 +307,6 @@ const Auth = ({ onLoginSuccess }) => {
                                                 />
                                             </motion.div>
                                         </div>
-                                        <motion.div
-                                            className="relative"
-                                            variants={inputVariants}
-                                            custom={2}
-                                            initial="hidden"
-                                            animate="visible"
-                                        >
-                                            <FaCalendarAlt className="absolute left-3 top-3.5 text-gray-400" />
-                                            <input
-                                                type="date"
-                                                placeholder="Date of Birth"
-                                                className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none text-gray-700"
-                                                value={dateOfBirth}
-                                                onChange={(e) => setDateOfBirth(e.target.value)}
-                                                required
-                                            />
-                                        </motion.div>
                                     </>
                                 )}
                                 <motion.div

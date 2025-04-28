@@ -70,15 +70,29 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
+    const handleLogoutClick = async () => {
+        try {
+            console.log("Logout clicked"); // Debug log
+            if (onLogout) {
+                await onLogout(); // Call the onLogout function
+                setDropdownOpen(false); // Close dropdown after logout
+            } else {
+                console.error("onLogout function is not defined");
+            }
+        } catch (error) {
+            console.error("Logout error:", error.message);
+        }
+    };
+
     const dropdownVariants = {
         hidden: { opacity: 0, y: -10, scale: 0.95 },
         visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
-        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } }
+        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } },
     };
 
     const profileVariants = {
         rest: { scale: 1 },
-        hover: { scale: 1.05, transition: { duration: 0.2 } }
+        hover: { scale: 1.05, transition: { duration: 0.2 } },
     };
 
     return (
@@ -152,7 +166,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                             </motion.li>
                                             <motion.li
                                                 className="px-3 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition text-red-600"
-                                                onClick={onLogout}
+                                                onClick={handleLogoutClick} // Updated to use handleLogoutClick
                                                 whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
                                             >
                                                 <FaSignOutAlt className="mr-2 text-red-600 text-base sm:text-lg" /> Logout
