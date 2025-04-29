@@ -86,7 +86,7 @@ function App() {
         path="/"
         element={
           isAuthenticated ? (
-            userRole === 1 ? (
+            userRole === 1 || userRole === 3 ? (
               <AdminMainComponent onLogout={handleLogout} />
             ) : (
               <UserMainComponent onLogout={handleLogout} />

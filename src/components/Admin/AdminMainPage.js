@@ -6,6 +6,7 @@ import Settings from "./Settings/Settings";
 import UserFeedback from "./UserFeedback/UserFeedback";
 import TransparencyMainComponent from "./Transparency/TransparencyMainComponent";
 import PlanningMainComponent from "./Planning/PlanningMainComponent";
+import RoleManagement from "./RoleManagement";
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
@@ -24,6 +25,8 @@ const AdminMainPage = ({ currentPage }) => {
                 return <AdminMainProfileComponent />;
             case "Settings":
                 return <Settings />;
+            case "Role Management":
+                return <RoleManagement />;
             default:
                 return <AdminHome />;
         }

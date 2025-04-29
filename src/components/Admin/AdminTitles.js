@@ -1,5 +1,5 @@
 import React from "react";
-import { FaHome, FaUsers, FaCog, FaComment, FaFileAlt, FaChartLine } from "react-icons/fa";
+import { FaHome, FaUsers, FaCog, FaComment, FaFileAlt, FaChartLine, FaCode } from "react-icons/fa";
 
 const AdminTitles = ({ currentPage }) => {
     const titles = {
@@ -10,6 +10,7 @@ const AdminTitles = ({ currentPage }) => {
         "User Feedback": { title: "User Feedback", icon: FaComment },
         Settings: { title: "Settings", icon: FaCog },
         Profile: { title: "Profile", icon: FaUsers },
+        "Role Management": { title: "Role Management", icon: FaCode },
     };
 
     const { title, icon: Icon } = titles[currentPage] || { title: "Home", icon: FaHome };

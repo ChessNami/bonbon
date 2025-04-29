@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { FaBars, FaHome, FaUsers, FaCog, FaComment, FaFileAlt, FaChartLine } from "react-icons/fa";
+import { FaBars, FaHome, FaUsers, FaCog, FaComment, FaFileAlt, FaChartLine, FaCode } from "react-icons/fa";
 import logo from "../../img/Logo/bonbon-logo.png";
+import { supabase } from "../../supabaseClient";
 
 const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPage }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [userRole, setUserRole] = useState(null);
 
     useEffect(() => {
         const handleResize = () => setIsCollapsed(window.innerWidth < 1000);
         window.addEventListener("resize", handleResize);
         handleResize();
         return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    useEffect(() => {
+        const fetchUserRole = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                const { data: userRoleData } = await supabase
+                    .from("user_roles")
+                    .select("role_id")
+                    .eq("user_id", session.user.id)
+                    .single();
+                setUserRole(userRoleData.role_id);
+            }
+        };
+        fetchUserRole();
     }, []);
 
     const sidebarOpen = isSidebarOpen && !isCollapsed;
@@ -20,6 +37,7 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
         { label: "Planning", icon: FaChartLine },
         { label: "Transparency", icon: FaFileAlt },
         { label: "User Feedback", icon: FaComment },
+        ...(userRole === 3 ? [{ label: "Role Management", icon: FaCode }] : []),
         { label: "Settings", icon: FaCog },
     ];
 
@@ -32,7 +50,6 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
                 maxWidth: sidebarOpen ? "16rem" : "4rem",
             }}
         >
-            {/* Sidebar Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-highlight">
                 <div className={`flex items-center transition-all ${sidebarOpen ? "opacity-100" : "opacity-0 hidden"}`}>
                     <img src={logo} alt="Bonbon Logo" className="w-14 h-auto select-none" draggable="false" />
@@ -43,7 +60,6 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
                 </button>
             </div>
 
-            {/* Navigation Links */}
             <nav className="flex-1 mt-2">
                 {navItems.map((item, index) => (
                     <button
