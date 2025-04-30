@@ -50,7 +50,7 @@ const TransparencyMainComponent = () => {
     return (
         <div className="flex flex-col w-full overflow-hidden p-4">
             <div className="w-full">
-                <div className="border-b bg-gray-100 flex flex-wrap">
+                <div className="border-b bg-gray-100 flex flex-wrap select-none">
                     {tabs.map((tab) => (
                         <motion.div
                             key={tab.key}

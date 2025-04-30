@@ -38,6 +38,7 @@
     "react-select": "^5.10.1",
     "react-slick": "^0.30.3",
     "react-spinners": "^0.15.0",
+    "react-tooltip": "^5.28.1",
     "recharts": "^2.15.1",
     "sheetjs-style": "^0.15.8",
     "slick-carousel": "^1.8.1",

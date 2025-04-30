@@ -92,7 +92,7 @@ const AdminProMgmt = () => {
                         .from("roles")
                         .select("name")
                         .eq("id", data.role_id)
-                        .eq("name", "admin")
+                        .in("name", ["admin", "dev"]) // Updated to include 'dev'
                         .single();
                     if (roleError) {
                         console.error("Error checking roles:", roleError);

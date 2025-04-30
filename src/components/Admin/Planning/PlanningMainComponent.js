@@ -35,7 +35,7 @@ const PlanningMainComponent = () => {
 
     return (
         <div className="p-4">
-            <div className="flex border-b border-gray-200">
+            <div className="flex border-b border-gray-200 select-none">
                 <motion.button
                     className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Geotagging"
                             ? "text-blue-600"

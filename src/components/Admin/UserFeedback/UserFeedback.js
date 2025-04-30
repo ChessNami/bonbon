@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaStar, FaCommentAlt, FaFilter, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaStar, FaCommentAlt, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { supabase } from "../../../supabaseClient";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../../utils/supabaseUtils";
 import Loader from "../../Loader";
@@ -16,7 +16,6 @@ const UserFeedback = () => {
     useEffect(() => {
         const fetchFeedbacks = async () => {
             try {
-                // Fetch feedback data
                 let query = supabase
                     .from("feedback")
                     .select("id, user_id, feedback_text, rating, created_at")
@@ -33,7 +32,6 @@ const UserFeedback = () => {
                     return;
                 }
 
-                // Fetch user display names from auth.users
                 const userIds = [...new Set(feedbackData.map((f) => f.user_id))];
                 const { data: userData, error: userError } = await supabase.rpc(
                     "get_users_by_ids",
@@ -45,7 +43,6 @@ const UserFeedback = () => {
                     return;
                 }
 
-                // Map user data to get display names with fallback
                 const userMap = new Map();
                 userData.forEach((user) => {
                     const displayName =
@@ -53,7 +50,6 @@ const UserFeedback = () => {
                     userMap.set(user.id, displayName);
                 });
 
-                // Fetch profile pictures and ensure displayName is set
                 const feedbackWithPhotos = await Promise.all(
                     feedbackData.map(async (feedback) => {
                         const photos = await fetchUserPhotos(feedback.user_id);
@@ -87,7 +83,6 @@ const UserFeedback = () => {
     useEffect(() => {
         const subscriptions = [];
 
-        // Subscribe to photo changes for each user
         feedbacks.forEach((feedback) => {
             const unsubscribe = subscribeToUserPhotos(feedback.user_id, (newPhotos) => {
                 setFeedbacks((prevFeedbacks) =>
@@ -101,7 +96,6 @@ const UserFeedback = () => {
             subscriptions.push(unsubscribe);
         });
 
-        // Cleanup subscriptions
         return () => {
             subscriptions.forEach((unsubscribe) => unsubscribe());
         };
@@ -150,47 +144,67 @@ const UserFeedback = () => {
     return (
         <section className="min-h-screen bg-blue-50 py-8 px-4 sm:px-6 lg:px-8 flex flex-col">
             <div className="flex-1 flex flex-col">
-                {/* Filters and Controls */}
-                <div className="max-w-4xl mx-auto mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <FaFilter className="text-blue-600" />
-                        <label className="text-sm font-medium text-gray-700">
-                            Filter by Rating:
-                        </label>
-                        <select
-                            value={ratingFilter}
-                            onChange={(e) => {
-                                setRatingFilter(Number(e.target.value));
-                                setCurrentPage(1);
-                            }}
-                            className="p-2 border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value={0}>All Ratings</option>
-                            {[1, 2, 3, 4, 5].map((rating) => (
-                                <option key={rating} value={rating}>
-                                    {rating} Star{rating > 1 ? "s" : ""}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <label className="text-sm font-medium text-gray-700">
-                            Items per page:
-                        </label>
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) => {
-                                setItemsPerPage(Number(e.target.value));
-                                setCurrentPage(1);
-                            }}
-                            className="p-2 border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            {[6, 12, 18, 24].map((num) => (
-                                <option key={num} value={num}>
-                                    {num}
-                                </option>
-                            ))}
-                        </select>
+                {/* Refactored Filter Layout */}
+                <div className="max-w-4xl mx-auto mb-8">
+                    <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-6">
+                        {/* Rating Filter */}
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <FaStar className="text-yellow-400" />
+                                <span className="text-sm font-medium text-gray-700">
+                                    Filter by Rating
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {[0, 1, 2, 3, 4, 5].map((rating) => (
+                                    <button
+                                        key={rating}
+                                        onClick={() => {
+                                            setRatingFilter(rating);
+                                            setCurrentPage(1);
+                                        }}
+                                        className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${ratingFilter === rating
+                                                ? "bg-blue-600 text-white shadow-md"
+                                                : "bg-gray-100 text-gray-700 hover:bg-blue-100"
+                                            }`}
+                                    >
+                                        {rating === 0 ? "All" : `${rating} Star${rating > 1 ? "s" : ""}`}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        {/* Items Per Page Slider */}
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-700">
+                                    Items per Page
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <div className="relative w-full sm:w-48">
+                                    <input
+                                        type="range"
+                                        min="6"
+                                        max="24"
+                                        step="6"
+                                        value={itemsPerPage}
+                                        onChange={(e) => {
+                                            setItemsPerPage(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                    <div className="flex justify-between mt-2 text-sm text-gray-600">
+                                        {[6, 12, 18, 24].map((num) => (
+                                            <span key={num}>{num}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                                <span className="text-sm font-semibold text-blue-600">
+                                    {itemsPerPage}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

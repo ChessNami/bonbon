@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../supabaseClient";
-import { FaSearch, FaUser, FaChevronLeft, FaChevronRight, FaSpinner, FaFilter } from "react-icons/fa";
+import { FaSearch, FaUser, FaChevronLeft, FaChevronRight, FaSpinner, FaFilter, FaEdit } from "react-icons/fa";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 import Swal from "sweetalert2";
+import { Tooltip } from "react-tooltip";
 
 const RoleManagement = () => {
     const [users, setUsers] = useState([]);
@@ -17,9 +18,17 @@ const RoleManagement = () => {
     const [loading, setLoading] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [selectedUserForRole, setSelectedUserForRole] = useState(null);
+    const [tempRoleId, setTempRoleId] = useState(null);
+    const [currentUserId, setCurrentUserId] = useState(null);
     const dropdownRef = useRef(null);
 
     useEffect(() => {
+        const fetchCurrentUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUserId(user?.id || null);
+        };
+
+        fetchCurrentUser();
         fetchRoles();
         fetchUsers();
 
@@ -36,7 +45,14 @@ const RoleManagement = () => {
     const fetchRoles = async () => {
         const { data, error } = await supabase.from("roles").select("*");
         if (error) {
-            Swal.fire("Error", "Failed to fetch roles", "error");
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: 'Failed to fetch roles',
+                timer: 1500,
+                showConfirmButton: false
+            });
         } else {
             setRoles(data);
         }
@@ -83,7 +99,14 @@ const RoleManagement = () => {
 
             setUsers(formattedUsers);
         } catch (error) {
-            Swal.fire("Error", error.message, "error");
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: error.message,
+                timer: 1500,
+                showConfirmButton: false
+            });
         }
         setLoading(false);
     };
@@ -129,17 +152,44 @@ const RoleManagement = () => {
     }, [searchTerm, sortField, sortOrder, users, roles]);
 
     const handleRoleChange = async (userId, newRoleId) => {
+        if (userId === currentUserId) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: 'You cannot change your own role',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            return;
+        }
+
         const { error } = await supabase
             .from("user_roles")
             .update({ role_id: newRoleId })
             .eq("user_id", userId);
 
         if (error) {
-            Swal.fire("Error", "Failed to update role", "error");
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: 'Failed to update role',
+                timer: 1500,
+                showConfirmButton: false
+            });
         } else {
-            Swal.fire("Success", "Role updated successfully", "success");
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Role updated successfully',
+                timer: 1500,
+                showConfirmButton: false
+            });
             fetchUsers();
             setSelectedUserForRole(null);
+            setTempRoleId(null);
         }
     };
 
@@ -176,8 +226,8 @@ const RoleManagement = () => {
                     key={i}
                     onClick={() => handlePageChange(i)}
                     className={`px-3 py-1 mx-1 rounded-full text-sm ${currentPage === i
-                            ? "bg-[#172554] text-white"
-                            : "bg-gray-200 text-gray-700 hover:bg-blue-100"
+                        ? "bg-[#172554] text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-blue-100"
                         }`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
@@ -201,7 +251,7 @@ const RoleManagement = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="flex-1 flex flex-col w-full mx-auto">
+            <div className="flex-1 flex flex-col w-full mx-auto min-h-screen">
                 <motion.div
                     className="mb-6 bg-white p-4 rounded-lg shadow flex flex-col md:flex-row md:items-center md:justify-between gap-4"
                     initial={{ y: -20, opacity: 0 }}
@@ -315,68 +365,124 @@ const RoleManagement = () => {
                     </div>
                 </motion.div>
 
-                <AnimatePresence>
-                    {loading ? (
+                <div className="flex flex-col flex-1 relative">
+                    {/* Loading Overlay */}
+                    <AnimatePresence>
+                        {loading && (
+                            <motion.div
+                                className="absolute inset-0 flex justify-center items-center z-10"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                            >
+                                <FaSpinner className="text-[#172554] text-4xl animate-spin" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* User Cards */}
+                    <AnimatePresence>
+                        {paginatedUsers.length === 0 && !loading ? (
+                            <motion.div
+                                className="text-center py-12 bg-white rounded-lg shadow-md max-w-md mx-auto px-4"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.4 }}
+                            >
+                                <FaUser className="mx-auto text-gray-400 mb-4" size={40} />
+                                <p className="text-gray-600 text-lg">No users found.</p>
+                                <p className="text-gray-500 text-sm mt-2">Try adjusting your search or filters.</p>
+                            </motion.div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {paginatedUsers.map((user, index) => (
+                                    <motion.div
+                                        key={user.user_id}
+                                        className="bg-white p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 relative"
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                                    >
+                                        <motion.button
+                                            className={`absolute top-2 right-2 p-2 rounded-full ${user.user_id === currentUserId
+                                                    ? "bg-gray-400 cursor-not-allowed"
+                                                    : "bg-[#172554] text-white hover:bg-blue-800"
+                                                }`}
+                                            onClick={() => {
+                                                if (user.user_id !== currentUserId) {
+                                                    setSelectedUserForRole(user);
+                                                    setTempRoleId(user.role_id);
+                                                }
+                                            }}
+                                            disabled={user.user_id === currentUserId}
+                                            whileHover={user.user_id === currentUserId ? {} : { scale: 1.1 }}
+                                            whileTap={user.user_id === currentUserId ? {} : { scale: 0.9 }}
+                                            data-tooltip-id={`tooltip-${user.user_id}`}
+                                            data-tooltip-content={
+                                                user.user_id === currentUserId
+                                                    ? "You cannot change your own role"
+                                                    : "Change Role"
+                                            }
+                                        >
+                                            <FaEdit />
+                                        </motion.button>
+                                        <Tooltip id={`tooltip-${user.user_id}`} />
+                                        <div className="flex flex-col items-center">
+                                            {user.profilePic ? (
+                                                <img
+                                                    src={user.profilePic}
+                                                    alt="Profile"
+                                                    className="w-48 h-48 rounded object-cover mb-3"
+                                                />
+                                            ) : (
+                                                <div className="w-48 h-48 rounded bg-blue-200 mb-3 flex items-center justify-center">
+                                                    <span className="text-blue-800 font-semibold text-2xl">
+                                                        {user.display_name && typeof user.display_name === "string"
+                                                            ? user.display_name[0]?.toUpperCase()
+                                                            : "A"}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <h2 className="text-lg font-semibold text-center">{user.display_name}</h2>
+                                            <p className="text-sm text-gray-600 capitalize">
+                                                {roles.find((r) => r.id === user.role_id)?.name || "Unknown"}
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
+                    </AnimatePresence>
+
+                    {totalPages > 0 && (
                         <motion.div
-                            className="flex justify-center items-center h-64"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                        >
-                            <FaSpinner className="text-[#172554] text-4xl animate-spin" />
-                        </motion.div>
-                    ) : paginatedUsers.length === 0 ? (
-                        <motion.div
-                            className="text-center py-12 bg-white rounded-lg shadow-md max-w-md mx-auto px-4"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex justify-center items-center mt-auto gap-2 py-4 bg-gray-100"
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
                             transition={{ duration: 0.4 }}
                         >
-                            <FaUser className="mx-auto text-gray-400 mb-4" size={40} />
-                            <p className="text-gray-600 text-lg">No users found.</p>
-                            <p className="text-gray-500 text-sm mt-2">Try adjusting your search or filters.</p>
+                            <motion.button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded-full bg-gray-200 text-gray-700 disabled:opacity-50 hover:bg-blue-100"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <FaChevronLeft />
+                            </motion.button>
+                            {renderPageNumbers()}
+                            <motion.button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="p-2 rounded-full bg-gray-200 text-gray-700 disabled:opacity-50 hover:bg-blue-100"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <FaChevronRight />
+                            </motion.button>
                         </motion.div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {paginatedUsers.map((user, index) => (
-                                <motion.div
-                                    key={user.user_id}
-                                    className="bg-white p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 relative"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                                >
-                                    <motion.button
-                                        className="absolute top-2 left-2 px-3 py-1 bg-[#172554] text-white rounded-md text-sm"
-                                        onClick={() => setSelectedUserForRole(user)}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        Change Role
-                                    </motion.button>
-                                    <div className="flex flex-col items-center">
-                                        {user.profilePic ? (
-                                            <img
-                                                src={user.profilePic}
-                                                alt="Profile"
-                                                className="w-32 h-32 rounded-md object-cover mb-3"
-                                            />
-                                        ) : (
-                                            <div className="w-32 h-32 rounded-md bg-blue-200 mb-3 flex items-center justify-center">
-                                                <span className="text-blue-800 font-semibold text-2xl">
-                                                    {user.display_name && typeof user.display_name === "string"
-                                                        ? user.display_name[0]?.toUpperCase()
-                                                        : "A"}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <h2 className="text-lg font-semibold text-center">{user.display_name}</h2>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
                     )}
-                </AnimatePresence>
+                </div>
 
                 {selectedUserForRole && (
                     <motion.div
@@ -392,31 +498,39 @@ const RoleManagement = () => {
                             exit={{ scale: 0.8, opacity: 0 }}
                         >
                             <h3 className="text-xl font-semibold mb-4">
-                                Change Role for {selectedUserForRole.display_name}
+                                Set Role for {selectedUserForRole.display_name}
                             </h3>
-                            <select
-                                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#172554] mb-4"
-                                value={selectedUserForRole.role_id}
-                                onChange={(e) => handleRoleChange(selectedUserForRole.user_id, e.target.value)}
-                            >
+                            <div className="space-y-2 mb-4">
                                 {roles.map((role) => (
-                                    <option key={role.id} value={role.id}>
+                                    <label key={role.id} className="flex items-center gap-2 capitalize">
+                                        <input
+                                            type="radio"
+                                            name="role"
+                                            value={role.id}
+                                            checked={tempRoleId === role.id}
+                                            onChange={(e) => setTempRoleId(Number(e.target.value))}
+                                            className="form-radio text-[#172554]"
+                                        />
                                         {role.name}
-                                    </option>
+                                    </label>
                                 ))}
-                            </select>
+                            </div>
                             <div className="flex justify-end gap-2">
                                 <motion.button
                                     className="px-4 py-2 bg-gray-200 rounded-md"
-                                    onClick={() => setSelectedUserForRole(null)}
+                                    onClick={() => {
+                                        setSelectedUserForRole(null);
+                                        setTempRoleId(null);
+                                    }}
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
-                                    Cancel
+                                    Discard
                                 </motion.button>
                                 <motion.button
                                     className="px-4 py-2 bg-[#172554] text-white rounded-md"
-                                    onClick={() => handleRoleChange(selectedUserForRole.user_id, selectedUserForRole.role_id)}
+                                    onClick={() => handleRoleChange(selectedUserForRole.user_id, tempRoleId)}
+                                    disabled={!tempRoleId}
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
@@ -427,35 +541,6 @@ const RoleManagement = () => {
                     </motion.div>
                 )}
             </div>
-
-            {totalPages > 0 && (
-                <motion.div
-                    className="flex justify-center items-center mt-8 gap-2 pb-4 sticky bottom-0 bg-gray-100"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.4 }}
-                >
-                    <motion.button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-full bg-gray-200 text-gray-700 disabled:opacity-50 hover:bg-blue-100"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <FaChevronLeft />
-                    </motion.button>
-                    {renderPageNumbers()}
-                    <motion.button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-full bg-gray-200 text-gray-700 disabled:opacity-50 hover:bg-blue-100"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <FaChevronRight />
-                    </motion.button>
-                </motion.div>
-            )}
         </motion.section>
     );
 };

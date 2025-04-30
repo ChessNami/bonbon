@@ -65,12 +65,11 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
                     <button
                         key={index}
                         onClick={() => setCurrentPage(item.label)}
-                        className={`flex items-center w-full py-3 px-4 my-2 text-left text-background hover:bg-secondary transition-all ${sidebarOpen ? "justify-start" : "justify-center"} ${currentPage === item.label ? "bg-secondary" : ""}`}
+                        className={`flex items-center w-full py-3 px-4 my-2 text-left text-background hover:bg-secondary transition-all ${sidebarOpen ? "justify-start" : "justify-center"
+                            } ${currentPage === item.label ? "bg-secondary" : ""}`}
                     >
                         <item.icon className="text-xl" />
-                        <span className={`ml-3 transition-all ${sidebarOpen ? "block" : "hidden"}`}>
-                            {item.label}
-                        </span>
+                        <span className={`ml-3 transition-all ${sidebarOpen ? "block" : "hidden"}`}>{item.label}</span>
                     </button>
                 ))}
             </nav>
