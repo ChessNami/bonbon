@@ -1369,11 +1369,11 @@ const Settings = () => {
                 <h3 className="text-xl font-semibold mb-4 text-gray-800">Footer Preview</h3>
                 <footer className="bg-gray-800 text-white p-4 rounded">
                     <div className="container mx-auto">
-                        <div className="flex flex-col space-y-6 sm:flex-row sm:space-y-0 sm:space-x-4">
-                            {/* Left Section Preview */}
-                            <div className="w-full sm:w-1/3">
-                                <h3 className="font-semibold text-xl mb-2">Contact Information</h3>
-                                <address className="text-md space-y-2">
+                        <div className="flex flex-col items-center space-y-6 sm:flex-row sm:items-start sm:space-y-0 sm:space-x-4">
+                            {/* Left Section */}
+                            <div className="w-full text-center sm:w-1/3 sm:text-left">
+                                <h3 className="font-semibold text-lg sm:text-xl mb-2">Contact Information</h3>
+                                <address className="text-sm sm:text-md space-y-2 not-italic">
                                     {footerData.left_info.address ? (
                                         <p>{footerData.left_info.address}</p>
                                     ) : (
@@ -1385,16 +1385,16 @@ const Settings = () => {
                                         <p className="text-gray-400">No telephone provided</p>
                                     )}
                                     {footerData.left_info.email ? (
-                                        <p>Email Address: {footerData.left_info.email}</p>
+                                        <p>Email: {footerData.left_info.email}</p>
                                     ) : (
                                         <p className="text-gray-400">No email provided</p>
                                     )}
                                 </address>
                             </div>
 
-                            {/* Center Section Preview */}
-                            <div className="w-full sm:w-1/3 flex justify-center">
-                                <div className="flex flex-wrap gap-4">
+                            {/* Center Section */}
+                            <div className="w-full flex justify-center sm:w-1/3">
+                                <div className="flex flex-wrap gap-4 justify-center">
                                     {footerData.center_info.length > 0 ? (
                                         footerData.center_info.map((social, index) => (
                                             <a
@@ -1407,20 +1407,20 @@ const Settings = () => {
                                                 {social.imgUrl ? (
                                                     <img src={social.imgUrl} alt={social.name} className="w-8 h-8" />
                                                 ) : (
-                                                    <div className="w-8 h-8 bg-gray-300"></div>
+                                                    <div className="w-8 h-8 bg-gray-300 rounded"></div>
                                                 )}
-                                                <span className="text-md">{social.name || "Social Name"}</span>
+                                                <span className="text-sm sm:text-md">{social.name || "Social Name"}</span>
                                             </a>
                                         ))
                                     ) : (
-                                        <p className="text-gray-400">No social media links provided</p>
+                                        <p className="text-gray-400 text-sm sm:text-md">No social media links provided</p>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Right Section Preview */}
-                            <div className="w-full sm:w-1/3 flex justify-end">
-                                <div className="flex flex-wrap gap-4 items-center">
+                            {/* Right Section */}
+                            <div className="w-full flex justify-center sm:w-1/3 sm:justify-end">
+                                <div className="flex flex-wrap gap-4 justify-center items-center">
                                     {footerData.right_info.some(logo => logo?.imgUrl) ? (
                                         footerData.right_info.map((logo, index) =>
                                             logo?.imgUrl ? (
@@ -1433,7 +1433,7 @@ const Settings = () => {
                                             ) : null
                                         )
                                     ) : (
-                                        <p className="text-gray-400">No logos provided</p>
+                                        <p className="text-gray-400 text-sm sm:text-md">No logos provided</p>
                                     )}
                                 </div>
                             </div>
