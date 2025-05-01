@@ -45,6 +45,17 @@ const Auth = ({ onLoginSuccess }) => {
                 showConfirmButton: false,
                 background: "#ffe4e6",
             });
+        } else if (!user.email_confirmed_at) {
+            Swal.fire({
+                icon: "error",
+                title: "Email Not Verified",
+                text: "Please verify your email address by clicking the link sent to your inbox. Check your spam folder if you don't see it.",
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: true,
+                background: "#ffe4e6",
+            });
+            await supabase.auth.signOut(); // Sign out the unverified user
         } else {
             const { data: userRoleData, error: roleError } = await supabase
                 .from("user_roles")
@@ -179,7 +190,7 @@ const Auth = ({ onLoginSuccess }) => {
             Swal.fire({
                 icon: "success",
                 title: "Success",
-                text: "Password reset email sent. Please check your inbox, spam, and spamn folders.",
+                text: "Password reset email sent. Please check your inbox, spam, and spam folders.",
                 timer: 2000,
                 timerProgressBar: true,
                 showConfirmButton: false,

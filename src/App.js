@@ -13,7 +13,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { setDisplayName } = useUser();
+  const { setDisplayName, viewMode } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -86,7 +86,9 @@ function App() {
         path="/"
         element={
           isAuthenticated ? (
-            userRole === 1 || userRole === 3 ? (
+            (userRole === 1 || userRole === 3) && viewMode === "user" ? (
+              <UserMainComponent onLogout={handleLogout} />
+            ) : userRole === 1 || userRole === 3 ? (
               <AdminMainComponent onLogout={handleLogout} />
             ) : (
               <UserMainComponent onLogout={handleLogout} />

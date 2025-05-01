@@ -14,6 +14,7 @@ import {
     getMunicipalitiesByProvince,
     getBarangaysByMunicipality,
 } from '@aivangogh/ph-address';
+import placeholderImage from '../../../img/Placeholder/placeholder.png';
 
 const ResidentProfiling = () => {
     const [activeTab, setActiveTab] = useState('householdForm');
@@ -37,6 +38,7 @@ const ResidentProfiling = () => {
     const [profileStatus, setProfileStatus] = useState(null);
     const [rejectionReason, setRejectionReason] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
+    const [signedImageUrl, setSignedImageUrl] = useState(placeholderImage);
 
     const tabs = [
         { key: 'householdForm', label: 'Household Head Form' },
@@ -98,6 +100,23 @@ const ResidentProfiling = () => {
                     if (data.resident_profile_status?.status === 2 || data.resident_profile_status?.status === 6) {
                         setIsEditing(true);
                     }
+
+                    // Fetch signed URL for household head image
+                    if (data.image_url) {
+                        const filePath = data.image_url;
+                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                            .from('householdhead')
+                            .createSignedUrl(filePath, 7200); // 2 hours
+
+                        if (signedUrlError) {
+                            console.error('Error generating signed URL:', signedUrlError);
+                            setSignedImageUrl(placeholderImage);
+                        } else {
+                            setSignedImageUrl(signedUrlData.signedUrl);
+                        }
+                    } else {
+                        setSignedImageUrl(placeholderImage);
+                    }
                 } else {
                     setFormData({
                         household: {},
@@ -109,6 +128,7 @@ const ResidentProfiling = () => {
                     });
                     setProfileStatus(null);
                     setRejectionReason(null);
+                    setSignedImageUrl(placeholderImage);
                 }
             } catch (error) {
                 console.error('Unexpected error in fetchUserAndData:', error.message);
@@ -282,6 +302,7 @@ const ResidentProfiling = () => {
                 'idNo',
                 'employmentType',
                 'education',
+                'image_url',
             ];
             for (let field of requiredHouseholdFields) {
                 if (!formData.household[field]) {
@@ -435,6 +456,7 @@ const ResidentProfiling = () => {
                         census: formData.census,
                         children_count: parseInt(formData.childrenCount, 10) || 0,
                         number_of_household_members: parseInt(formData.numberOfhouseholdMembers, 10) || 0,
+                        image_url: formData.household.image_url,
                     },
                     { onConflict: 'user_id' }
                 )
@@ -608,7 +630,7 @@ const ResidentProfiling = () => {
                 <div className="relative flex items-center justify-center min-h-[50vh] w-full px-4">
                     <div className="absolute inset-0 bg-blue-100 opacity-50 rounded-lg"></div>
                     <div className="relative z-10 text-center">
-                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-blue-600">Update Request Pending</h2>
+                        <h2 className="text-2xl sm:text-3xl detectar cambios md:text-4xl font-bold text-blue-600">Update Request Pending</h2>
                         <p className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-gray-600">
                             Your request to update your resident profile is pending admin approval.
                         </p>
@@ -689,6 +711,17 @@ const ResidentProfiling = () => {
                             {activeConfirmationTab === 'householdHead' && (
                                 <fieldset className="border p-3 sm:p-4 rounded-lg">
                                     <legend className="font-semibold text-sm sm:text-base">Household Head</legend>
+                                    <div className="mb-4">
+                                        <img
+                                            src={signedImageUrl}
+                                            alt="Household Head"
+                                            className="w-32 h-32 object-cover rounded-full mx-auto"
+                                            onError={(e) => {
+                                                console.error('Failed to load household head image:', signedImageUrl);
+                                                e.target.src = placeholderImage;
+                                            }}
+                                        />
+                                    </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                         {[
                                             'firstName',
@@ -973,7 +1006,7 @@ const ResidentProfiling = () => {
                     </AnimatePresence>
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 

@@ -1,26 +1,48 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "../../img/Logo/bonbon-logo.png";
 import DropdownNav from "./DropdownNav";
 import FullNav from "./FullNav";
 import { useUser } from "../contexts/UserContext";
-import { FaSignOutAlt, FaCommentDots } from "react-icons/fa";
+import { FaSignOutAlt, FaCommentDots, FaCog, FaEye } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 import { supabase } from "../../supabaseClient";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 
+// Utility to debounce resize events
+const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
+};
+
+// Memoized Dropdown Item to prevent unnecessary re-renders
+const DropdownItem = memo(({ icon, label, onClick, textColor, bgColor }) => (
+    <motion.li
+        className={`px-3 py-2 flex items-center cursor-pointer rounded-md ${textColor || ""}`}
+        onClick={onClick}
+        whileHover={{ backgroundColor: bgColor || "rgba(219, 234, 254, 0.5)" }}
+        transition={{ duration: 0.1 }}
+    >
+        {icon} <span className="text-base sm:text-lg">{label}</span>
+    </motion.li>
+));
+
 const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
-    const { displayName } = useUser();
+    const { displayName, viewMode, toggleViewMode } = useUser();
     const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1160);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
     const [profilePic, setProfilePic] = useState(placeholderImg);
+    const [userRole, setUserRole] = useState(null);
 
     useEffect(() => {
-        const handleResize = () => {
+        const handleResize = debounce(() => {
             setIsSmallScreen(window.innerWidth < 1160);
-        };
+        }, 100);
 
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
@@ -44,7 +66,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
 
     useEffect(() => {
         let unsubscribe;
-        const fetchProfilePic = async () => {
+        const fetchUserData = async () => {
             const { data: { user }, error } = await supabase.auth.getUser();
 
             if (error || !user) {
@@ -53,15 +75,27 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                 return;
             }
 
+            // Fetch profile picture
             const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
             setProfilePic(profilePicUrl || placeholderImg);
+
+            // Fetch user role
+            const { data: userRoleData, error: roleError } = await supabase
+                .from("user_roles")
+                .select("role_id")
+                .eq("user_id", user.id)
+                .single();
+
+            if (!roleError) {
+                setUserRole(userRoleData.role_id);
+            }
 
             unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
                 setProfilePic(newPhotos.profilePic || placeholderImg);
             });
         };
 
-        fetchProfilePic();
+        fetchUserData();
 
         return () => {
             if (unsubscribe) unsubscribe();
@@ -72,10 +106,10 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
 
     const handleLogoutClick = async () => {
         try {
-            console.log("Logout clicked"); // Debug log
+            console.log("Logout clicked");
             if (onLogout) {
-                await onLogout(); // Call the onLogout function
-                setDropdownOpen(false); // Close dropdown after logout
+                await onLogout();
+                setDropdownOpen(false);
             } else {
                 console.error("onLogout function is not defined");
             }
@@ -85,14 +119,14 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
     };
 
     const dropdownVariants = {
-        hidden: { opacity: 0, y: -10, scale: 0.95 },
-        visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
-        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } },
+        hidden: { opacity: 0, y: -10 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.15, ease: "easeOut" } },
+        exit: { opacity: 0, y: -10, transition: { duration: 0.1, ease: "easeIn" } },
     };
 
     const profileVariants = {
         rest: { scale: 1 },
-        hover: { scale: 1.05, transition: { duration: 0.2 } },
+        hover: { scale: 1.03, transition: { duration: 0.1 } },
     };
 
     return (
@@ -115,7 +149,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                     {isSmallScreen ? (
                         <div className="relative">
                             <motion.div
-                                className="flex items-center p-1 cursor-pointer rounded-full active:bg-blue-400 hover:bg-secondary hover:bg-opacity-30 transition-all duration-200"
+                                className="flex items-center p-1 cursor-pointer rounded-full hover:bg-blue-100 transition-colors duration-100"
                                 onClick={toggleDropdown}
                                 ref={profileRef}
                                 aria-label="User Profile"
@@ -129,6 +163,7 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                     alt="User Profile"
                                     className="w-14 sm:w-16 h-14 sm:h-16 rounded-full object-cover select-none"
                                     draggable="false"
+                                    loading="lazy"
                                 />
                             </motion.div>
 
@@ -143,34 +178,46 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                         exit="exit"
                                     >
                                         <ul className="p-3 sm:p-4 space-y-2">
-                                            <motion.li
-                                                className="px-3 py-2 flex items-center cursor-pointer active:bg-blue-200 hover:bg-blue-100 rounded-md transition"
+                                            <DropdownItem
+                                                icon={<img src={profilePic} className="w-10 sm:w-14 h-10 sm:h-14 rounded-full object-cover mr-2" alt="User Profile" />}
+                                                label={displayName}
                                                 onClick={() => {
                                                     setCurrentPage("Profile");
                                                     setDropdownOpen(false);
                                                 }}
-                                                whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
-                                            >
-                                                <img src={profilePic} className="w-10 sm:w-14 h-10 sm:h-14 rounded-full object-cover mr-2" alt="User Profile" />
-                                                <span className="text-base sm:text-xl font-semibold">{displayName}</span>
-                                            </motion.li>
-                                            <motion.li
-                                                className="px-3 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition"
+                                            />
+                                            <DropdownItem
+                                                icon={<FaCog className="mr-2 text-gray-700 text-base sm:text-lg" />}
+                                                label="Settings"
+                                                onClick={() => {
+                                                    setCurrentPage("Settings");
+                                                    setDropdownOpen(false);
+                                                }}
+                                            />
+                                            <DropdownItem
+                                                icon={<FaCommentDots className="mr-2 text-gray-700 text-base sm:text-lg" />}
+                                                label="Give Feedback"
                                                 onClick={() => {
                                                     setCurrentPage("Feedback");
                                                     setDropdownOpen(false);
                                                 }}
-                                                whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
-                                            >
-                                                <FaCommentDots className="mr-2 text-gray-700 text-base sm:text-lg" /> Give Feedback
-                                            </motion.li>
-                                            <motion.li
-                                                className="px-3 py-2 flex items-center hover:bg-blue-100 cursor-pointer rounded-md transition text-red-600"
-                                                onClick={handleLogoutClick} // Updated to use handleLogoutClick
-                                                whileHover={{ backgroundColor: "rgba(219, 234, 254, 0.5)" }}
-                                            >
-                                                <FaSignOutAlt className="mr-2 text-red-600 text-base sm:text-lg" /> Logout
-                                            </motion.li>
+                                            />
+                                            {(userRole === 1 || userRole === 3) && (
+                                                <DropdownItem
+                                                    icon={<FaEye className="mr-2 text-gray-700 text-base sm:text-lg" />}
+                                                    label={`Switch to ${viewMode === "user" ? "Admin" : "User"} View`}
+                                                    onClick={() => {
+                                                        toggleViewMode();
+                                                        setDropdownOpen(false);
+                                                    }}
+                                                />
+                                            )}
+                                            <DropdownItem
+                                                icon={<FaSignOutAlt className="mr-2 text-red-600 text-base sm:text-lg" />}
+                                                label="Logout"
+                                                onClick={handleLogoutClick}
+                                                textColor="text-red-600"
+                                            />
                                         </ul>
                                     </motion.div>
                                 )}

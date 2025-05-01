@@ -6,6 +6,7 @@ const UserContext = createContext();
 export const UserProvider = ({ children }) => {
     const [displayName, setDisplayName] = useState("");
     const [profilePicture, setProfilePicture] = useState(null);
+    const [viewMode, setViewMode] = useState("admin"); // Default to admin view
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -33,8 +34,12 @@ export const UserProvider = ({ children }) => {
         fetchUser();
     }, []);
 
+    const toggleViewMode = () => {
+        setViewMode((prev) => (prev === "admin" ? "user" : "admin"));
+    };
+
     return (
-        <UserContext.Provider value={{ displayName, profilePicture, setDisplayName }}>
+        <UserContext.Provider value={{ displayName, profilePicture, setDisplayName, viewMode, toggleViewMode }}>
             {children}
         </UserContext.Provider>
     );

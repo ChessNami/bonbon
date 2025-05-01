@@ -41,7 +41,7 @@ const ResidentManagement = () => {
     const updateModalRef = useRef(null);
     const [activeProfileTab, setActiveProfileTab] = useState(0);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-    const [sortOption, setSortOption] = useState('name-asc'); // Default sort: Name A-Z
+    const [sortOption, setSortOption] = useState('default');
     const filterDropdownRef = useRef(null);
 
     // Initialize address mappings
@@ -109,6 +109,7 @@ const ResidentManagement = () => {
                     census,
                     children_count,
                     number_of_household_members,
+                    image_url,
                     resident_profile_status (
                         id,
                         status,
@@ -121,85 +122,100 @@ const ResidentManagement = () => {
                 throw new Error('Failed to fetch residents');
             }
 
-            const formattedResidents = data.map((resident) => {
-                let household;
-                try {
-                    household = typeof resident.household === 'string'
-                        ? JSON.parse(resident.household)
-                        : resident.household;
-                } catch (parseError) {
-                    console.error(`Error parsing household for resident ${resident.id}:`, parseError);
-                    household = {
-                        firstName: 'Unknown',
-                        lastName: 'Unknown',
-                        gender: 'Unknown',
-                        dob: 'Unknown',
-                        address: 'Unknown',
-                        zone: 'Unknown',
-                    };
-                }
-
-                let spouse = null;
-                try {
-                    if (resident.spouse) {
-                        spouse = typeof resident.spouse === 'string'
-                            ? JSON.parse(resident.spouse)
-                            : resident.spouse;
+            const formattedResidents = await Promise.all(
+                data.map(async (resident) => {
+                    let household;
+                    try {
+                        household = typeof resident.household === 'string'
+                            ? JSON.parse(resident.household)
+                            : resident.household;
+                    } catch (parseError) {
+                        console.error(`Error parsing household for resident ${resident.id}:`, parseError);
+                        household = {
+                            firstName: 'Unknown',
+                            lastName: 'Unknown',
+                            gender: 'Unknown',
+                            dob: 'Unknown',
+                            address: 'Unknown',
+                            zone: 'Unknown',
+                        };
                     }
-                } catch (parseError) {
-                    console.error(`Error parsing spouse for resident ${resident.id}:`, parseError);
-                    spouse = null;
-                }
 
-                let householdComposition = [];
-                try {
-                    if (resident.household_composition) {
-                        householdComposition = typeof resident.household_composition === 'string'
-                            ? JSON.parse(resident.household_composition)
-                            : resident.household_composition;
-                        if (!Array.isArray(householdComposition)) {
-                            householdComposition = [];
+                    let spouse = null;
+                    try {
+                        if (resident.spouse) {
+                            spouse = typeof resident.spouse === 'string'
+                                ? JSON.parse(resident.spouse)
+                                : resident.spouse;
+                        }
+                    } catch (parseError) {
+                        console.error(`Error parsing spouse for resident ${resident.id}:`, parseError);
+                        spouse = null;
+                    }
+
+                    let householdComposition = [];
+                    try {
+                        if (resident.household_composition) {
+                            householdComposition = typeof resident.household_composition === 'string'
+                                ? JSON.parse(resident.household_composition)
+                                : resident.household_composition;
+                            if (!Array.isArray(householdComposition)) {
+                                householdComposition = [];
+                            }
+                        }
+                    } catch (parseError) {
+                        console.error(`Error parsing household_composition for resident ${resident.id}:`, parseError);
+                        householdComposition = [];
+                    }
+
+                    let census = {};
+                    try {
+                        if (resident.census) {
+                            census = typeof resident.census === 'string'
+                                ? JSON.parse(resident.census)
+                                : resident.census;
+                        }
+                    } catch (parseError) {
+                        console.error(`Error parsing census for resident ${resident.id}:`, parseError);
+                        census = {};
+                    }
+
+                    let profileImageUrl = null;
+                    if (resident.image_url) {
+                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                            .from('householdhead')
+                            .createSignedUrl(resident.image_url, 7200); // 2 hours
+                        if (signedUrlError) {
+                            console.error(`Error generating signed URL for resident ${resident.id}:`, signedUrlError.message);
+                        } else {
+                            profileImageUrl = signedUrlData.signedUrl;
                         }
                     }
-                } catch (parseError) {
-                    console.error(`Error parsing household_composition for resident ${resident.id}:`, parseError);
-                    householdComposition = [];
-                }
 
-                let census = {};
-                try {
-                    if (resident.census) {
-                        census = typeof resident.census === 'string'
-                            ? JSON.parse(resident.census)
-                            : resident.census;
-                    }
-                } catch (parseError) {
-                    console.error(`Error parsing census for resident ${resident.id}:`, parseError);
-                    census = {};
-                }
-
-                return {
-                    id: resident.id,
-                    userId: resident.user_id,
-                    firstName: household.firstName || 'Unknown',
-                    lastName: household.lastName || 'Unknown',
-                    gender: household.gender || 'Unknown',
-                    dob: household.dob || 'Unknown',
-                    address: household.address || 'Unknown',
-                    purok: household.zone || 'Unknown',
-                    householdHead: `${household.firstName || 'Unknown'} ${household.lastName || 'Unknown'}`,
-                    status: resident.resident_profile_status?.status || 3,
-                    updateReason: resident.resident_profile_status?.status === 4 ? resident.resident_profile_status?.rejection_reason : null,
-                    rejectionReason: resident.resident_profile_status?.status !== 4 ? resident.resident_profile_status?.rejection_reason : null,
-                    rejectionDate: resident.resident_profile_status?.updated_at,
-                    householdData: household,
-                    spouseData: spouse,
-                    householdComposition: householdComposition,
-                    censusData: census,
-                    childrenCount: resident.children_count || 0,
-                    numberOfHouseholdMembers: resident.number_of_household_members || 0,
-                };
-            });
+                    return {
+                        id: resident.id,
+                        userId: resident.user_id,
+                        firstName: household.firstName || 'Unknown',
+                        lastName: household.lastName || 'Unknown',
+                        gender: household.gender || 'Unknown',
+                        dob: household.dob || 'Unknown',
+                        address: household.address || 'Unknown',
+                        purok: household.zone || 'Unknown',
+                        householdHead: `${household.firstName || 'Unknown'} ${household.lastName || 'Unknown'}`,
+                        status: resident.resident_profile_status?.status || 3,
+                        updateReason: resident.resident_profile_status?.status === 4 ? resident.resident_profile_status?.rejection_reason : null,
+                        rejectionReason: resident.resident_profile_status?.status !== 4 ? resident.resident_profile_status?.rejection_reason : null,
+                        rejectionDate: resident.resident_profile_status?.updated_at,
+                        householdData: household,
+                        spouseData: spouse,
+                        householdComposition: householdComposition,
+                        censusData: census,
+                        childrenCount: resident.children_count || 0,
+                        numberOfHouseholdMembers: resident.number_of_household_members || 0,
+                        profileImageUrl: profileImageUrl,
+                    };
+                })
+            );
 
             setResidents(formattedResidents);
             setFilteredResidents(formattedResidents);
@@ -262,24 +278,83 @@ const ResidentManagement = () => {
     useEffect(() => {
         let filtered = [...residents];
 
-        // Apply search term
+        // Apply search filter
         if (searchTerm) {
-            filtered = filtered.filter(resident =>
-                resident.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                resident.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                resident.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                resident.purok.toLowerCase().includes(searchTerm.toLowerCase())
+            filtered = filtered.filter((resident) =>
+                `${resident.firstName} ${resident.lastName}`
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase())
             );
         }
 
         // Apply status filter
         if (statusFilter !== 'all') {
-            filtered = filtered.filter(resident => resident.status === parseInt(statusFilter));
+            filtered = filtered.filter((resident) => resident.status === parseInt(statusFilter));
         }
 
+        // Sort residents based on sortOption
+        filtered.sort((a, b) => {
+            // Default sorting: Pending first (oldest), other statuses (oldest), Approved last (alphabetical)
+            if (sortOption === 'default') {
+                if (a.status === 3 && b.status !== 3) return -1;
+                if (b.status === 3 && a.status !== 3) return 1;
+                if (a.status === 3 && b.status === 3) {
+                    return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+                }
+                if (a.status === 1 && b.status === 1) {
+                    return a.lastName.localeCompare(b.lastName);
+                }
+                if (a.status === 1 && b.status !== 1) return 1;
+                if (b.status === 1 && a.status !== 1) return -1;
+                return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+            }
+
+            // Name (A-Z)
+            if (sortOption === 'name-asc') {
+                return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+            }
+
+            // Name (Z-A)
+            if (sortOption === 'name-desc') {
+                return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`);
+            }
+
+            // Status (Ascending)
+            if (sortOption === 'status-asc') {
+                return a.status - b.status;
+            }
+
+            // Status (Descending)
+            if (sortOption === 'status-desc') {
+                return b.status - a.status;
+            }
+
+            // Date Added (Oldest)
+            if (sortOption === 'date-asc') {
+                return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+            }
+
+            // Date Added (Newest)
+            if (sortOption === 'date-desc') {
+                return new Date(b.rejectionDate || '1970-01-01') - new Date(a.rejectionDate || '1970-01-01');
+            }
+
+            // Fallback to default sorting if sortOption is invalid
+            if (a.status === 3 && b.status !== 3) return -1;
+            if (b.status === 3 && a.status !== 3) return 1;
+            if (a.status === 3 && b.status === 3) {
+                return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+            }
+            if (a.status === 1 && b.status === 1) {
+                return a.lastName.localeCompare(b.lastName);
+            }
+            if (a.status === 1 && b.status !== 1) return 1;
+            if (b.status === 1 && a.status !== 1) return -1;
+            return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+        });
+
         setFilteredResidents(filtered);
-        setCurrentPage(1); // Reset to first page on filter change
-    }, [searchTerm, statusFilter, residents]);
+    }, [residents, searchTerm, statusFilter, sortOption]);
 
     // Disable scroll on body when modals are open
     useEffect(() => {
@@ -1136,6 +1211,7 @@ const ResidentManagement = () => {
                                                 onChange={(e) => setSortOption(e.target.value)}
                                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
                                             >
+                                                <option value="default">Default (Pending First, Approved by Name)</option>
                                                 <option value="name-asc">Name (A-Z)</option>
                                                 <option value="name-desc">Name (Z-A)</option>
                                                 <option value="status-asc">Status (Ascending)</option>
@@ -1210,8 +1286,23 @@ const ResidentManagement = () => {
                                         <div className="p-6">
                                             <div className="flex items-center justify-between mb-5">
                                                 <div className="flex items-center space-x-4">
-                                                    <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-semibold text-xl shadow-md">
-                                                        {resident.firstName.charAt(0).toUpperCase()}{resident.lastName.charAt(0).toUpperCase()}
+                                                    <div className="relative w-16 h-16 rounded-full flex items-center justify-center text-white font-semibold text-xl shadow-md">
+                                                        {resident.profileImageUrl ? (
+                                                            <img
+                                                                src={resident.profileImageUrl}
+                                                                alt={`${resident.firstName} ${resident.lastName}`}
+                                                                className="w-full h-full rounded-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.nextSibling.style.display = 'flex';
+                                                                }}
+                                                            />
+                                                        ) : null}
+                                                        <div
+                                                            className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full ${resident.profileImageUrl ? 'hidden' : ''}`}
+                                                        >
+                                                            {resident.firstName.charAt(0).toUpperCase()}{resident.lastName.charAt(0).toUpperCase()}
+                                                        </div>
                                                         <div
                                                             className={`absolute -top-1 -right-1 w-4 h-4 ${pulse} rounded-full border-2 border-white animate-pulse`}
                                                         />
@@ -1410,44 +1501,69 @@ const ResidentManagement = () => {
                                             {activeProfileTab === 0 && (
                                                 <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                                     <legend className="text-lg font-semibold text-gray-800 px-2">Household Head</legend>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                        {[
-                                                            'firstName',
-                                                            'middleName',
-                                                            'lastName',
-                                                            'address',
-                                                            'region',
-                                                            'province',
-                                                            'city',
-                                                            'barangay',
-                                                            'zone',
-                                                            'zipCode',
-                                                            'dob',
-                                                            'age',
-                                                            'gender',
-                                                            'civilStatus',
-                                                            'phoneNumber',
-                                                            'idType',
-                                                            'idNo',
-                                                            'employmentType',
-                                                            'education',
-                                                        ].map((key) => {
-                                                            let label = capitalizeWords(key);
-                                                            if (key === 'dob') label = 'Date of Birth';
-                                                            if (key === 'idType') label = 'ID Type';
-                                                            if (key === 'idNo') label = 'ID Number';
-                                                            if (key === 'zone') label = 'Purok/Zone';
-                                                            return (
-                                                                <div key={key} className="space-y-1">
-                                                                    <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
-                                                                        {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                            ? addressMappings[key][selectedResident.householdData[key]] || 'N/A'
-                                                                            : selectedResident.householdData[key] || 'N/A'}
-                                                                    </div>
+                                                    <div className="flex flex-col sm:flex-row gap-6">
+                                                        {/* Profile Picture */}
+                                                        <div className="flex-shrink-0">
+                                                            <div className="relative w-36 h-36 rounded-full flex items-center justify-center text-white font-semibold text-2xl shadow-md">
+                                                                {selectedResident.profileImageUrl ? (
+                                                                    <img
+                                                                        src={selectedResident.profileImageUrl}
+                                                                        alt={`${selectedResident.firstName} ${selectedResident.lastName}`}
+                                                                        className="w-full h-full rounded-full object-cover"
+                                                                        onError={(e) => {
+                                                                            e.target.style.display = 'none';
+                                                                            e.target.nextSibling.style.display = 'flex';
+                                                                        }}
+                                                                    />
+                                                                ) : null}
+                                                                <div
+                                                                    className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 ${selectedResident.profileImageUrl ? 'hidden' : ''}`}
+                                                                >
+                                                                    {selectedResident.firstName.charAt(0).toUpperCase()}
+                                                                    {selectedResident.lastName.charAt(0).toUpperCase()}
                                                                 </div>
-                                                            );
-                                                        })}
+                                                            </div>
+                                                        </div>
+                                                        {/* Fields Grid */}
+                                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                            {[
+                                                                'firstName',
+                                                                'middleName',
+                                                                'lastName',
+                                                                'address',
+                                                                'region',
+                                                                'province',
+                                                                'city',
+                                                                'barangay',
+                                                                'zone',
+                                                                'zipCode',
+                                                                'dob',
+                                                                'age',
+                                                                'gender',
+                                                                'civilStatus',
+                                                                'phoneNumber',
+                                                                'idType',
+                                                                'idNo',
+                                                                'employmentType',
+                                                                'education',
+                                                            ].map((key) => {
+                                                                let label = capitalizeWords(key);
+                                                                if (key === 'dob') label = 'Date of Birth';
+                                                                if (key === 'idType') label = 'ID Type';
+                                                                if (key === 'idNo') label = 'ID Number';
+                                                                if (key === 'zone') label = 'Purok/Zone';
+                                                                return (
+                                                                    <div key={key} className="space-y-1">
+                                                                        <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                            {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                                ? addressMappings[key][selectedResident.householdData[key]] || 'N/A'
+                                                                                : selectedResident.householdData[key] || 'N/A'}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 </fieldset>
                                             )}

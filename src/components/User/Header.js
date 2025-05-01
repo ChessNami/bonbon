@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../contexts/UserContext";
 import { supabase } from "../../supabaseClient";
-import { FaCalendarAlt, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaMapMarkerAlt } from "react-icons/fa";
+import { FaCalendarAlt, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaMapMarkerAlt, FaCog, FaEye } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 
 const Header = ({ onLogout, setCurrentPage }) => {
-    const { displayName } = useUser();
+    const { displayName, viewMode, toggleViewMode } = useUser();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isSmallScreen, setIsSmallScreen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [profilePic, setProfilePic] = useState(placeholderImg);
-    const [isLoading, setIsLoading] = useState(true); // New state for loading
+    const [isLoading, setIsLoading] = useState(true);
+    const [userRole, setUserRole] = useState(null);
     const dropdownRef = useRef(null);
     const profileRef = useRef(null);
 
@@ -52,24 +53,36 @@ const Header = ({ onLogout, setCurrentPage }) => {
     useEffect(() => {
         let unsubscribe;
         const fetchProfilePic = async () => {
-            setIsLoading(true); // Set loading to true when fetching starts
+            setIsLoading(true);
             const { data: { user }, error } = await supabase.auth.getUser();
 
             if (error || !user) {
                 console.error("Error fetching user:", error?.message || "No user found");
                 setProfilePic(placeholderImg);
-                setIsLoading(false); // Stop loading when fetch is complete
+                setIsLoading(false);
                 return;
             }
 
+            // Fetch profile picture
             const { profilePic: profilePicUrl } = await fetchUserPhotos(user.id);
             setProfilePic(profilePicUrl || placeholderImg);
-            setIsLoading(false); // Stop loading when fetch is complete
 
-            // Subscribe to photo changes
+            // Fetch user role
+            const { data: userRoleData, error: roleError } = await supabase
+                .from("user_roles")
+                .select("role_id")
+                .eq("user_id", user.id)
+                .single();
+
+            if (!roleError) {
+                setUserRole(userRoleData.role_id);
+            }
+
             unsubscribe = subscribeToUserPhotos(user.id, (newPhotos) => {
                 setProfilePic(newPhotos.profilePic || placeholderImg);
             });
+
+            setIsLoading(false);
         };
 
         fetchProfilePic();
@@ -118,7 +131,15 @@ const Header = ({ onLogout, setCurrentPage }) => {
     const dropdownItems = [
         { icon: <FaUser className="mr-2 text-gray-700" />, label: "Profile", action: () => setCurrentPage("Profile") },
         { icon: <FaMapMarkerAlt className="mr-2 text-gray-700" />, label: "Geotagging", action: () => setCurrentPage("Geotagging") },
+        { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => setCurrentPage("Settings") },
         { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => setCurrentPage("Feedback") },
+        ...(userRole === 1 || userRole === 3
+            ? [{
+                icon: <FaEye className="mr-2 text-gray-700" />,
+                label: `${viewMode === "user" ? "Admin" : "User"} View`,
+                action: () => toggleViewMode(),
+            }]
+            : []),
         { icon: <FaSignOutAlt className="mr-2 text-red-600" />, label: "Logout", action: onLogout, textColor: "text-red-600" },
     ];
 
