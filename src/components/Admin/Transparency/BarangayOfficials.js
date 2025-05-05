@@ -77,6 +77,7 @@ const BarangayOfficials = () => {
                 icon: "error",
                 title: "Fetch Error",
                 text: "Failed to fetch officials. Check console for details.",
+                scrollbarPadding: false,
             });
             setOfficials([]);
         } finally {
@@ -106,6 +107,7 @@ const BarangayOfficials = () => {
                 icon: "error",
                 title: "Invalid File",
                 text: "Only PNG and JPEG/JPG files are allowed.",
+                scrollbarPadding: false,
             });
         }
     };
@@ -163,6 +165,7 @@ const BarangayOfficials = () => {
             Swal.fire({
                 title: 'Processing...',
                 text: `Please wait while we ${modalMode === "create" ? "add" : "update"} the official.`,
+                scrollbarPadding: false,
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 didOpen: () => {
@@ -256,6 +259,7 @@ const BarangayOfficials = () => {
                 icon: "success",
                 title: `Official ${modalMode === "create" ? "added" : "updated"} successfully`,
                 showConfirmButton: false,
+                scrollbarPadding: false,
                 timer: 1500,
             });
 
@@ -269,6 +273,7 @@ const BarangayOfficials = () => {
                 icon: "error",
                 title: "Operation Failed",
                 text: error.message || "An unexpected error occurred. Please try again.",
+                scrollbarPadding: false,
             });
         }
     };
@@ -279,6 +284,7 @@ const BarangayOfficials = () => {
                 Swal.fire({
                     title: 'Processing...',
                     text: 'Please wait while we delete the official.',
+                    scrollbarPadding: false,
                     allowOutsideClick: false,
                     allowEscapeKey: false,
                     didOpen: () => {
@@ -306,6 +312,7 @@ const BarangayOfficials = () => {
                     position: "top-end",
                     icon: "success",
                     title: "Official deleted successfully",
+                    scrollbarPadding: false,
                     showConfirmButton: false,
                     timer: 1500,
                 });
@@ -318,6 +325,7 @@ const BarangayOfficials = () => {
                     icon: "error",
                     title: "Delete Failed",
                     text: error.message || "An unexpected error occurred. Please try again.",
+                    scrollbarPadding: false,
                 });
             }
         }
@@ -452,8 +460,8 @@ const BarangayOfficials = () => {
                             onClick={() => paginate(currentPage - 1)}
                             disabled={currentPage === 1}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === 1
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
                                 }`}
                         >
                             <FaArrowLeft size={16} />
@@ -464,8 +472,8 @@ const BarangayOfficials = () => {
                                     key={page}
                                     onClick={() => paginate(page)}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${currentPage === page
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                 >
                                     {page}
@@ -476,8 +484,8 @@ const BarangayOfficials = () => {
                             onClick={() => paginate(currentPage + 1)}
                             disabled={currentPage === totalPages}
                             className={`p-2 rounded-full transition-all duration-200 ${currentPage === totalPages
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
                                 }`}
                         >
                             <FaArrowRight size={16} />

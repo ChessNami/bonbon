@@ -230,7 +230,7 @@ const ZonePopulationTable = () => {
     return (
         <div className="bg-white p-4 rounded-lg shadow-md w-full overflow-hidden">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Zone Population</h2>
+                <h2 className="text-2xl font-bold text-gray-800">Zone Population of Barangay Bonbon</h2>
                 <div className="flex gap-2">
                     <button
                         onClick={() => paginate(-1)}
