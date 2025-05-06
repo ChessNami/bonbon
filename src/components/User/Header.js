@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useUser } from "../contexts/UserContext";
 import { supabase } from "../../supabaseClient";
-import { FaCalendarAlt, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaMapMarkerAlt, FaCog, FaEye } from "react-icons/fa";
+import { FaCalendarAlt, FaCommentDots, FaSignOutAlt, FaSun, FaMoon, FaUser, FaEye } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
 
@@ -130,8 +130,6 @@ const Header = ({ onLogout, setCurrentPage }) => {
 
     const dropdownItems = [
         { icon: <FaUser className="mr-2 text-gray-700" />, label: "Profile", action: () => setCurrentPage("Profile") },
-        { icon: <FaMapMarkerAlt className="mr-2 text-gray-700" />, label: "Geotagging", action: () => setCurrentPage("Geotagging") },
-        { icon: <FaCog className="mr-2 text-gray-700" />, label: "Settings", action: () => setCurrentPage("Settings") },
         { icon: <FaCommentDots className="mr-2 text-gray-700" />, label: "Give Feedback", action: () => setCurrentPage("Feedback") },
         ...(userRole === 1 || userRole === 3
             ? [{

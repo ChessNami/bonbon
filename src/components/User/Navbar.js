@@ -4,7 +4,7 @@ import logo from "../../img/Logo/bonbon-logo.png";
 import DropdownNav from "./DropdownNav";
 import FullNav from "./FullNav";
 import { useUser } from "../contexts/UserContext";
-import { FaSignOutAlt, FaCommentDots, FaCog, FaEye } from "react-icons/fa";
+import { FaSignOutAlt, FaCommentDots, FaEye } from "react-icons/fa";
 import placeholderImg from "../../img/Placeholder/placeholder.png";
 import { supabase } from "../../supabaseClient";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../utils/supabaseUtils";
@@ -183,14 +183,6 @@ const Navbar = ({ setCurrentPage, currentPage, onLogout }) => {
                                                 label={displayName}
                                                 onClick={() => {
                                                     setCurrentPage("Profile");
-                                                    setDropdownOpen(false);
-                                                }}
-                                            />
-                                            <DropdownItem
-                                                icon={<FaCog className="mr-2 text-gray-700 text-base sm:text-lg" />}
-                                                label="Settings"
-                                                onClick={() => {
-                                                    setCurrentPage("Settings");
                                                     setDropdownOpen(false);
                                                 }}
                                             />

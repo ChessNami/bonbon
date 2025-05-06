@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaStar, FaCommentAlt, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaStar, FaCommentAlt, FaChevronLeft, FaChevronRight, FaTrash } from "react-icons/fa";
 import { supabase } from "../../../supabaseClient";
 import { fetchUserPhotos, subscribeToUserPhotos } from "../../../utils/supabaseUtils";
 import Loader from "../../Loader";
+import Swal from "sweetalert2";
 
 const UserFeedback = () => {
     const [feedbacks, setFeedbacks] = useState([]);
@@ -11,11 +12,51 @@ const UserFeedback = () => {
     const [ratingFilter, setRatingFilter] = useState(0);
     const [itemsPerPage, setItemsPerPage] = useState(6);
     const [currentPage, setCurrentPage] = useState(1);
+    const [userRoles, setUserRoles] = useState([]);
+    const [averageRating, setAverageRating] = useState(0);
 
-    // Fetch feedback and user data from Supabase
+    // Fetch current user's roles
+    useEffect(() => {
+        const fetchUserRoles = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: rolesData, error: rolesError } = await supabase
+                        .from("user_roles")
+                        .select("role_id")
+                        .eq("user_id", user.id);
+
+                    if (rolesError) {
+                        console.error("Error fetching user roles:", rolesError);
+                        return;
+                    }
+
+                    const roleIds = rolesData.map((role) => role.role_id);
+                    const { data: roles, error: roleError } = await supabase
+                        .from("roles")
+                        .select("name")
+                        .in("id", roleIds);
+
+                    if (roleError) {
+                        console.error("Error fetching role names:", roleError);
+                        return;
+                    }
+
+                    setUserRoles(roles.map((role) => role.name));
+                }
+            } catch (error) {
+                console.error("Unexpected error fetching user roles:", error);
+            }
+        };
+
+        fetchUserRoles();
+    }, []);
+
+    // Fetch feedback and calculate global average rating
     useEffect(() => {
         const fetchFeedbacks = async () => {
             try {
+                // Fetch filtered feedback for display
                 let query = supabase
                     .from("feedback")
                     .select("id, user_id, feedback_text, rating, created_at")
@@ -31,6 +72,21 @@ const UserFeedback = () => {
                     console.error("Error fetching feedbacks:", feedbackError);
                     return;
                 }
+
+                // Fetch all feedback ratings for global average
+                const { data: allFeedbackData, error: allFeedbackError } = await supabase
+                    .from("feedback")
+                    .select("rating");
+
+                if (allFeedbackError) {
+                    console.error("Error fetching all feedback ratings:", allFeedbackError);
+                    return;
+                }
+
+                // Calculate global average rating
+                const totalRating = allFeedbackData.reduce((sum, f) => sum + f.rating, 0);
+                const avgRating = allFeedbackData.length > 0 ? (totalRating / allFeedbackData.length).toFixed(1) : 0;
+                setAverageRating(avgRating);
 
                 const userIds = [...new Set(feedbackData.map((f) => f.user_id))];
                 const { data: userData, error: userError } = await supabase.rpc(
@@ -101,6 +157,67 @@ const UserFeedback = () => {
         };
     }, [feedbacks]);
 
+    // Delete feedback with confirmation
+    const handleDeleteFeedback = async (feedbackId) => {
+        const result = await Swal.fire({
+            title: "Are you sure?",
+            text: "This feedback will be permanently deleted.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#3085d6",
+            confirmButtonText: "Yes, delete it!",
+            cancelButtonText: "Cancel",
+            scrollbarPadding: false,
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const { error } = await supabase
+                    .from("feedback")
+                    .delete()
+                    .eq("id", feedbackId);
+
+                if (error) {
+                    console.error("Error deleting feedback:", error);
+                    return;
+                }
+
+                setFeedbacks((prevFeedbacks) =>
+                    prevFeedbacks.filter((f) => f.id !== feedbackId)
+                );
+
+                // Recalculate global average rating after deletion
+                const { data: allFeedbackData, error: allFeedbackError } = await supabase
+                    .from("feedback")
+                    .select("rating");
+
+                if (allFeedbackError) {
+                    console.error("Error fetching all feedback ratings:", allFeedbackError);
+                    return;
+                }
+
+                const totalRating = allFeedbackData.reduce((sum, f) => sum + f.rating, 0);
+                const avgRating = allFeedbackData.length > 0 ? (totalRating / allFeedbackData.length).toFixed(1) : 0;
+                setAverageRating(avgRating);
+
+                // Show success toast
+                await Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "success",
+                    title: "Feedback deleted successfully",
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    timerProgressBar: true,
+                });
+            } catch (error) {
+                console.error("Unexpected error deleting feedback:", error);
+            }
+        }
+    };
+
     // Pagination logic
     const totalPages = Math.ceil(feedbacks.length / itemsPerPage);
     const paginatedFeedbacks = feedbacks.slice(
@@ -147,6 +264,13 @@ const UserFeedback = () => {
                 {/* Refactored Filter Layout */}
                 <div className="max-w-4xl mx-auto mb-8">
                     <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-6">
+                        {/* Average Rating Display */}
+                        <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
+                            <FaStar className="text-yellow-400 text-xl" />
+                            <span className="text-lg font-semibold text-gray-800">
+                                Average Rating: {Number(averageRating) === 5 ? "5" : averageRating} / 5
+                            </span>
+                        </div>
                         {/* Rating Filter */}
                         <div className="flex flex-col sm:flex-row items-center gap-4">
                             <div className="flex items-center gap-2">
@@ -242,7 +366,7 @@ const UserFeedback = () => {
                             {paginatedFeedbacks.map((feedback, index) => (
                                 <motion.div
                                     key={feedback.id}
-                                    className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                                    className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 relative"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{
@@ -250,6 +374,16 @@ const UserFeedback = () => {
                                         delay: index * 0.1,
                                     }}
                                 >
+                                    {/* Delete Button for Admins and Devs */}
+                                    {(userRoles.includes("admin") || userRoles.includes("dev")) && (
+                                        <button
+                                            onClick={() => handleDeleteFeedback(feedback.id)}
+                                            className="absolute bottom-7 right-4 text-red-500 hover:text-red-700 transition-colors duration-200"
+                                            title="Delete Feedback"
+                                        >
+                                            <FaTrash size={16} />
+                                        </button>
+                                    )}
                                     {/* User Info */}
                                     <div className="flex items-center mb-4">
                                         {feedback.profilePic ? (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaVenusMars, FaCalendarAlt, FaMapMarkerAlt, FaHome, FaEye, FaSyncAlt, FaTrashAlt, FaExclamationTriangle, FaClock } from 'react-icons/fa';
+import { FaVenusMars, FaCalendarAlt, FaMapMarkerAlt, FaEye, FaSyncAlt, FaTrashAlt, FaExclamationTriangle, FaClock } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
 const ResidentCard = ({ resident, onView, onUpdate, onDelete, getStatusBadge }) => {
@@ -121,10 +121,6 @@ const ResidentCard = ({ resident, onView, onUpdate, onDelete, getStatusBadge }) 
                     <p className="flex items-center gap-3 truncate">
                         <FaMapMarkerAlt className="text-emerald-500" />
                         <span className="font-medium"><span className="font-bold">Address:</span> {resident.address}</span>
-                    </p>
-                    <p className="flex items-center gap-3">
-                        <FaHome className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Purok/Zone:</span> {resident.purok}</span>
                     </p>
                     {resident.status === 6 && resident.rejectionReason && (
                         <p className="flex items-center gap-3 text-orange-600">

@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { FaTimes, FaMap, FaTag, FaInfoCircle } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
-import { supabase } from "../../../supabaseClient";
+import { supabase } from "../../../../supabaseClient";
 import PhoneFilters from "./PhoneFilters";
 import FullFilters from "./FullFilters";
 
@@ -158,7 +158,7 @@ const StrategicRoadMapView = () => {
     }, [roads, filterTitle, filterType, filterColor]);
 
     return (
-        <div className="p-4 mx-auto container max-w-7xl">
+        <div className="p-6 mx-auto container max-w-7xl">
             <div className="flex flex-wrap gap-3 mb-6">
                 <motion.button
                     onClick={() => setIsModalOpen(true)}

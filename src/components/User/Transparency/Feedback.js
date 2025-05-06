@@ -58,40 +58,114 @@ const Feedback = () => {
             return;
         }
 
-        const { error } = await supabase
-            .from("feedback")
-            .insert({
-                user_id: user.id,
-                feedback_text: feedback,
-                rating,
+        // Show loading dialog
+        Swal.fire({
+            title: "Submitting feedback...",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            scrollbarPadding: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
+
+        try {
+            // Calculate the start of the current week (Sunday)
+            const now = new Date();
+            const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+            const daysSinceSunday = dayOfWeek; // Number of days since last Sunday
+            const startOfWeek = new Date(now);
+            startOfWeek.setUTCHours(0, 0, 0, 0); // Set to midnight UTC
+            startOfWeek.setUTCDate(now.getUTCDate() - daysSinceSunday); // Go back to last Sunday
+
+            // Calculate the end of the week (Saturday)
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 6);
+            endOfWeek.setUTCHours(23, 59, 59, 999); // End of Saturday
+
+            // Check feedback count for the current week
+            const { data: recentFeedbacks, error: countError } = await supabase
+                .from("feedback")
+                .select("id, created_at")
+                .eq("user_id", user.id)
+                .gte("created_at", startOfWeek.toISOString())
+                .lte("created_at", endOfWeek.toISOString());
+
+            if (countError) {
+                Swal.close();
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "error",
+                    title: "Error checking feedback limit",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+                console.error("Error checking feedback count:", countError);
+                return;
+            }
+
+            if (recentFeedbacks.length >= 2) {
+                Swal.close();
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "warning",
+                    title: "You can only submit 2 feedbacks per week",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+                return;
+            }
+
+            const { error } = await supabase
+                .from("feedback")
+                .insert({
+                    user_id: user.id,
+                    feedback_text: feedback,
+                    rating,
+                });
+
+            if (error) {
+                Swal.close();
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "error",
+                    title: "Failed to submit feedback",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+                console.error("Error submitting feedback:", error);
+                return;
+            }
+
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: "Feedback submitted successfully!",
+                showConfirmButton: false,
+                timer: 1500,
             });
 
-        if (error) {
+            setSubmitted(true);
+            setFeedback("");
+            setRating(0);
+            setTimeout(() => setSubmitted(false), 3000);
+        } catch (error) {
+            Swal.close();
             Swal.fire({
                 toast: true,
                 position: "top-end",
                 icon: "error",
-                title: "Failed to submit feedback",
+                title: "Unexpected error occurred",
                 showConfirmButton: false,
                 timer: 1500,
             });
-            console.error("Error submitting feedback:", error);
-            return;
+            console.error("Unexpected error submitting feedback:", error);
         }
-
-        Swal.fire({
-            toast: true,
-            position: "top-end",
-            icon: "success",
-            title: "Feedback submitted successfully!",
-            showConfirmButton: false,
-            timer: 1500,
-        });
-
-        setSubmitted(true);
-        setFeedback("");
-        setRating(0);
-        setTimeout(() => setSubmitted(false), 3000);
     };
 
     return (

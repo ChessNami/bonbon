@@ -26,7 +26,39 @@ const MiniCalendar = ({ setIsModalOpen }) => {
                 `https://date.nager.at/api/v3/PublicHolidays/${selectedYear}/PH`
             );
             const data = await response.json();
-            setHolidays(data);
+
+            // Translation map for Tagalog to English holiday names
+            const holidayTranslations = {
+                "Bagong Taon": "New Year's Day",
+                "Araw ng Kagitingan": "Day of Valor",
+                "Araw ng Kalayaan": "Independence Day",
+                "Araw ng mga Bayani": "National Heroes' Day",
+                "Araw ng mga Santo": "All Saints' Day",
+                "Araw ng mga Patay": "All Souls' Day",
+                "Huwebes Santo": "Maundy Thursday",
+                "Biyernes Santo": "Good Friday",
+                "Sabado de Gloria": "Holy Saturday",
+                "Pasko": "Christmas Day",
+                "Araw ng Rizal": "Rizal Day",
+                "Undas": "All Saints' Day",
+                "Mahal na Araw": "Holy Week",
+                "Araw ng Paggawa": "Labor Day",
+                "Araw ni Gat Andres Bonifacio": "Bonifacio Day",
+                "Araw ng Kamatayan ni Dr. Jose Rizal": "Rizal Day",
+                "Araw ng Pasko": "Christmas Day",
+                "Eid al-Fitr": "Eid al-Fitr",
+                "Eid al-Adha": "Eid al-Adha",
+                'Araw ng Kamatayan ni Senador Benigno Simeon "Ninoy" Aquino Jr.': "Ninoy Aquino Day",
+                "Kapistahan ng Immaculada Concepcion": "Feast of the Immaculate Conception"
+            };
+
+            // Translate holiday names
+            const translatedHolidays = data.map(holiday => ({
+                ...holiday,
+                localName: holidayTranslations[holiday.localName] || holiday.localName
+            }));
+
+            setHolidays(translatedHolidays);
         } catch (error) {
             console.error("Error fetching holidays:", error);
         }
@@ -374,7 +406,7 @@ const MiniCalendar = ({ setIsModalOpen }) => {
                                                     : `${event.start_time} - ${event.end_time}`}
                                             </p>
                                             <p className="text-lg text-gray-600 mb-4 capitalize">
-                                            <span className="font-bold">Where: </span>
+                                                <span className="font-bold">Where: </span>
                                                 {event.location || "N/A"}
                                             </p>
                                             <p className="text-lg text-gray-600">

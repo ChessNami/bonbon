@@ -120,20 +120,23 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         const { data: residentData, error: residentError } = await supabase
             .from("residents")
             .select(`
-                id,
-                household,
-                spouse,
-                household_composition,
-                census,
-                children_count,
-                number_of_household_members,
-                resident_profile_status (
-                    status,
-                    rejection_reason
-                )
-            `)
+        id,
+        user_id,
+        household,
+        spouse,
+        household_composition,
+        census,
+        children_count,
+        number_of_household_members,
+        image_url,
+        resident_profile_status (
+            status,
+            rejection_reason
+        )
+    `)
             .eq("user_id", userData.id)
             .single();
+
         if (residentError || !residentData) {
             console.error("Error fetching resident data:", residentError?.message);
         } else {
@@ -191,12 +194,28 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                 census = {};
             }
 
+            let profileImageUrl = null;
+            if (residentData.image_url) {
+                const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                    .from('householdhead')
+                    .createSignedUrl(residentData.image_url, 7200);
+                if (signedUrlError) {
+                    console.error(`Error generating signed URL for user ${userData.id}:`, signedUrlError.message);
+                } else {
+                    profileImageUrl = signedUrlData.signedUrl;
+                }
+            }
+
             setResidentData({
                 id: residentData.id,
-                householdData: household,
+                userId: residentData.user_id,
+                householdData: {
+                    ...household,
+                    profileImageUrl: profileImageUrl,
+                },
                 spouseData: spouse,
                 householdComposition: householdComposition,
-                censusData: census, // Added censusData
+                censusData: census,
                 childrenCount: residentData.children_count || 0,
                 numberOfHouseholdMembers: residentData.number_of_household_members || 0,
             });
@@ -1026,12 +1045,9 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                             animate="visible"
                             exit="exit"
                         >
-                            <div
-                                ref={profileModalRef}
-                                className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
-                            >
+                            <div className="bg-white rounded-2xl w-full max-w-5xl h-full flex flex-col overflow-hidden shadow-2xl">
                                 <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
-                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Resident Profile</h2>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Resident Profile Details</h2>
                                     <motion.button
                                         onClick={() => setShowProfileModal(false)}
                                         className="text-gray-500 hover:text-gray-800 transition-colors duration-200"
@@ -1042,15 +1058,14 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                         <FaTimes size={24} />
                                     </motion.button>
                                 </div>
-                                <div className="flex-1 overflow-hidden">
-                                    {/* Tabs */}
-                                    <div className="border-b bg-gray-100 flex">
+                                <div className="bg-gray-100 border-b border-gray-200">
+                                    <div className="flex flex-wrap gap-3 p-6">
                                         {['Household Head', 'Spouse', 'Household Composition', 'Census Questions'].map((tab, index) => (
                                             <button
                                                 key={index}
-                                                className={`flex-1 px-6 py-3 text-sm font-semibold transition-all ${activeProfileTab === index
-                                                    ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
-                                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-gray-200'
+                                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${activeProfileTab === index
+                                                    ? 'bg-emerald-600 text-white shadow-md'
+                                                    : 'text-gray-600 hover:bg-gray-200 hover:text-emerald-600'
                                                     }`}
                                                 onClick={() => setActiveProfileTab(index)}
                                             >
@@ -1058,289 +1073,305 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                                        {/* Household Head Tab */}
-                                        {activeProfileTab === 0 && (
-                                            <fieldset className="border border-gray-200 p-6 rounded-xl bg-white shadow-sm">
-                                                <legend className="text-lg font-semibold text-gray-800 px-2">Household Head</legend>
-                                                {Object.keys(residentData.householdData).length > 0 ? (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                        {[
-                                                            'firstName',
-                                                            'middleName',
-                                                            'lastName',
-                                                            'address',
-                                                            'region',
-                                                            'province',
-                                                            'city',
-                                                            'barangay',
-                                                            'zone',
-                                                            'zipCode',
-                                                            'dob',
-                                                            'age',
-                                                            'gender',
-                                                            'civilStatus',
-                                                            'phoneNumber',
-                                                            'idType',
-                                                            'idNo',
-                                                            'employmentType',
-                                                            'education',
-                                                            'religion',
-                                                            'extension',
-                                                        ].map((key) => {
-                                                            let label = capitalizeWords(key);
-                                                            if (key === 'dob') label = 'Date of Birth';
-                                                            if (key === 'idType') label = 'ID Type';
-                                                            if (key === 'idNo') label = 'ID Number';
-                                                            if (key === 'zone') label = 'Purok/Zone';
-                                                            return (
-                                                                <div key={key}>
-                                                                    <label className="font-medium text-gray-700 text-sm">{label}</label>
-                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                        {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                            ? addressMappings[key][residentData.householdData[key]] || 'N/A'
-                                                                            : residentData.householdData[key] || 'N/A'}
-                                                                    </p>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                        {residentData.householdData.employmentType === 'employed' && (
-                                                            <>
-                                                                <div>
-                                                                    <label className="font-medium text-gray-700 text-sm">Occupation</label>
-                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                        {residentData.householdData.occupation || 'N/A'}
-                                                                    </p>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="font-medium text-gray-700 text-sm">Skills</label>
-                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                        {residentData.householdData.skills || 'N/A'}
-                                                                    </p>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="font-medium text-gray-700 text-sm">Company Address</label>
-                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                        {residentData.householdData.companyAddress || 'N/A'}
-                                                                    </p>
-                                                                </div>
-                                                            </>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                                    {activeProfileTab === 0 && (
+                                        <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                            <legend className="text-lg font-semibold text-gray-800 px-2">Household Head</legend>
+                                            <div className="flex flex-col sm:flex-row gap-6">
+                                                <div className="flex-shrink-0">
+                                                    <div className="relative w-36 h-36 rounded-full flex items-center justify-center text-white font-semibold text-2xl shadow-md">
+                                                        {residentData.householdData.profileImageUrl ? (
+                                                            <img
+                                                                src={residentData.householdData.profileImageUrl}
+                                                                alt={`${residentData.householdData.firstName} ${residentData.householdData.lastName}`}
+                                                                className="w-full h-full rounded-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.src = placeholderImg;
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500">
+                                                                {residentData.householdData.firstName?.charAt(0)?.toUpperCase() || ''}
+                                                                {residentData.householdData.lastName?.charAt(0)?.toUpperCase() || ''}
+                                                            </div>
                                                         )}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-gray-500 italic">No household head data available.</p>
-                                                )}
-                                            </fieldset>
-                                        )}
-                                        {/* Spouse Tab */}
-                                        {activeProfileTab === 1 && (
-                                            <fieldset className="border border-gray-200 p-6 rounded-xl bg-white shadow-sm">
-                                                <legend className="text-lg font-semibold text-gray-800 px-2">Spouse</legend>
-                                                {residentData.spouseData ? (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                        {[
-                                                            'firstName',
-                                                            'middleName',
-                                                            'lastName',
-                                                            'address',
-                                                            'region',
-                                                            'province',
-                                                            'city',
-                                                            'barangay',
-                                                            'dob',
-                                                            'age',
-                                                            'gender',
-                                                            'civilStatus',
-                                                            'phoneNumber',
-                                                            'idType',
-                                                            'idNo',
-                                                            'education',
-                                                            'employmentType',
-                                                            'religion',
-                                                            'extension',
-                                                        ].map((key) => {
-                                                            let label = capitalizeWords(key);
-                                                            if (key === 'dob') label = 'Date of Birth';
-                                                            if (key === 'idType') label = 'ID Type';
-                                                            if (key === 'idNo') label = 'ID Number';
-                                                            return (
-                                                                <div key={key}>
-                                                                    <label className="font-medium text-gray-700 text-sm">{label}</label>
-                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                        {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                            ? addressMappings[key][residentData.spouseData[key]] || 'N/A'
-                                                                            : residentData.spouseData[key] || 'N/A'}
-                                                                    </p>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                        {residentData.spouseData.employmentType === 'employed' && (
-                                                            <>
-                                                                <div>
-                                                                    <label className="font-medium text-gray-700 text-sm">Occupation</label>
-                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                        {residentData.spouseData.occupation || 'N/A'}
-                                                                    </p>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="font-medium text-gray-700 text-sm">Skills</label>
-                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                        {residentData.spouseData.skills || 'N/A'}
-                                                                    </p>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="font-medium text-gray-700 text-sm">Company Address</label>
-                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                        {residentData.spouseData.companyAddress || 'N/A'}
-                                                                    </p>
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-gray-500 italic">No spouse data available.</p>
-                                                )}
-                                            </fieldset>
-                                        )}
-                                        {/* Household Composition Tab */}
-                                        {activeProfileTab === 2 && (
-                                            <fieldset className="border border-gray-200 p-6 rounded-xl bg-white shadow-sm">
-                                                <legend className="text-lg font-semibold text-gray-800 px-2">Household Composition</legend>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-                                                    <div>
-                                                        <label className="font-medium text-gray-700 text-sm">Number of Children</label>
-                                                        <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 text-sm">
-                                                            {residentData.childrenCount || 0}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <label className="font-medium text-gray-700 text-sm">Number of Other Household Members</label>
-                                                        <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 text-sm">
-                                                            {residentData.numberOfHouseholdMembers || 0}
-                                                        </p>
                                                     </div>
                                                 </div>
-                                                {residentData.childrenCount > 0 && (
-                                                    <div className="border-t border-gray-200 pt-6">
-                                                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Children</h3>
-                                                        {residentData.householdComposition
-                                                            .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
-                                                            .map((member, index) => (
-                                                                <div key={`child-${index}`} className="border border-gray-200 p-5 rounded-xl mb-4 bg-gray-50 shadow-sm">
-                                                                    <h4 className="text-md font-semibold text-gray-800 mb-3">Child {index + 1}</h4>
-                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                                        {[
-                                                                            'firstName',
-                                                                            'middleName',
-                                                                            'middleInitial',
-                                                                            'lastName',
-                                                                            'relation',
-                                                                            'gender',
-                                                                            'customGender',
-                                                                            'age',
-                                                                            'dob',
-                                                                            'education',
-                                                                            'occupation',
-                                                                            'isLivingWithParents',
-                                                                            ...(member.isLivingWithParents === 'No'
-                                                                                ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
-                                                                                : []),
-                                                                        ].map((key) => {
-                                                                            let label = capitalizeWords(key);
-                                                                            if (key === 'dob') label = 'Date of Birth';
-                                                                            if (key === 'customGender') label = 'Custom Gender';
-                                                                            if (key === 'isLivingWithParents') label = 'Is Living with Parents';
-                                                                            if (key === 'zone') label = 'Purok/Zone';
-                                                                            return (
-                                                                                <div key={key}>
-                                                                                    <label className="font-medium text-gray-700 text-sm">{label}</label>
-                                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-white text-gray-800 capitalize text-sm">
-                                                                                        {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                                            ? addressMappings[key][member[key]] || 'N/A'
-                                                                                            : member[key] || 'N/A'}
-                                                                                    </p>
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
+                                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                    {[
+                                                        'firstName',
+                                                        'middleName',
+                                                        'lastName',
+                                                        'extension',
+                                                        'address',
+                                                        'region',
+                                                        'province',
+                                                        'city',
+                                                        'barangay',
+                                                        'zone',
+                                                        'zipCode',
+                                                        'dob',
+                                                        'age',
+                                                        'gender',
+                                                        'civilStatus',
+                                                        'religion',
+                                                        'phoneNumber',
+                                                        'idType',
+                                                        'idNo',
+                                                        'employmentType',
+                                                        'education',
+                                                    ].map((key) => {
+                                                        let label = capitalizeWords(key);
+                                                        if (key === 'dob') label = 'Date of Birth';
+                                                        if (key === 'idType') label = 'ID Type';
+                                                        if (key === 'idNo') label = 'ID Number';
+                                                        if (key === 'zone') label = 'Purok/Zone';
+                                                        return (
+                                                            <div key={key} className="space-y-1">
+                                                                <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                    {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                        ? addressMappings[key][residentData.householdData[key]] || 'N/A'
+                                                                        : residentData.householdData[key] || 'N/A'}
                                                                 </div>
-                                                            ))}
-                                                    </div>
-                                                )}
-                                                {residentData.numberOfHouseholdMembers > 0 && (
-                                                    <div className="border-t border-gray-200 pt-6">
-                                                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Other Household Members</h3>
-                                                        {residentData.householdComposition
-                                                            .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
-                                                            .map((member, index) => (
-                                                                <div key={`member-${index}`} className="border border-gray-200 p-5 rounded-xl mb-4 bg-gray-50 shadow-sm">
-                                                                    <h4 className="text-md font-semibold text-gray-800 mb-3">Member {index + 1}</h4>
-                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                                        {[
-                                                                            'firstName',
-                                                                            'middleName',
-                                                                            'middleInitial',
-                                                                            'lastName',
-                                                                            'relation',
-                                                                            'gender',
-                                                                            'customGender',
-                                                                            'age',
-                                                                            'dob',
-                                                                            'education',
-                                                                            'occupation',
-                                                                        ].map((key) => {
-                                                                            let label = capitalizeWords(key);
-                                                                            if (key === 'dob') label = 'Date of Birth';
-                                                                            if (key === 'customGender') label = 'Custom Gender';
-                                                                            return (
-                                                                                <div key={key}>
-                                                                                    <label className="font-medium text-gray-700 text-sm">{label}</label>
-                                                                                    <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-white text-gray-800 capitalize text-sm">
-                                                                                        {member[key] || 'N/A'}
-                                                                                    </p>
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {residentData.householdData.employmentType === 'employed' && (
+                                                        <>
+                                                            <div className="space-y-1">
+                                                                <label className="text-sm font-medium text-gray-700">Occupation</label>
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                    {residentData.householdData.occupation || 'N/A'}
                                                                 </div>
-                                                            ))}
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-sm font-medium text-gray-700">Skills</label>
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                    {residentData.householdData.skills || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-sm font-medium text-gray-700">Company Address</label>
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                    {residentData.householdData.companyAddress || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </fieldset>
+                                    )}
+                                    {activeProfileTab === 1 && (
+                                        <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                            <legend className="text-lg font-semibold text-gray-800 px-2">Spouse</legend>
+                                            {residentData.spouseData ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                    {[
+                                                        'firstName',
+                                                        'middleName',
+                                                        'lastName',
+                                                        'extension',
+                                                        'address',
+                                                        'region',
+                                                        'province',
+                                                        'city',
+                                                        'barangay',
+                                                        'zone',
+                                                        'zipCode',
+                                                        'dob',
+                                                        'age',
+                                                        'gender',
+                                                        'civilStatus',
+                                                        'religion',
+                                                        'phoneNumber',
+                                                        'idType',
+                                                        'idNo',
+                                                        'education',
+                                                        'employmentType',
+                                                    ].map((key) => {
+                                                        let label = capitalizeWords(key);
+                                                        if (key === 'dob') label = 'Date of Birth';
+                                                        if (key === 'idType') label = 'ID Type';
+                                                        if (key === 'idNo') label = 'ID Number';
+                                                        if (key === 'zone') label = 'Purok/Zone';
+                                                        return (
+                                                            <div key={key} className="space-y-1">
+                                                                <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                    {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                        ? addressMappings[key][residentData.spouseData[key]] || 'N/A'
+                                                                        : residentData.spouseData[key] || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {residentData.spouseData.employmentType === 'employed' && (
+                                                        <>
+                                                            <div className="space-y-1">
+                                                                <label className="text-sm font-medium text-gray-700">Occupation</label>
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                    {residentData.spouseData.occupation || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-sm font-medium text-gray-700">Skills</label>
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                    {residentData.spouseData.skills || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-sm font-medium text-gray-700">Company Address</label>
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                    {residentData.spouseData.companyAddress || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 italic">No spouse data available.</p>
+                                            )}
+                                        </fieldset>
+                                    )}
+                                    {activeProfileTab === 2 && (
+                                        <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                            <legend className="text-lg font-semibold text-gray-800 px-2">Household Composition</legend>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                                                <div className="space-y-1">
+                                                    <label className="text-sm font-medium text-gray-700">Number of Children</label>
+                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                        {residentData.childrenCount || 0}
                                                     </div>
-                                                )}
-                                                {residentData.childrenCount === 0 && residentData.numberOfHouseholdMembers === 0 && (
-                                                    <p className="text-sm text-gray-500 italic">No household members or children added.</p>
-                                                )}
-                                            </fieldset>
-                                        )}
-                                        {/* Census Questions Tab */}
-                                        {activeProfileTab === 3 && (
-                                            <fieldset className="border border-gray-200 p-6 rounded-xl bg-white shadow-sm">
-                                                <legend className="text-lg font-semibold text-gray-800 px-2">Census Questions</legend>
-                                                {residentData.censusData && Object.keys(residentData.censusData).length > 0 ? (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                        {[
-                                                            { key: 'ownsHouse', label: 'Owns House' },
-                                                            { key: 'isRenting', label: 'Is Renting' },
-                                                            { key: 'yearsInBarangay', label: 'Years in Barangay' },
-                                                            { key: 'isRegisteredVoter', label: 'Registered Voter' },
-                                                            { key: 'voterPrecinctNo', label: 'Voter Precinct Number' },
-                                                            { key: 'hasOwnComfortRoom', label: 'Own Comfort Room' },
-                                                            { key: 'hasOwnWaterSupply', label: 'Own Water Supply' },
-                                                            { key: 'hasOwnElectricity', label: 'Own Electricity' },
-                                                        ].map(({ key, label }) => (
-                                                            <div key={key}>
-                                                                <label className="font-medium text-gray-700 text-sm">{label}</label>
-                                                                <p className="mt-1 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 capitalize text-sm">
-                                                                    {residentData.censusData[key] || 'N/A'}
-                                                                </p>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-sm font-medium text-gray-700">Number of Other Household Members</label>
+                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                        {residentData.numberOfHouseholdMembers || 0}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {residentData.childrenCount > 0 && (
+                                                <div className="border-t border-gray-200 pt-6">
+                                                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Children</h3>
+                                                    {residentData.householdComposition
+                                                        .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
+                                                        .map((member, index) => (
+                                                            <div key={`child-${index}`} className="bg-gray-50 p-5 rounded-xl shadow-sm mb-4 border border-gray-200">
+                                                                <h4 className="text-md font-semibold text-gray-800 mb-3">Child {index + 1}</h4>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                                    {[
+                                                                        'firstName',
+                                                                        'middleName',
+                                                                        'middleInitial',
+                                                                        'lastName',
+                                                                        'relation',
+                                                                        'gender',
+                                                                        'customGender',
+                                                                        'age',
+                                                                        'dob',
+                                                                        'education',
+                                                                        'occupation',
+                                                                        'isLivingWithParents',
+                                                                        ...(member.isLivingWithParents === 'No'
+                                                                            ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
+                                                                            : []),
+                                                                    ].map((key) => {
+                                                                        let label = capitalizeWords(key);
+                                                                        if (key === 'dob') label = 'Date of Birth';
+                                                                        if (key === 'customGender') label = 'Custom Gender';
+                                                                        if (key === 'isLivingWithParents') label = 'Is Living with Parents';
+                                                                        if (key === 'zone') label = 'Purok/Zone';
+                                                                        return (
+                                                                            <div key={key} className="space-y-1">
+                                                                                <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                                <div className="bg-white p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                                    {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                                        ? addressMappings[key][member[key]] || 'N/A'
+                                                                                        : member[key] || 'N/A'}
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
                                                             </div>
                                                         ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-gray-500 italic">No census data available.</p>
-                                                )}
-                                            </fieldset>
-                                        )}
-                                    </div>
+                                                </div>
+                                            )}
+                                            {residentData.numberOfHouseholdMembers > 0 && (
+                                                <div className="border-t border-gray-200 pt-6">
+                                                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Other Household Members</h3>
+                                                    {residentData.householdComposition
+                                                        .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
+                                                        .map((member, index) => (
+                                                            <div key={`member-${index}`} className="bg-gray-50 p-5 rounded-xl shadow-sm mb-4 border border-gray-200">
+                                                                <h4 className="text-md font-semibold text-gray-800 mb-3">Member {index + 1}</h4>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                                    {[
+                                                                        'firstName',
+                                                                        'middleName',
+                                                                        'middleInitial',
+                                                                        'lastName',
+                                                                        'relation',
+                                                                        'gender',
+                                                                        'customGender',
+                                                                        'age',
+                                                                        'dob',
+                                                                        'education',
+                                                                        'occupation',
+                                                                    ].map((key) => {
+                                                                        let label = capitalizeWords(key);
+                                                                        if (key === 'dob') label = 'Date of Birth';
+                                                                        if (key === 'customGender') label = 'Custom Gender';
+                                                                        return (
+                                                                            <div key={key} className="space-y-1">
+                                                                                <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                                                <div className="bg-white p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                                    {member[key] || 'N/A'}
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            )}
+                                            {residentData.childrenCount === 0 && residentData.numberOfHouseholdMembers === 0 && (
+                                                <p className="text-sm text-gray-500 italic">No household members or children added.</p>
+                                            )}
+                                        </fieldset>
+                                    )}
+                                    {activeProfileTab === 3 && (
+                                        <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                            <legend className="text-lg font-semibold text-gray-800 px-2">Census Questions</legend>
+                                            {residentData.censusData && Object.keys(residentData.censusData).length > 0 ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                    {[
+                                                        { key: 'ownsHouse', label: 'Owns House' },
+                                                        { key: 'isRenting', label: 'Is Renting' },
+                                                        { key: 'yearsInBarangay', label: 'Years in Barangay' },
+                                                        { key: 'isRegisteredVoter', label: 'Registered Voter' },
+                                                        { key: 'voterPrecinctNo', label: 'Voter Precinct Number' },
+                                                        { key: 'hasOwnComfortRoom', label: 'Own Comfort Room' },
+                                                        { key: 'hasOwnWaterSupply', label: 'Own Water Supply' },
+                                                        { key: 'hasOwnElectricity', label: 'Own Electricity' },
+                                                    ].map(({ key, label }) => (
+                                                        <div key={key} className="space-y-1">
+                                                            <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                {residentData.censusData[key] || 'N/A'}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 italic">No census data available.</p>
+                                            )}
+                                        </fieldset>
+                                    )}
                                 </div>
                             </div>
                         </motion.div>

@@ -159,6 +159,7 @@ const FooterConfig = ({ onFetchResidents }) => {
         Swal.fire({
             title: "Saving...",
             allowOutsideClick: false,
+            scrollbarPadding: false,
             didOpen: () => {
                 Swal.showLoading();
             },

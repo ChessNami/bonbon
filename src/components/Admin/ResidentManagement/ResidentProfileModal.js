@@ -87,7 +87,7 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     />
                                                 ) : null}
                                                 <div
-                                                    className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 ${resident.profileImageUrl ? 'hidden' : ''}`}
+                                                    className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full ${resident.profileImageUrl ? 'hidden' : ''}`}
                                                 >
                                                     {resident.firstName.charAt(0).toUpperCase()}
                                                     {resident.lastName.charAt(0).toUpperCase()}

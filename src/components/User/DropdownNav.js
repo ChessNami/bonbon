@@ -25,9 +25,7 @@ const DropdownNav = ({ handleNavClick, currentPage }) => {
         { name: "Home" },
         { name: "Transparency" },
         { name: "Demographics" },
-        { name: "Project Management" },
-        { name: "Strategic Road" },
-        { name: "Geotagging" },
+        { name: "Map Views" },
     ];
 
     const handleItemClick = (name) => {
