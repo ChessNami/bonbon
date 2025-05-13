@@ -943,6 +943,121 @@ const HouseholdComposition = ({
                     </button>
                     <button
                         type="button"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-red-700 active:bg-red-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
+                        onClick={async () => {
+                            try {
+                                // Check if household composition data exists
+                                const { data: residentData, error: fetchError } = await supabase
+                                    .from('residents')
+                                    .select('household_composition, children_count, number_of_household_members')
+                                    .eq('user_id', userId)
+                                    .maybeSingle(); // Use maybeSingle to handle no rows gracefully
+
+                                if (fetchError) {
+                                    Swal.fire({
+                                        toast: true,
+                                        position: 'top-end',
+                                        icon: 'error',
+                                        title: `Error checking household composition data: ${fetchError.message}`,
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        scrollbarPadding: false,
+                                    });
+                                    return;
+                                }
+
+                                // If no resident data or no household composition data exists
+                                if (
+                                    !residentData ||
+                                    (!residentData.household_composition &&
+                                        residentData.children_count === 0 &&
+                                        residentData.number_of_household_members === 0)
+                                ) {
+                                    Swal.fire({
+                                        toast: true,
+                                        position: 'top-end',
+                                        icon: 'info',
+                                        title: 'No household composition data to clear',
+                                        text: 'The household composition is already empty.',
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        scrollbarPadding: false,
+                                    });
+                                    return;
+                                }
+
+                                // Confirm deletion if data exists
+                                const result = await Swal.fire({
+                                    title: 'Are you sure?',
+                                    text: 'This will clear all household composition data, including children and other household members. This action cannot be undone.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#d33',
+                                    cancelButtonColor: '#3085d6',
+                                    confirmButtonText: 'Yes, clear it!',
+                                    scrollbarPadding: false,
+                                });
+
+                                if (!result.isConfirmed) return;
+
+                                // Clear household composition data
+                                const { error: updateError } = await supabase
+                                    .from('residents')
+                                    .update({
+                                        household_composition: null,
+                                        children_count: 0,
+                                        number_of_household_members: 0,
+                                    })
+                                    .eq('user_id', userId);
+
+                                if (updateError) {
+                                    Swal.fire({
+                                        toast: true,
+                                        position: 'top-end',
+                                        icon: 'error',
+                                        title: `Error clearing household composition data: ${updateError.message}`,
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        scrollbarPadding: false,
+                                    });
+                                    return;
+                                }
+
+                                // Reset form state
+                                setChildren([]);
+                                setHouseholdMembers([]);
+                                setLocalChildrenCount(0);
+                                setLocalNumberOfhouseholdMembers(0);
+                                setProvinces({});
+                                setCities({});
+                                setBarangays({});
+
+                                Swal.fire({
+                                    toast: true,
+                                    position: 'top-end',
+                                    icon: 'success',
+                                    title: 'Household composition data cleared successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                    scrollbarPadding: false,
+                                });
+                            } catch (error) {
+                                Swal.fire({
+                                    toast: true,
+                                    position: 'top-end',
+                                    icon: 'error',
+                                    title: `Unexpected error: ${error.message}`,
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                    scrollbarPadding: false,
+                                });
+                            }
+                        }}
+                    >
+                        Clear Data
+                    </button>
+                    <button
+                        type="button"
                         className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={handleSubmit}
                     >

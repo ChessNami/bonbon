@@ -237,6 +237,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 text: 'Please wait while we save your data.',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
+                scrollbarPadding: false,
                 didOpen: () => {
                     Swal.showLoading();
                 },
@@ -846,6 +847,173 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             Back
                         </button>
                     )}
+                    <button
+                        type="button"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md transition duration-150 hover:bg-red-700 active:bg-red-800 text-sm sm:text-base w-full sm:w-auto"
+                        onClick={async () => {
+                            try {
+                                // Check if resident data exists
+                                const { data: residentData, error: fetchError } = await supabase
+                                    .from('residents')
+                                    .select('image_url, household, spouse, household_composition, census, children_count, number_of_household_members')
+                                    .eq('user_id', userId)
+                                    .maybeSingle(); // Use maybeSingle to handle no rows gracefully
+
+                                if (fetchError) {
+                                    Swal.fire({
+                                        toast: true,
+                                        position: 'top-end',
+                                        icon: 'error',
+                                        title: `Error checking resident data: ${fetchError.message}`,
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        scrollbarPadding: false,
+                                    });
+                                    return;
+                                }
+
+                                // If no resident data exists or all relevant fields are empty
+                                if (
+                                    !residentData ||
+                                    (Object.keys(residentData.household || {}).length === 0 &&
+                                        !residentData.spouse &&
+                                        !residentData.household_composition &&
+                                        !residentData.census &&
+                                        residentData.children_count === 0 &&
+                                        residentData.number_of_household_members === 0 &&
+                                        !residentData.image_url)
+                                ) {
+                                    Swal.fire({
+                                        toast: true,
+                                        position: 'top-end',
+                                        icon: 'info',
+                                        title: 'No profiling data to clear',
+                                        text: 'The resident profile is already empty.',
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        scrollbarPadding: false,
+                                    });
+                                    return;
+                                }
+
+                                // Confirm deletion if data exists
+                                const result = await Swal.fire({
+                                    title: 'Are you sure?',
+                                    text: 'This will clear all household data and delete the associated image. This action cannot be undone.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#d33',
+                                    cancelButtonColor: '#3085d6',
+                                    confirmButtonText: 'Yes, clear it!',
+                                    scrollbarPadding: false,
+                                });
+
+                                if (!result.isConfirmed) return;
+
+                                // Delete the image from storage if it exists
+                                if (residentData?.image_url) {
+                                    const { error: storageError } = await supabase.storage
+                                        .from('householdhead')
+                                        .remove([residentData.image_url]);
+
+                                    if (storageError) {
+                                        console.error(`Failed to delete image: ${storageError.message}`);
+                                        Swal.fire({
+                                            toast: true,
+                                            position: 'top-end',
+                                            icon: 'warning',
+                                            title: `Image deletion failed: ${storageError.message}. Proceeding with data clearing.`,
+                                            showConfirmButton: false,
+                                            timer: 3000,
+                                            scrollbarPadding: false,
+                                            timerProgressBar: true,
+                                        });
+                                    }
+                                }
+
+                                // Clear resident data, setting household to empty JSONB object
+                                const { error: updateError } = await supabase
+                                    .from('residents')
+                                    .update({
+                                        household: {}, // Empty JSONB object instead of null
+                                        spouse: null,
+                                        household_composition: null,
+                                        census: null,
+                                        children_count: 0,
+                                        number_of_household_members: 0,
+                                        image_url: null,
+                                    })
+                                    .eq('user_id', userId);
+
+                                if (updateError) {
+                                    Swal.fire({
+                                        toast: true,
+                                        position: 'top-end',
+                                        icon: 'error',
+                                        title: `Error clearing data: ${updateError.message}`,
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        scrollbarPadding: false,
+                                    });
+                                    return;
+                                }
+
+                                // Reset form state
+                                setFormData({
+                                    age: '',
+                                    dob: '',
+                                    city: '',
+                                    idNo: '',
+                                    zone: '',
+                                    gender: '',
+                                    idType: '',
+                                    region: '',
+                                    address: '',
+                                    zipCode: '',
+                                    barangay: '',
+                                    lastName: '',
+                                    province: '',
+                                    education: '',
+                                    firstName: '',
+                                    middleName: '',
+                                    civilStatus: '',
+                                    phoneNumber: '',
+                                    customGender: '',
+                                    middleInitial: '',
+                                    employmentType: '',
+                                    image: null,
+                                    image_preview: '',
+                                    croppedImage: null,
+                                });
+                                setGender('');
+                                setCustomGender('');
+                                setEmploymentType('');
+                                setSignedImageUrl(null);
+
+                                Swal.fire({
+                                    toast: true,
+                                    position: 'top-end',
+                                    icon: 'success',
+                                    title: 'Household data and associated image cleared successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                    scrollbarPadding: false,
+                                });
+                            } catch (error) {
+                                Swal.fire({
+                                    toast: true,
+                                    position: 'top-end',
+                                    icon: 'error',
+                                    title: `Unexpected error: ${error.message}`,
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                    scrollbarPadding: false,
+                                });
+                            }
+                        }}
+                    >
+                        Clear Data
+                    </button>
                     <button
                         type="button"
                         className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 hover:bg-blue-700 active:bg-blue-800 text-sm sm:text-base w-full sm:w-auto"

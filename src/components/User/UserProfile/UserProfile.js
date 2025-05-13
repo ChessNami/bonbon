@@ -497,6 +497,93 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
         });
     };
 
+    const handleDeleteProfiling = async () => {
+        if (!user || !residentData) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: 'User or resident data not found',
+                showConfirmButton: false,
+                timer: 2000,
+                scrollbarPadding: false,
+                timerProgressBar: true,
+            });
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: 'Delete Resident Profile',
+            html: `
+                <p className="text-sm text-gray-600 mb-4">Are you sure you want to delete your resident profile? This action is irreversible and will remove all associated data, including household, spouse, and census information.</p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, Delete',
+            cancelButtonText: 'Cancel',
+            scrollbarPadding: false,
+        });
+
+        if (result.isConfirmed) {
+            try {
+                Swal.fire({
+                    title: 'Deleting profile...',
+                    text: 'Please wait while your profile is being deleted',
+                    allowOutsideClick: false,
+                    scrollbarPadding: false,
+                    didOpen: () => Swal.showLoading(),
+                });
+
+                // Delete resident profile status
+                const { error: statusError } = await supabase
+                    .from('resident_profile_status')
+                    .delete()
+                    .eq('resident_id', residentData.id);
+                if (statusError) throw new Error('Failed to delete profile status: ' + statusError.message);
+
+                // Delete resident data
+                const { error: residentError } = await supabase
+                    .from('residents')
+                    .delete()
+                    .eq('id', residentData.id);
+                if (residentError) throw new Error('Failed to delete resident data: ' + residentError.message);
+
+                // Reset state
+                setResidentData(null);
+                setResidentProfileStatus('not_submitted');
+                setRejectionReason(null);
+
+                Swal.close();
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Profile Deleted',
+                    text: 'Your resident profile has been successfully deleted.',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    scrollbarPadding: false,
+                    timerProgressBar: true,
+                });
+            } catch (error) {
+                Swal.close();
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Deletion Failed',
+                    text: error.message || 'Failed to delete resident profile',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    scrollbarPadding: false,
+                    timerProgressBar: true,
+                });
+            }
+        }
+    };
+
     // Handle photo deletion
     const handleDeletePhoto = async (type) => {
         if (!user) {
@@ -1457,6 +1544,18 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                                     Request to Update Profiling
                                 </motion.button>
                             </>
+                        )}
+                        {residentProfileStatus !== 'not_submitted' && residentProfileStatus !== null && (
+                            <motion.button
+                                onClick={handleDeleteProfiling}
+                                className="ml-2 bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 transition-colors duration-200 text-xs sm:text-sm flex items-center gap-1"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                disabled={residentProfileStatus === 'not_submitted' || residentProfileStatus === null}
+                            >
+                                <FaTrash />
+                                Delete Profiling
+                            </motion.button>
                         )}
                     </div>
                     {(residentProfileStatus === 2 || residentProfileStatus === 4 || residentProfileStatus === 6) && rejectionReason && (

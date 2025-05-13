@@ -286,7 +286,6 @@ const ResidentProfiling = () => {
             const requiredHouseholdFields = [
                 'firstName',
                 'lastName',
-                'middleName',
                 'address',
                 'region',
                 'province',

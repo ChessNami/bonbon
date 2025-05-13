@@ -259,7 +259,7 @@ const UserFeedback = () => {
     };
 
     return (
-        <section className="min-h-screen bg-blue-50 py-8 px-4 sm:px-6 lg:px-8 flex flex-col">
+        <section className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 flex flex-col">
             <div className="flex-1 flex flex-col">
                 {/* Refactored Filter Layout */}
                 <div className="max-w-4xl mx-auto mb-8">

@@ -436,7 +436,7 @@ const ResidentManagement = () => {
     const handleDelete = async (id) => {
         const result = await Swal.fire({
             title: 'Are you sure?',
-            text: 'This action will permanently delete the resident profile.',
+            text: 'This action will permanently delete the resident profile and associated image.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -451,33 +451,68 @@ const ResidentManagement = () => {
         }
 
         try {
+            // Fetch the resident to get the image_url
+            const { data: residentData, error: fetchError } = await supabase
+                .from('residents')
+                .select('image_url')
+                .eq('id', id)
+                .single();
+
+            if (fetchError) {
+                throw new Error(`Failed to fetch resident data: ${fetchError.message}`);
+            }
+
+            // Delete the image from storage if it exists
+            if (residentData.image_url) {
+                const { error: storageError } = await supabase.storage
+                    .from('householdhead')
+                    .remove([residentData.image_url]);
+
+                if (storageError) {
+                    console.error(`Failed to delete image: ${storageError.message}`);
+                    // Log the error but continue with deletion to avoid orphaned resident data
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'warning',
+                        title: `Image deletion failed: ${storageError.message}. Proceeding with resident deletion.`,
+                        showConfirmButton: false,
+                        timer: 3000,
+                        scrollbarPadding: false,
+                        timerProgressBar: true,
+                    });
+                }
+            }
+
+            // Delete resident profile status
             const { error: statusError } = await supabase
                 .from('resident_profile_status')
                 .delete()
                 .eq('resident_id', id);
 
             if (statusError) {
-                throw new Error('Failed to delete resident status');
+                throw new Error(`Failed to delete resident status: ${statusError.message}`);
             }
 
-            const { error } = await supabase
+            // Delete resident record
+            const { error: residentError } = await supabase
                 .from('residents')
                 .delete()
                 .eq('id', id);
 
-            if (error) {
-                throw new Error('Failed to delete resident');
+            if (residentError) {
+                throw new Error(`Failed to delete resident: ${residentError.message}`);
             }
 
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Resident deleted successfully',
+                title: 'Resident and associated image deleted successfully',
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true
+                timerProgressBar: true,
             });
             await fetchResidents();
         } catch (error) {
@@ -489,7 +524,7 @@ const ResidentManagement = () => {
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true
+                timerProgressBar: true,
             });
         }
     };
