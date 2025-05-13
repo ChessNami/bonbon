@@ -158,78 +158,6 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         setModalData({ dateKey, holiday, userEvents: userEventsForDate });
     };
 
-    const handleCloseModal = () => {
-        setModalData(null);
-    };
-
-    const handleCloseEventModal = () => {
-        setIsEventModalOpen(false);
-        setEventDetails({
-            title: "",
-            date: "",
-            startHour: "1",
-            startMinute: "00",
-            startPeriod: "AM",
-            endHour: "1",
-            endMinute: "00",
-            endPeriod: "AM",
-            location: "",
-            description: "",
-            facebook_link: "",
-            image: null,
-            image_preview: "",
-            croppedImage: null,
-        });
-    };
-
-    const handleCloseEditModal = () => {
-        setIsEditModalOpen(false);
-        setCurrentEvent(null);
-        setEventDetails({
-            title: "",
-            date: "",
-            startHour: "1",
-            startMinute: "00",
-            startPeriod: "AM",
-            endHour: "1",
-            endMinute: "00",
-            endPeriod: "AM",
-            location: "",
-            description: "",
-            facebook_link: "",
-            image: null,
-            image_preview: "",
-            croppedImage: null,
-        });
-    };
-
-    const handleClickOutsideModal = useCallback((e) => {
-        if (isEditModalOpen && eventModalRef.current && !eventModalRef.current.contains(e.target)) {
-            handleCloseEditModal();
-        } else if (isEventModalOpen && eventModalRef.current && !eventModalRef.current.contains(e.target)) {
-            handleCloseEventModal();
-        } else if (modalData && modalRef.current && !modalRef.current.contains(e.target)) {
-            handleCloseModal();
-        }
-    }, [isEventModalOpen, isEditModalOpen, modalData]);
-
-    useEffect(() => {
-        if (modalData || isEventModalOpen || isEditModalOpen) {
-            document.body.style.overflow = "hidden";
-            document.body.style.paddingRight = "15px";
-            document.addEventListener("mousedown", handleClickOutsideModal);
-        } else {
-            document.body.style.overflow = "";
-            document.body.style.paddingRight = "";
-            document.removeEventListener("mousedown", handleClickOutsideModal);
-        }
-        return () => {
-            document.body.style.overflow = "";
-            document.body.style.paddingRight = "";
-            document.removeEventListener("mousedown", handleClickOutsideModal);
-        };
-    }, [modalData, isEventModalOpen, isEditModalOpen, handleClickOutsideModal]);
-
     const totalSlots = 42;
     const emptySlots = firstDayOfMonth;
     const filledSlots = daysArray.length;
@@ -267,6 +195,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         image_preview: "",
         croppedImage: null,
         wholeDay: false,
+        create_type: "event", // Added create_type
     });
 
     const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
@@ -281,6 +210,84 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
     const handleWholeDayToggle = () => {
         setEventDetails({ ...eventDetails, wholeDay: !eventDetails.wholeDay });
     };
+
+    const handleCloseModal = useCallback(() => {
+        setModalData(null);
+    }, [setModalData]);
+
+    const handleCloseEventModal = useCallback(() => {
+        setIsEventModalOpen(false);
+        setEventDetails({
+            title: "",
+            date: "",
+            startHour: "1",
+            startMinute: "00",
+            startPeriod: "AM",
+            endHour: "1",
+            endMinute: "00",
+            endPeriod: "AM",
+            location: "",
+            description: "",
+            facebook_link: "",
+            image: null,
+            image_preview: "",
+            croppedImage: null,
+            wholeDay: false,
+            create_type: "event", // Reset to event
+        });
+        setSelectedDates([]); // Clear selected dates
+    }, [setIsEventModalOpen, setEventDetails, setSelectedDates]);
+
+    const handleCloseEditModal = useCallback(() => {
+        setIsEditModalOpen(false);
+        setCurrentEvent(null);
+        setEventDetails({
+            title: "",
+            date: "",
+            startHour: "1",
+            startMinute: "00",
+            startPeriod: "AM",
+            endHour: "1",
+            endMinute: "00",
+            endPeriod: "AM",
+            location: "",
+            description: "",
+            facebook_link: "",
+            image: null,
+            image_preview: "",
+            croppedImage: null,
+            wholeDay: false,
+            create_type: "event", // Reset to event for consistency
+        });
+        setSelectedDates([]); // Clear selected dates
+    }, [setIsEditModalOpen, setCurrentEvent, setEventDetails, setSelectedDates]);
+
+    const handleClickOutsideModal = useCallback((e) => {
+        if (isEditModalOpen && eventModalRef.current && !eventModalRef.current.contains(e.target)) {
+            handleCloseEditModal();
+        } else if (isEventModalOpen && eventModalRef.current && !eventModalRef.current.contains(e.target)) {
+            handleCloseEventModal();
+        } else if (modalData && modalRef.current && !modalRef.current.contains(e.target)) {
+            handleCloseModal();
+        }
+    }, [isEditModalOpen, isEventModalOpen, modalData, handleCloseEditModal, handleCloseEventModal, handleCloseModal, eventModalRef, modalRef]);
+
+    useEffect(() => {
+        if (modalData || isEventModalOpen || isEditModalOpen) {
+            document.body.style.overflow = "hidden";
+            document.body.style.paddingRight = "15px";
+            document.addEventListener("mousedown", handleClickOutsideModal);
+        } else {
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
+            document.removeEventListener("mousedown", handleClickOutsideModal);
+        }
+        return () => {
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
+            document.removeEventListener("mousedown", handleClickOutsideModal);
+        };
+    }, [modalData, isEventModalOpen, isEditModalOpen, handleClickOutsideModal]);
 
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
@@ -320,13 +327,41 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             return;
         }
 
-        const startTime = `${eventDetails.startHour}:${eventDetails.startMinute} ${eventDetails.startPeriod}`;
-        const endTime = `${eventDetails.endHour}:${eventDetails.endMinute} ${eventDetails.endPeriod}`;
+        // Validate required fields for events
+        if (eventDetails.create_type === "event") {
+            if (!eventDetails.location) {
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "warning",
+                    title: "Missing Location",
+                    text: "Location is required for events.",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+                return;
+            }
+            if (!eventDetails.wholeDay && (!eventDetails.startHour || !eventDetails.startMinute || !eventDetails.startPeriod || !eventDetails.endHour || !eventDetails.endMinute || !eventDetails.endPeriod)) {
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "warning",
+                    title: "Missing Time",
+                    text: "Start and end times are required for non-whole-day events.",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+                return;
+            }
+        }
+
+        const startTime = eventDetails.create_type === "event" && !eventDetails.wholeDay ? `${eventDetails.startHour}:${eventDetails.startMinute} ${eventDetails.startPeriod}` : null;
+        const endTime = eventDetails.create_type === "event" && !eventDetails.wholeDay ? `${eventDetails.endHour}:${eventDetails.endMinute} ${eventDetails.endPeriod}` : null;
 
         try {
             Swal.fire({
                 title: "Processing...",
-                text: "Please wait while we save the event.",
+                text: `Please wait while we save the ${eventDetails.create_type}.`,
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 didOpen: () => {
@@ -335,8 +370,8 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             });
 
             let imageUrl = null;
-            let eventId = null;
 
+            // Handle image upload for both events and announcements
             if (eventDetails.image) {
                 if (!cropperRef.current || !cropperRef.current.cropper) {
                     Swal.close();
@@ -387,24 +422,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     }, "image/jpeg");
                 });
 
-                const { data: insertData, error: insertError } = await supabase
-                    .from("events")
-                    .insert([{
-                        title: eventDetails.title,
-                        dates: selectedDates,
-                        start_time: startTime,
-                        end_time: endTime,
-                        location: eventDetails.location,
-                        description: eventDetails.description,
-                        facebook_link: eventDetails.facebook_link,
-                        whole_day: eventDetails.wholeDay,
-                    }])
-                    .select("id");
-
-                if (insertError) throw new Error(`Error inserting event: ${insertError.message}`);
-
-                eventId = insertData[0].id;
-                const fileName = `public/event_${eventId}.jpg`;
+                const fileName = `public/event_${Date.now()}.jpg`; // Use timestamp to avoid conflicts
 
                 const { error: uploadError } = await supabase.storage
                     .from("event-photos")
@@ -415,41 +433,42 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
 
                 if (uploadError) throw new Error(`Error uploading image: ${uploadError.message}`);
 
-                const { error: updateError } = await supabase
-                    .from("events")
-                    .update({ image_url: fileName })
-                    .eq("id", eventId);
-
-                if (updateError) throw new Error(`Error updating image URL: ${updateError.message}`);
-
                 imageUrl = fileName;
-            } else {
-                const { error: insertError } = await supabase
-                    .from("events")
-                    .insert([{
-                        title: eventDetails.title,
-                        dates: selectedDates,
-                        start_time: startTime,
-                        end_time: endTime,
-                        location: eventDetails.location,
-                        description: eventDetails.description,
-                        facebook_link: eventDetails.facebook_link,
-                        whole_day: eventDetails.wholeDay,
-                    }]);
-
-                if (insertError) throw new Error(`Error inserting event: ${insertError.message}`);
             }
 
+            // Insert the event/announcement with the image_url included
+            const { data: insertData, error: insertError } = await supabase
+                .from("events")
+                .insert([{
+                    title: eventDetails.title,
+                    dates: selectedDates,
+                    start_time: startTime,
+                    end_time: endTime,
+                    location: eventDetails.create_type === "event" ? eventDetails.location : null,
+                    description: eventDetails.description,
+                    facebook_link: eventDetails.facebook_link,
+                    image_url: imageUrl, // Include image_url in the initial insert
+                    whole_day: eventDetails.create_type === "event" ? eventDetails.wholeDay : false,
+                    create_type: eventDetails.create_type,
+                }])
+                .select("id");
+
+            if (insertError) throw new Error(`Error inserting ${eventDetails.create_type}: ${insertError.message}`);
+
+            const eventId = insertData[0].id;
+
             const newEvent = {
+                id: eventId,
                 title: eventDetails.title,
                 dates: selectedDates,
                 start_time: startTime,
                 end_time: endTime,
-                location: eventDetails.location,
+                location: eventDetails.create_type === "event" ? eventDetails.location : null,
                 description: eventDetails.description,
                 facebook_link: eventDetails.facebook_link,
                 image_url: imageUrl,
-                whole_day: eventDetails.wholeDay,
+                whole_day: eventDetails.create_type === "event" ? eventDetails.wholeDay : false,
+                create_type: eventDetails.create_type,
             };
             const updatedEvents = { ...userEvents };
             selectedDates.forEach((date) => {
@@ -473,6 +492,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 image_preview: "",
                 croppedImage: null,
                 wholeDay: false,
+                create_type: "event",
             });
             setSelectedDates([]);
             setIsEventModalOpen(false);
@@ -482,7 +502,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 toast: true,
                 position: "top-end",
                 icon: "success",
-                title: "Event created successfully",
+                title: `${eventDetails.create_type === "event" ? "Event" : "Announcement"} created successfully`,
                 showConfirmButton: false,
                 timer: 1500,
             });
@@ -490,7 +510,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             fetchUserEvents();
         } catch (error) {
             Swal.close();
-            console.error("Error in handleCreateEvent:", error);
+            console.error(`Error in handleCreateEvent:`, error);
             Swal.fire({
                 toast: true,
                 position: "top-end",
@@ -520,23 +540,24 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         setEventDetails({
             title: event.title,
             date: event.dates[0],
-            startHour: event.start_time.split(":")[0],
-            startMinute: event.start_time.split(":")[1].split(" ")[0],
-            startPeriod: event.start_time.split(" ")[1],
-            endHour: event.end_time.split(":")[0],
-            endMinute: event.end_time.split(":")[1].split(" ")[0],
-            endPeriod: event.end_time.split(" ")[1],
-            location: event.location,
-            description: event.description,
+            startHour: event.create_type === "event" && event.start_time ? event.start_time.split(":")[0] : "1",
+            startMinute: event.create_type === "event" && event.start_time ? event.start_time.split(":")[1].split(" ")[0] : "00",
+            startPeriod: event.create_type === "event" && event.start_time ? event.start_time.split(" ")[1] : "AM",
+            endHour: event.create_type === "event" && event.end_time ? event.end_time.split(":")[0] : "1",
+            endMinute: event.create_type === "event" && event.end_time ? event.end_time.split(":")[1].split(" ")[0] : "00",
+            endPeriod: event.create_type === "event" && event.end_time ? event.end_time.split(" ")[1] : "AM",
+            location: event.create_type === "event" ? event.location || "" : "",
+            description: event.description || "",
             facebook_link: event.facebook_link || "",
-            wholeDay: event.whole_day,
+            wholeDay: event.create_type === "event" ? event.whole_day : false,
             image: null,
             image_preview: "",
             croppedImage: null,
+            create_type: event.create_type || "event",
         });
         setSelectedDates(event.dates);
         setIsEditModalOpen(true);
-        setModalData(null); // Close event details modal
+        setModalData(null);
     };
 
     const handleUpdateEvent = async (e) => {
@@ -555,13 +576,41 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             return;
         }
 
-        const startTime = `${eventDetails.startHour}:${eventDetails.startMinute} ${eventDetails.startPeriod}`;
-        const endTime = `${eventDetails.endHour}:${eventDetails.endMinute} ${eventDetails.endPeriod}`;
+        // Validate required fields for events
+        if (eventDetails.create_type === "event") {
+            if (!eventDetails.location) {
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "warning",
+                    title: "Missing Location",
+                    text: "Location is required for events.",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+                return;
+            }
+            if (!eventDetails.wholeDay && (!eventDetails.startHour || !eventDetails.startMinute || !eventDetails.startPeriod || !eventDetails.endHour || !eventDetails.endMinute || !eventDetails.endPeriod)) {
+                Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon: "warning",
+                    title: "Missing Time",
+                    text: "Start and end times are required for non-whole-day events.",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+                return;
+            }
+        }
+
+        const startTime = eventDetails.create_type === "event" && !eventDetails.wholeDay ? `${eventDetails.startHour}:${eventDetails.startMinute} ${eventDetails.startPeriod}` : null;
+        const endTime = eventDetails.create_type === "event" && !eventDetails.wholeDay ? `${eventDetails.endHour}:${eventDetails.endMinute} ${eventDetails.endPeriod}` : null;
 
         try {
             Swal.fire({
                 title: "Processing...",
-                text: "Please wait while we update the event.",
+                text: `Please wait while we update the ${eventDetails.create_type}.`,
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 didOpen: () => {
@@ -569,6 +618,82 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 },
             });
 
+            let imageUrl = currentEvent.image_url; // Retain existing image_url if no new image is uploaded
+
+            // Handle image upload if a new image is provided
+            if (eventDetails.image) {
+                if (!cropperRef.current || !cropperRef.current.cropper) {
+                    Swal.close();
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "warning",
+                        title: "Cropper Not Initialized",
+                        text: "Please wait for the image cropper to load or re-upload the image.",
+                        showConfirmButton: false,
+                        timer: 1500,
+                    });
+                    return;
+                }
+
+                const croppedCanvas = cropperRef.current.cropper.getCroppedCanvas({
+                    width: 800,
+                    height: 450,
+                });
+
+                if (!croppedCanvas) {
+                    Swal.close();
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "error",
+                        title: "Cropping Error",
+                        text: "Failed to crop the image. Please adjust the crop area and try again.",
+                        showConfirmButton: false,
+                        timer: 1500,
+                    });
+                    return;
+                }
+
+                const compressedImage = await new Promise((resolve, reject) => {
+                    croppedCanvas.toBlob((blob) => {
+                        if (blob) {
+                            new Compressor(blob, {
+                                quality: 0.8,
+                                maxWidth: 1280,
+                                maxHeight: 720,
+                                success: (compressedResult) => resolve(compressedResult),
+                                error: (err) => reject(new Error(`Image compression failed: ${err.message}`)),
+                            });
+                        } else {
+                            reject(new Error("Cropping failed: No blob generated."));
+                        }
+                    }, "image/jpeg");
+                });
+
+                const fileName = `public/event_${currentEvent.id}_${Date.now()}.jpg`;
+
+                // Delete the old image if it exists
+                if (currentEvent.image_url) {
+                    const { error: deleteImageError } = await supabase.storage
+                        .from("event-photos")
+                        .remove([currentEvent.image_url]);
+                    if (deleteImageError) throw new Error(`Error deleting old image: ${deleteImageError.message}`);
+                }
+
+                const { error: uploadError } = await supabase.storage
+                    .from("event-photos")
+                    .upload(fileName, compressedImage, {
+                        cacheControl: "3600",
+                        upsert: true,
+                    });
+
+                if (uploadError) throw new Error(`Error uploading image: ${uploadError.message}`);
+
+                imageUrl = fileName;
+            }
+
+            // Update the event/announcement with the new or existing image_url
             const { error: updateError } = await supabase
                 .from("events")
                 .update({
@@ -576,14 +701,16 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                     dates: selectedDates,
                     start_time: startTime,
                     end_time: endTime,
-                    location: eventDetails.location,
+                    location: eventDetails.create_type === "event" ? eventDetails.location : null,
                     description: eventDetails.description,
                     facebook_link: eventDetails.facebook_link,
-                    whole_day: eventDetails.wholeDay,
+                    image_url: imageUrl, // Update with the new or existing image_url
+                    whole_day: eventDetails.create_type === "event" ? eventDetails.wholeDay : false,
+                    create_type: eventDetails.create_type,
                 })
                 .eq("id", currentEvent.id);
 
-            if (updateError) throw new Error(`Error updating event: ${updateError.message}`);
+            if (updateError) throw new Error(`Error updating ${eventDetails.create_type}: ${updateError.message}`);
 
             const updatedEvent = {
                 id: currentEvent.id,
@@ -591,10 +718,12 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 dates: selectedDates,
                 start_time: startTime,
                 end_time: endTime,
-                location: eventDetails.location,
+                location: eventDetails.create_type === "event" ? eventDetails.location : null,
                 description: eventDetails.description,
                 facebook_link: eventDetails.facebook_link,
-                whole_day: eventDetails.wholeDay,
+                image_url: imageUrl,
+                whole_day: eventDetails.create_type === "event" ? eventDetails.wholeDay : false,
+                create_type: eventDetails.create_type,
             };
             const updatedEvents = { ...userEvents };
             selectedDates.forEach((date) => {
@@ -618,6 +747,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 image_preview: "",
                 croppedImage: null,
                 wholeDay: false,
+                create_type: "event",
             });
             setSelectedDates([]);
             setIsEditModalOpen(false);
@@ -627,7 +757,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 toast: true,
                 position: "top-end",
                 icon: "success",
-                title: "Event updated successfully",
+                title: `${eventDetails.create_type === "event" ? "Event" : "Announcement"} updated successfully`,
                 showConfirmButton: false,
                 timer: 1500,
             });
@@ -1013,17 +1143,21 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                                     initial="hidden"
                                                     animate="visible"
                                                 >
-                                                    <h3 className="font-bold">{event.title}</h3>
+                                                    <h3 className="font-bold">{event.title} ({event.create_type === "event" ? "Event" : "Announcement"})</h3>
                                                     <p>
                                                         <span className="font-bold">Dates:</span> {event.dates.join(", ")}
                                                     </p>
-                                                    <p>
-                                                        <span className="font-bold">Time:</span>{" "}
-                                                        {event.whole_day ? "Whole Day" : `${event.start_time} - ${event.end_time}`}
-                                                    </p>
-                                                    <p>
-                                                        <span className="font-bold">Location:</span> {event.location}
-                                                    </p>
+                                                    {event.create_type === "event" && (
+                                                        <>
+                                                            <p>
+                                                                <span className="font-bold">Time:</span>{" "}
+                                                                {event.whole_day ? "Whole Day" : `${event.start_time} - ${event.end_time}`}
+                                                            </p>
+                                                            <p>
+                                                                <span className="font-bold">Location:</span> {event.location || "N/A"}
+                                                            </p>
+                                                        </>
+                                                    )}
                                                     <p>
                                                         <span className="font-bold">Description:</span> {event.description || "N/A"}
                                                     </p>
@@ -1077,14 +1211,14 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
             <AnimatePresence>
                 {isEventModalOpen && (
                     <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60"
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                     >
                         <motion.div
                             ref={eventModalRef}
-                            className="bg-white rounded-lg shadow-lg w-11/12 max-w-md md:max-w-lg mx-4 h-[90vh] flex flex-col"
+                            className="bg-white rounded-lg shadow-lg w-11/12 max-w-md md:max-w-lg mx-4 h-[90vh] flex flex-col z-[1001]"
                             variants={modalVariants}
                             initial="hidden"
                             animate="visible"
@@ -1104,7 +1238,33 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                             <div className="p-4 overflow-y-auto flex-1">
                                 <form onSubmit={handleCreateEvent} className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium mb-1">Event Title</label>
+                                        <label className="block text-sm font-medium mb-1">Event or Announcement</label>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={eventDetails.create_type === "announcement"}
+                                                onChange={() => setEventDetails({
+                                                    ...eventDetails,
+                                                    create_type: eventDetails.create_type === "event" ? "announcement" : "event",
+                                                    wholeDay: eventDetails.create_type === "event" ? false : eventDetails.wholeDay,
+                                                    startHour: "1",
+                                                    startMinute: "00",
+                                                    startPeriod: "AM",
+                                                    endHour: "1",
+                                                    endMinute: "00",
+                                                    endPeriod: "AM",
+                                                    location: ""
+                                                })}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                            <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                                {eventDetails.create_type === "event" ? "Event" : "Announcement"}
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Title</label>
                                         <input
                                             type="text"
                                             name="title"
@@ -1123,118 +1283,122 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                             className="w-full p-2 border rounded bg-gray-100"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Whole Day?</label>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={eventDetails.wholeDay}
-                                                onChange={handleWholeDayToggle}
-                                                className="sr-only peer"
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                                            <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">{eventDetails.wholeDay ? "Yes" : "No"}</span>
-                                        </label>
-                                    </div>
-                                    {!eventDetails.wholeDay && (
+                                    {eventDetails.create_type === "event" && (
                                         <>
                                             <div>
-                                                <label className="block text-sm font-medium mb-1">Start Time</label>
-                                                <div className="flex flex-wrap space-x-2 items-center">
-                                                    <select
-                                                        name="startHour"
-                                                        value={eventDetails.startHour}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {hours.map((hour) => (
-                                                            <option key={hour} value={hour}>
-                                                                {hour}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <span>:</span>
-                                                    <select
-                                                        name="startMinute"
-                                                        value={eventDetails.startMinute}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {minutes.map((minute) => (
-                                                            <option key={minute} value={minute}>
-                                                                {minute}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <select
-                                                        name="startPeriod"
-                                                        value={eventDetails.startPeriod}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {periods.map((period) => (
-                                                            <option key={period} value={period}>
-                                                                {period}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                                <label className="block text-sm font-medium mb-1">Whole Day?</label>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={eventDetails.wholeDay}
+                                                        onChange={handleWholeDayToggle}
+                                                        className="sr-only peer"
+                                                    />
+                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                    <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">{eventDetails.wholeDay ? "Yes" : "No"}</span>
+                                                </label>
                                             </div>
+                                            {!eventDetails.wholeDay && (
+                                                <>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Start Time</label>
+                                                        <div className="flex flex-wrap space-x-2 items-center">
+                                                            <select
+                                                                name="startHour"
+                                                                value={eventDetails.startHour}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {hours.map((hour) => (
+                                                                    <option key={hour} value={hour}>
+                                                                        {hour}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <span>:</span>
+                                                            <select
+                                                                name="startMinute"
+                                                                value={eventDetails.startMinute}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {minutes.map((minute) => (
+                                                                    <option key={minute} value={minute}>
+                                                                        {minute}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <select
+                                                                name="startPeriod"
+                                                                value={eventDetails.startPeriod}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {periods.map((period) => (
+                                                                    <option key={period} value={period}>
+                                                                        {period}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">End Time</label>
+                                                        <div className="flex flex-wrap space-x-2 items-center">
+                                                            <select
+                                                                name="endHour"
+                                                                value={eventDetails.endHour}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {hours.map((hour) => (
+                                                                    <option key={hour} value={hour}>
+                                                                        {hour}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <span>:</span>
+                                                            <select
+                                                                name="endMinute"
+                                                                value={eventDetails.endMinute}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {minutes.map((minute) => (
+                                                                    <option key={minute} value={minute}>
+                                                                        {minute}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <select
+                                                                name="endPeriod"
+                                                                value={eventDetails.endPeriod}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {periods.map((period) => (
+                                                                    <option key={period} value={period}>
+                                                                        {period}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div>
-                                                <label className="block text-sm font-medium mb-1">End Time</label>
-                                                <div className="flex flex-wrap space-x-2 items-center">
-                                                    <select
-                                                        name="endHour"
-                                                        value={eventDetails.endHour}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {hours.map((hour) => (
-                                                            <option key={hour} value={hour}>
-                                                                {hour}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <span>:</span>
-                                                    <select
-                                                        name="endMinute"
-                                                        value={eventDetails.endMinute}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {minutes.map((minute) => (
-                                                            <option key={minute} value={minute}>
-                                                                {minute}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <select
-                                                        name="endPeriod"
-                                                        value={eventDetails.endPeriod}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {periods.map((period) => (
-                                                            <option key={period} value={period}>
-                                                                {period}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                                <label className="block text-sm font-medium mb-1">Location</label>
+                                                <input
+                                                    type="text"
+                                                    name="location"
+                                                    value={eventDetails.location}
+                                                    onChange={handleEventInputChange}
+                                                    className="w-full p-2 border rounded"
+                                                    required
+                                                />
                                             </div>
                                         </>
                                     )}
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Location</label>
-                                        <input
-                                            type="text"
-                                            name="location"
-                                            value={eventDetails.location}
-                                            onChange={handleEventInputChange}
-                                            className="w-full p-2 border rounded"
-                                            required
-                                        />
-                                    </div>
                                     <div>
                                         <label className="block text-sm font-medium mb-1">Description</label>
                                         <textarea
@@ -1288,7 +1452,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                     >
-                                        Create Event
+                                        Create {eventDetails.create_type === "event" ? "Event" : "Announcement"}
                                     </motion.button>
                                 </form>
                             </div>
@@ -1327,6 +1491,32 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                             <div className="p-4 overflow-y-auto flex-1">
                                 <form onSubmit={handleUpdateEvent} className="space-y-4">
                                     <div>
+                                        <label className="block text-sm font-medium mb-1">Event or Announcement</label>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={eventDetails.create_type === "announcement"}
+                                                onChange={() => setEventDetails({
+                                                    ...eventDetails,
+                                                    create_type: eventDetails.create_type === "event" ? "announcement" : "event",
+                                                    wholeDay: eventDetails.create_type === "event" ? false : eventDetails.wholeDay,
+                                                    startHour: "1",
+                                                    startMinute: "00",
+                                                    startPeriod: "AM",
+                                                    endHour: "1",
+                                                    endMinute: "00",
+                                                    endPeriod: "AM",
+                                                    location: ""
+                                                })}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                            <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                                {eventDetails.create_type === "event" ? "Event" : "Announcement"}
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div>
                                         <label className="block text-sm font-medium mb-1">Event Title</label>
                                         <input
                                             type="text"
@@ -1346,118 +1536,122 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                             className="w-full p-2 border rounded bg-gray-100"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Whole Day?</label>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={eventDetails.wholeDay}
-                                                onChange={handleWholeDayToggle}
-                                                className="sr-only peer"
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                                            <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">{eventDetails.wholeDay ? "Yes" : "No"}</span>
-                                        </label>
-                                    </div>
-                                    {!eventDetails.wholeDay && (
+                                    {eventDetails.create_type === "event" && (
                                         <>
                                             <div>
-                                                <label className="block text-sm font-medium mb-1">Start Time</label>
-                                                <div className="flex flex-wrap space-x-2 items-center">
-                                                    <select
-                                                        name="startHour"
-                                                        value={eventDetails.startHour}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {hours.map((hour) => (
-                                                            <option key={hour} value={hour}>
-                                                                {hour}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <span>:</span>
-                                                    <select
-                                                        name="startMinute"
-                                                        value={eventDetails.startMinute}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {minutes.map((minute) => (
-                                                            <option key={minute} value={minute}>
-                                                                {minute}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <select
-                                                        name="startPeriod"
-                                                        value={eventDetails.startPeriod}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {periods.map((period) => (
-                                                            <option key={period} value={period}>
-                                                                {period}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                                <label className="block text-sm font-medium mb-1">Whole Day?</label>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={eventDetails.wholeDay}
+                                                        onChange={handleWholeDayToggle}
+                                                        className="sr-only peer"
+                                                    />
+                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                    <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">{eventDetails.wholeDay ? "Yes" : "No"}</span>
+                                                </label>
                                             </div>
+                                            {!eventDetails.wholeDay && (
+                                                <>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Start Time</label>
+                                                        <div className="flex flex-wrap space-x-2 items-center">
+                                                            <select
+                                                                name="startHour"
+                                                                value={eventDetails.startHour}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {hours.map((hour) => (
+                                                                    <option key={hour} value={hour}>
+                                                                        {hour}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <span>:</span>
+                                                            <select
+                                                                name="startMinute"
+                                                                value={eventDetails.startMinute}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {minutes.map((minute) => (
+                                                                    <option key={minute} value={minute}>
+                                                                        {minute}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <select
+                                                                name="startPeriod"
+                                                                value={eventDetails.startPeriod}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {periods.map((period) => (
+                                                                    <option key={period} value={period}>
+                                                                        {period}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">End Time</label>
+                                                        <div className="flex flex-wrap space-x-2 items-center">
+                                                            <select
+                                                                name="endHour"
+                                                                value={eventDetails.endHour}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {hours.map((hour) => (
+                                                                    <option key={hour} value={hour}>
+                                                                        {hour}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <span>:</span>
+                                                            <select
+                                                                name="endMinute"
+                                                                value={eventDetails.endMinute}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {minutes.map((minute) => (
+                                                                    <option key={minute} value={minute}>
+                                                                        {minute}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <select
+                                                                name="endPeriod"
+                                                                value={eventDetails.endPeriod}
+                                                                onChange={handleEventInputChange}
+                                                                className="p-2 border rounded w-1/4 sm:w-20"
+                                                            >
+                                                                {periods.map((period) => (
+                                                                    <option key={period} value={period}>
+                                                                        {period}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div>
-                                                <label className="block text-sm font-medium mb-1">End Time</label>
-                                                <div className="flex flex-wrap space-x-2 items-center">
-                                                    <select
-                                                        name="endHour"
-                                                        value={eventDetails.endHour}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {hours.map((hour) => (
-                                                            <option key={hour} value={hour}>
-                                                                {hour}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <span>:</span>
-                                                    <select
-                                                        name="endMinute"
-                                                        value={eventDetails.endMinute}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {minutes.map((minute) => (
-                                                            <option key={minute} value={minute}>
-                                                                {minute}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <select
-                                                        name="endPeriod"
-                                                        value={eventDetails.endPeriod}
-                                                        onChange={handleEventInputChange}
-                                                        className="p-2 border rounded w-1/4 sm:w-20"
-                                                    >
-                                                        {periods.map((period) => (
-                                                            <option key={period} value={period}>
-                                                                {period}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                                <label className="block text-sm font-medium mb-1">Location</label>
+                                                <input
+                                                    type="text"
+                                                    name="location"
+                                                    value={eventDetails.location}
+                                                    onChange={handleEventInputChange}
+                                                    className="w-full p-2 border rounded"
+                                                    required
+                                                />
                                             </div>
                                         </>
                                     )}
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Location</label>
-                                        <input
-                                            type="text"
-                                            name="location"
-                                            value={eventDetails.location}
-                                            onChange={handleEventInputChange}
-                                            className="w-full p-2 border rounded"
-                                            required
-                                        />
-                                    </div>
                                     <div>
                                         <label className="block text-sm font-medium mb-1">Description</label>
                                         <textarea
@@ -1485,7 +1679,7 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                     >
-                                        Update Event
+                                        Update {eventDetails.create_type === "event" ? "Event" : "Announcement"}
                                     </motion.button>
                                 </form>
                             </div>

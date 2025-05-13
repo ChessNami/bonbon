@@ -156,8 +156,8 @@ const Home = () => {
         };
     }, [isModalOpen]);
 
-    // Filter upcoming events within 30 days
     const upcomingEvents = allEvents
+        .filter((event) => event.create_type === "event") // Filter for event type only
         .map((event) => {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -285,23 +285,40 @@ const Home = () => {
                                                 </div>
                                             </div>
                                             <div className="w-full sm:w-2/3">
-                                                <h2 className="text-gray-700 mb-1 sm:mb-2 text-lg sm:text-xl font-bold capitalize">
-                                                    {item.title}
-                                                </h2>
+                                                <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                                                    <h2 className="text-gray-700 text-lg sm:text-xl font-bold capitalize">
+                                                        {item.title}
+                                                    </h2>
+                                                    <span className={`text-xs font-semibold px-2 py-1 rounded ${item.create_type === "event" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                                                        {item.create_type === "event" ? "Event" : "Announcement"}
+                                                    </span>
+                                                </div>
                                                 <p className="text-sm sm:text-lg text-gray-600 capitalize">
                                                     <span className="font-bold">Date:</span>{" "}
                                                     {formatDates(item.dates)}
-                                                    <br />
-                                                    <span className="font-bold">Time:</span>{" "}
-                                                    {item.whole_day
-                                                        ? "Whole Day"
-                                                        : `${item.start_time} - ${item.end_time}`}
-                                                    <br />
-                                                    <span className="font-bold">Where:</span>{" "}
-                                                    {item.location}
+                                                    {item.create_type === "event" && (
+                                                        <>
+                                                            <br />
+                                                            <span className="font-bold">Time:</span>{" "}
+                                                            {item.whole_day
+                                                                ? "Whole Day"
+                                                                : `${item.start_time || "N/A"} - ${item.end_time || "N/A"}`}
+                                                            <br />
+                                                            <span className="font-bold">Where:</span>{" "}
+                                                            {item.location || "N/A"}
+                                                        </>
+                                                    )}
                                                 </p>
                                                 <p className="mt-1 sm:mt-2 text-gray-500 text-sm sm:text-sm">
-                                                    {item.description}
+                                                    {item.description.split(/(\s+)/).map((word, index) =>
+                                                        word.startsWith('#') ? (
+                                                            <span key={index} className="text-blue-500 font-semibold">
+                                                                {word}
+                                                            </span>
+                                                        ) : (
+                                                            word
+                                                        )
+                                                    )}
                                                 </p>
                                             </div>
                                         </motion.div>
@@ -328,8 +345,8 @@ const Home = () => {
                                     key={page}
                                     onClick={() => handlePageChange(page)}
                                     className={`px-3 py-1 rounded ${currentPage === page
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-gray-200 hover:bg-gray-300"
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-gray-200 hover:bg-gray-300"
                                         }`}
                                 >
                                     {page}
@@ -391,9 +408,14 @@ const Home = () => {
                                         />
                                     </div>
                                     <div className="p-2 text-center">
-                                        <h3 className="text-xs sm:text-sm font-bold text-gray-700 line-clamp-2 capitalize">
-                                            {item.title}
-                                        </h3>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <h3 className="text-xs sm:text-sm font-bold text-gray-700 line-clamp-2 capitalize">
+                                                {item.title}
+                                            </h3>
+                                            <span className={`text-[10px] font-semibold px-1 py-0.5 rounded ${item.create_type === "event" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                                                {item.create_type === "event" ? "Event" : "Announcement"}
+                                            </span>
+                                        </div>
                                         <p className="text-[10px] sm:text-xs text-gray-500">
                                             {item.displayDate.toLocaleDateString()}
                                         </p>
@@ -421,8 +443,8 @@ const Home = () => {
                                         key={page}
                                         onClick={() => handleUpcomingPageChange(page)}
                                         className={`px-3 py-1 rounded ${upcomingCurrentPage === page
-                                                ? "bg-blue-500 text-white"
-                                                : "bg-gray-200 hover:bg-gray-300"
+                                            ? "bg-blue-500 text-white"
+                                            : "bg-gray-200 hover:bg-gray-300"
                                             }`}
                                     >
                                         {page}
