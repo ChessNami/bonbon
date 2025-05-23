@@ -43,6 +43,7 @@ const ResidentManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortOption, setSortOption] = useState('default');
+    const [isRentingFilter, setIsRentingFilter] = useState('all');
 
     // Initialize address mappings
     useEffect(() => {
@@ -292,6 +293,13 @@ const ResidentManagement = () => {
             filtered = filtered.filter((resident) => resident.status === parseInt(statusFilter));
         }
 
+        if (isRentingFilter !== 'all') {
+            filtered = filtered.filter((resident) => {
+                const census = resident.censusData || {};
+                return census.isRenting === isRentingFilter;
+            });
+        }
+
         filtered.sort((a, b) => {
             if (sortOption === 'default') {
                 if (a.status === 3 && b.status !== 3) return -1;
@@ -345,7 +353,7 @@ const ResidentManagement = () => {
         });
 
         setFilteredResidents(filtered);
-    }, [residents, searchTerm, statusFilter, sortOption]);
+    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter]);
 
     // Disable scroll on body when modals are open
     useEffect(() => {
@@ -373,8 +381,9 @@ const ResidentManagement = () => {
     const handleClearFilters = () => {
         setSearchTerm('');
         setStatusFilter('all');
-        setSortOption('name-asc');
+        setSortOption('default');
         setItemsPerPage(10);
+        setIsRentingFilter('all'); // Reset the new filter
     };
 
     const handleUpdateStatus = async (resident, reason) => {
@@ -1005,6 +1014,8 @@ const ResidentManagement = () => {
                         itemsPerPage={itemsPerPage}
                         setItemsPerPage={setItemsPerPage}
                         onClearFilters={handleClearFilters}
+                        isRentingFilter={isRentingFilter}
+                        setIsRentingFilter={setIsRentingFilter}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                         {currentItems.length > 0 ? (

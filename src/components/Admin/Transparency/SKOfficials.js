@@ -16,7 +16,7 @@ const SKOfficials = () => {
     const [currentOfficial, setCurrentOfficial] = useState(null);
     const [formData, setFormData] = useState({
         name: "",
-        position: "SK Kagawad",
+        position: "",
         official_type: "",
         image: null,
         image_preview: "",
@@ -126,7 +126,7 @@ const SKOfficials = () => {
         setModalMode("create");
         setFormData({
             name: "",
-            position: "SK Kagawad",
+            position: "",
             official_type: "",
             image: null,
             image_preview: "",
@@ -339,7 +339,7 @@ const SKOfficials = () => {
         setCurrentOfficial(null);
         setFormData({
             name: "",
-            position: "SK Kagawad",
+            position: "",
             official_type: "",
             image: null,
             image_preview: "",
@@ -381,7 +381,7 @@ const SKOfficials = () => {
                     onClick={handleCreate}
                     className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-md"
                 >
-                    <FaPlus className="mr-2" /> Add SK Official
+                    <FaPlus className="mr-2" /> Add Official
                 </button>
                 <div className="flex items-center space-x-2">
                     <label className="text-sm font-medium text-gray-700">Items per page:</label>
@@ -544,18 +544,19 @@ const SKOfficials = () => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Position</label>
-                                            <input
-                                                type="text"
+                                            <select
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"
-                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
-                                            />
-                                            {errors.position && (
-                                                <p className="text-red-500 text-xs mt-1">{errors.position}</p>
-                                            )}
+                                            >
+                                                <option value="SK Chairman">SK Chairman</option>
+                                                <option value="SK Secretary">SK Secretary</option>
+                                                <option value="SK Treasurer">SK Treasurer</option>
+                                                <option value="SK Kagawad">SK Kagawad</option>
+                                            </select>
+                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Official Type</label>
@@ -639,18 +640,19 @@ const SKOfficials = () => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Position</label>
-                                            <input
-                                                type="text"
+                                            <select
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"
-                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
-                                            />
-                                            {errors.position && (
-                                                <p className="text-red-500 text-xs mt-1">{errors.position}</p>
-                                            )}
+                                            >
+                                                <option value="SK Chairman">SK Chairman</option>
+                                                <option value="SK Secretary">SK Secretary</option>
+                                                <option value="SK Treasurer">SK Treasurer</option>
+                                                <option value="SK Kagawad">SK Kagawad</option>
+                                            </select>
+                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Official Type</label>

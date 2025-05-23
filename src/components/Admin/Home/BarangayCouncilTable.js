@@ -61,11 +61,14 @@ const BarangayCouncilTable = () => {
                             official_type: official.official_type || "N/A",
                             signedImageUrl,
                             isHeader:
-                                official.position.toLowerCase().includes("punong barangay") ||
-                                official.position.toLowerCase().includes("barangay captain") ||
-                                official.position.toLowerCase().includes("barangay kapitan") ||
-                                official.position.toLowerCase().includes("sk chairman") ||
-                                official.position.toLowerCase().includes("sk chairperson"),
+                                (activeTab === "Barangay Officials" &&
+                                    (official.position.toLowerCase().includes("punong barangay") ||
+                                        official.position.toLowerCase().includes("barangay captain") ||
+                                        official.position.toLowerCase().includes("barangay kapitan"))) ||
+                                (activeTab === "Sangguniang Kabataan" &&
+                                    (official.position.toLowerCase().includes("sk chairman") ||
+                                        official.position.toLowerCase().includes("chairman") ||
+                                        official.position.toLowerCase().includes("sk chairperson"))),
                         };
                     })
                 );
@@ -99,14 +102,11 @@ const BarangayCouncilTable = () => {
 
     useEffect(() => {
         if (selectedOfficial) {
-            // Add class to body when modal is open
             document.body.classList.add('modal-open');
         } else {
-            // Remove class from body when modal is closed
             document.body.classList.remove('modal-open');
         }
 
-        // Cleanup on component unmount
         return () => {
             document.body.classList.remove('modal-open');
         };
@@ -171,8 +171,8 @@ const BarangayCouncilTable = () => {
                     <button
                         key={tab}
                         className={`px-6 py-3 text-sm font-medium transition-colors duration-300 relative ${activeTab === tab
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-500 hover:text-blue-600"
+                                ? "text-blue-600 border-b-2 border-blue-600"
+                                : "text-gray-500 hover:text-blue-600"
                             }`}
                         onClick={() => setActiveTab(tab)}
                     >
@@ -206,8 +206,8 @@ const BarangayCouncilTable = () => {
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     transition={{ duration: 0.2, delay: index * 0.1 }}
                                     className={`bg-gray-50 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 cursor-pointer ${member.isHeader
-                                        ? "border-4 border-blue-400 bg-blue-50"
-                                        : ""
+                                            ? "border-4 border-blue-400 bg-blue-50"
+                                            : ""
                                         }`}
                                     onClick={() => setSelectedOfficial(member)}
                                 >
@@ -233,8 +233,8 @@ const BarangayCouncilTable = () => {
                                     <div className="p-4 text-center">
                                         <h3
                                             className={`text-lg font-semibold ${member.isHeader
-                                                ? "text-blue-700"
-                                                : "text-gray-800"
+                                                    ? "text-blue-700"
+                                                    : "text-gray-800"
                                                 } uppercase truncate`}
                                         >
                                             {member.name}
@@ -263,10 +263,10 @@ const BarangayCouncilTable = () => {
                         <button
                             key={index}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${page === currentPage
-                                ? "bg-blue-600 text-white"
-                                : page === "..."
-                                    ? "text-gray-500 cursor-default"
-                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                    ? "bg-blue-600 text-white"
+                                    : page === "..."
+                                        ? "text-gray-500 cursor-default"
+                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                 }`}
                             onClick={() => typeof page === "number" && setCurrentPage(page)}
                             disabled={page === "..."}
@@ -286,7 +286,6 @@ const BarangayCouncilTable = () => {
                 </div>
             )}
 
-            {/* Modal for Official Details */}
             <AnimatePresence>
                 {selectedOfficial && (
                     <motion.div
@@ -303,7 +302,6 @@ const BarangayCouncilTable = () => {
                             exit={{ scale: 0.8, opacity: 0 }}
                             transition={{ duration: 0.3 }}
                         >
-                            {/* Fixed Header */}
                             <div className="flex justify-between items-center p-4 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-lg">
                                 <h2 className="text-xl font-bold text-gray-800">Official Details</h2>
                                 <button
@@ -314,7 +312,6 @@ const BarangayCouncilTable = () => {
                                 </button>
                             </div>
 
-                            {/* Scrollable Content */}
                             <div className="p-6 overflow-y-auto max-h-[80vh]">
                                 <div className="flex flex-col items-center">
                                     <div className="w-full h-auto mb-4">

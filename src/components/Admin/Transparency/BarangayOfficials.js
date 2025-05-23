@@ -16,7 +16,7 @@ const BarangayOfficials = () => {
     const [currentOfficial, setCurrentOfficial] = useState(null);
     const [formData, setFormData] = useState({
         name: "",
-        position: "Kagawad",
+        position: "",
         official_type: "",
         image: null,
         image_preview: "",
@@ -126,7 +126,7 @@ const BarangayOfficials = () => {
         setModalMode("create");
         setFormData({
             name: "",
-            position: "Kagawad",
+            position: "",
             official_type: "",
             image: null,
             image_preview: "",
@@ -337,7 +337,7 @@ const BarangayOfficials = () => {
         setCurrentOfficial(null);
         setFormData({
             name: "",
-            position: "Kagawad",
+            position: "",
             official_type: "",
             image: null,
             image_preview: "",
@@ -541,18 +541,19 @@ const BarangayOfficials = () => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Position</label>
-                                            <input
-                                                type="text"
+                                            <select
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"
-                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
-                                            />
-                                            {errors.position && (
-                                                <p className="text-red-500 text-xs mt-1">{errors.position}</p>
-                                            )}
+                                            >
+                                                <option value="Punong Barangay">Punong Barangay</option>
+                                                <option value="Barangay Secretary">Barangay Secretary</option>
+                                                <option value="Barangay Treasurer">Barangay Treasurer</option>
+                                                <option value="Barangay Kagawad">Barangay Kagawad</option>
+                                            </select>
+                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Official Type</label>
@@ -636,18 +637,19 @@ const BarangayOfficials = () => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Position</label>
-                                            <input
-                                                type="text"
+                                            <select
                                                 name="position"
                                                 value={formData.position}
                                                 onChange={handleInputChange}
-                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"
-                                                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                className={`w-full p-2 border rounded ${errors.position ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 required
-                                            />
-                                            {errors.position && (
-                                                <p className="text-red-500 text-xs mt-1">{errors.position}</p>
-                                            )}
+                                            >
+                                                <option value="Punong Barangay">Punong Barangay</option>
+                                                <option value="Barangay Secretary">Barangay Secretary</option>
+                                                <option value="Barangay Treasurer">Barangay Treasurer</option>
+                                                <option value="Barangay Kagawad">Barangay Kagawad</option>
+                                            </select>
+                                            {errors.position && <p className="text-red-500 text-xs mt-1">{errors.position}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Official Type</label>
