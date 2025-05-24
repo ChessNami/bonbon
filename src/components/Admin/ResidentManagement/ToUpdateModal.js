@@ -1,13 +1,11 @@
 import React, { useRef } from 'react';
-import { FaTimes, FaEye, FaCheck, FaEdit } from 'react-icons/fa';
+import { FaTimes, FaEye } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const PendingModal = ({
+const ToUpdateModal = ({
     isOpen,
     residents,
     onView,
-    onAccept,
-    onUpdate, // Changed from onReject to onUpdate
     onClose,
     zIndex,
     getStatusBadge,
@@ -53,7 +51,7 @@ const PendingModal = ({
                         className="bg-white rounded-2xl w-full max-w-4xl max-h-[80vh] h-full flex flex-col overflow-hidden shadow-2xl"
                     >
                         <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
-                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Pending Residents</h2>
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Update Profiling Residents</h2>
                             <motion.button
                                 onClick={onClose}
                                 className="text-gray-500 hover:text-gray-800 transition-colors duration-200"
@@ -97,10 +95,10 @@ const PendingModal = ({
                                                         {resident.firstName} {resident.lastName}
                                                     </h3>
                                                     <div className="mt-1">{getStatusBadge(resident.status)}</div>
-                                                    {resident.createdAt && (
+                                                    {resident.updatedAt && (
                                                         <p className="text-sm text-gray-600 mt-1">
-                                                            <span className="font-medium">Submitted At:</span>{' '}
-                                                            {new Date(resident.createdAt).toLocaleString()}
+                                                            <span className="font-medium">Update Requested At:</span>{' '}
+                                                            {new Date(resident.updatedAt).toLocaleString()}
                                                         </p>
                                                     )}
                                                 </div>
@@ -115,30 +113,18 @@ const PendingModal = ({
                                                     <FaEye />
                                                     View
                                                 </motion.button>
-                                                <motion.button
-                                                    onClick={() => onAccept(resident)}
-                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-500 rounded-full hover:bg-green-600 transition-colors duration-300"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaCheck />
-                                                    Accept
-                                                </motion.button>
-                                                <motion.button
-                                                    onClick={() => onUpdate(resident)}
-                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-full hover:bg-orange-600 transition-colors duration-300"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <FaEdit />
-                                                    Update
-                                                </motion.button>
                                             </div>
                                         </div>
+                                        {resident.rejectionReason && (
+                                            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-3">Reason for Update Request</h4>
+                                                <p className="text-sm text-gray-600 italic">{resident.rejectionReason}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-sm text-gray-500 text-center italic">No pending residents at this time.</p>
+                                <p className="text-sm text-gray-500 text-center italic">No residents requiring profile updates at this time.</p>
                             )}
                         </div>
                     </div>
@@ -148,4 +134,4 @@ const PendingModal = ({
     );
 };
 
-export default PendingModal;
+export default ToUpdateModal;

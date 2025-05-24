@@ -14,6 +14,7 @@ import PendingModal from './PendingModal';
 import RequestsModal from './RequestsModal';
 import UpdateModal from './UpdateModal';
 import RejectedModal from './RejectedModal';
+import ToUpdateModal from './ToUpdateModal'; // Add this import
 import { getStatusBadge } from './Utils';
 
 const ResidentManagement = () => {
@@ -27,6 +28,7 @@ const ResidentManagement = () => {
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [requestsModalOpen, setRequestsModalOpen] = useState(false);
     const [updateModalOpen, setUpdateModalOpen] = useState(false);
+    const [updateProfilingModalOpen, setUpdateProfilingModalOpen] = useState(false);
     const [selectedResident, setSelectedResident] = useState(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [showRejectionForm, setShowRejectionForm] = useState(null);
@@ -357,7 +359,7 @@ const ResidentManagement = () => {
 
     // Disable scroll on body when modals are open
     useEffect(() => {
-        if (viewModalOpen || pendingModalOpen || rejectModalOpen || requestsModalOpen || updateModalOpen) {
+        if (viewModalOpen || pendingModalOpen || rejectModalOpen || requestsModalOpen || updateModalOpen || updateProfilingModalOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'auto';
@@ -365,7 +367,7 @@ const ResidentManagement = () => {
         return () => {
             document.body.style.overflow = 'auto';
         };
-    }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
+    }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen, updateProfilingModalOpen]);
 
     // Update modal stack
     useEffect(() => {
@@ -374,9 +376,10 @@ const ResidentManagement = () => {
         if (rejectModalOpen) stack.push('reject');
         if (requestsModalOpen) stack.push('requests');
         if (updateModalOpen) stack.push('update');
+        if (updateProfilingModalOpen) stack.push('updateProfiling'); // Add this line
         if (viewModalOpen) stack.push('view');
         setModalStack(stack);
-    }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen]);
+    }, [viewModalOpen, pendingModalOpen, rejectModalOpen, requestsModalOpen, updateModalOpen, updateProfilingModalOpen]);
 
     const handleClearFilters = () => {
         setSearchTerm('');
@@ -999,9 +1002,11 @@ const ResidentManagement = () => {
                         pendingCount={pendingCount}
                         rejectedCount={rejectedCount}
                         requestsCount={requestsCount}
+                        updateProfilingCount={residents.filter((r) => r.status === 6).length}
                         onPending={() => setPendingModalOpen(true)}
                         onRejected={() => setRejectModalOpen(true)}
                         onRequests={() => setRequestsModalOpen(true)}
+                        onUpdateProfiling={() => setUpdateProfilingModalOpen(true)}
                         onReload={handleReload}
                     />
                     <FilterSearch
@@ -1136,6 +1141,19 @@ const ResidentManagement = () => {
                             setRejectionReason('');
                         }}
                         zIndex={getModalZIndex('update')}
+                    />
+                    <ToUpdateModal
+                        isOpen={updateProfilingModalOpen}
+                        residents={residents.filter((r) => r.status === 6)}
+                        onView={(resident) => {
+                            setSelectedResident(resident);
+                            setViewModalOpen(true);
+                        }}
+                        onClose={() => {
+                            setUpdateProfilingModalOpen(false);
+                        }}
+                        zIndex={getModalZIndex('updateProfiling')}
+                        getStatusBadge={getStatusBadge}
                     />
                     <RejectedModal
                         isOpen={rejectModalOpen}
