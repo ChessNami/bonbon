@@ -27,6 +27,9 @@ const ResidentProfiling = () => {
         childrenCount: 0,
         numberOfhouseholdMembers: 0,
     });
+    const [signedValidIdUrl, setSignedValidIdUrl] = useState(null);
+    const [signedZoneCertUrl, setSignedZoneCertUrl] = useState(null);
+    const [signedSpouseValidIdUrl, setSignedSpouseValidIdUrl] = useState(null);
     const [userId, setUserId] = useState(null);
     const [addressMappings, setAddressMappings] = useState({
         region: {},
@@ -80,7 +83,7 @@ const ResidentProfiling = () => {
                 setUserId(user.id);
                 const { data, error } = await supabase
                     .from('residents')
-                    .select('*, resident_profile_status(status, rejection_reason)')
+                    .select('*, resident_profile_status(status, rejection_reason), spouse_valid_id_url')
                     .eq('user_id', user.id)
                     .single();
 
@@ -103,19 +106,56 @@ const ResidentProfiling = () => {
 
                     // Fetch signed URL for household head image
                     if (data.image_url) {
-                        const filePath = data.image_url;
                         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                             .from('householdhead')
-                            .createSignedUrl(filePath, 7200); // 2 hours
-
+                            .createSignedUrl(data.image_url, 7200);
                         if (signedUrlError) {
-                            console.error('Error generating signed URL:', signedUrlError);
+                            console.error('Error generating signed URL for image:', signedUrlError);
                             setSignedImageUrl(placeholderImage);
                         } else {
                             setSignedImageUrl(signedUrlData.signedUrl);
                         }
                     } else {
                         setSignedImageUrl(placeholderImage);
+                    }
+
+                    // Fetch signed URL for valid ID
+                    if (data.valid_id_url) {
+                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                            .from('validid')
+                            .createSignedUrl(data.valid_id_url, 7200);
+                        if (signedUrlError) {
+                            console.error('Error generating signed URL for valid ID:', signedUrlError);
+                            setSignedValidIdUrl(null);
+                        } else {
+                            setSignedValidIdUrl(signedUrlData.signedUrl);
+                        }
+                    }
+
+                    // Fetch signed URL for zone certificate
+                    if (data.zone_cert_url) {
+                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                            .from('validid')
+                            .createSignedUrl(data.zone_cert_url, 7200);
+                        if (signedUrlError) {
+                            console.error('Error generating signed URL for zone certificate:', signedUrlError);
+                            setSignedZoneCertUrl(null);
+                        } else {
+                            setSignedZoneCertUrl(signedUrlData.signedUrl);
+                        }
+                    }
+
+                    // Fetch signed URL for spouse valid ID
+                    if (data.spouse_valid_id_url) {
+                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                            .from('validid')
+                            .createSignedUrl(data.spouse_valid_id_url, 7200);
+                        if (signedUrlError) {
+                            console.error('Error generating signed URL for spouse valid ID:', signedUrlError);
+                            setSignedSpouseValidIdUrl(null);
+                        } else {
+                            setSignedSpouseValidIdUrl(signedUrlData.signedUrl);
+                        }
                     }
                 } else {
                     setFormData({
@@ -129,6 +169,8 @@ const ResidentProfiling = () => {
                     setProfileStatus(null);
                     setRejectionReason(null);
                     setSignedImageUrl(placeholderImage);
+                    setSignedValidIdUrl(null);
+                    setSignedZoneCertUrl(null);
                 }
             } catch (error) {
                 console.error('Unexpected error in fetchUserAndData:', error.message);
@@ -302,6 +344,8 @@ const ResidentProfiling = () => {
                 'employmentType',
                 'education',
                 'image_url',
+                'valid_id_url',
+                'zone_cert_url',
             ];
             for (let field of requiredHouseholdFields) {
                 if (!formData.household[field]) {
@@ -456,6 +500,9 @@ const ResidentProfiling = () => {
                         children_count: parseInt(formData.childrenCount, 10) || 0,
                         number_of_household_members: parseInt(formData.numberOfhouseholdMembers, 10) || 0,
                         image_url: formData.household.image_url,
+                        valid_id_url: formData.household.valid_id_url,
+                        zone_cert_url: formData.household.zone_cert_url,
+                        spouse_valid_id_url: formData.spouse?.valid_id_url || null,
                     },
                     { onConflict: 'user_id' }
                 )
@@ -721,6 +768,37 @@ const ResidentProfiling = () => {
                                             }}
                                         />
                                     </div>
+                                    <div className="mb-4">
+                                        <h3 className="text-sm font-semibold text-center mb-2">Household Head Valid ID</h3>
+                                        {signedValidIdUrl && (
+                                            formData.household.valid_id_url?.endsWith('.pdf') ? (
+                                                <p className="text-sm text-center">Valid ID (PDF): {formData.household.valid_id_url.split('/').pop()}</p>
+                                            ) : (
+                                                <img
+                                                    src={signedValidIdUrl}
+                                                    alt="Valid ID"
+                                                    className="w-48 h-48 object-contain mx-auto"
+                                                    onError={() => setSignedValidIdUrl(null)}
+                                                />
+                                            )
+                                        )}
+                                    </div>
+                                    <div className="mb-4">
+                                        {signedZoneCertUrl && (
+                                            (formData.household.zone_cert_url?.endsWith('.pdf') ||
+                                                formData.household.zone_cert_url?.endsWith('.doc') ||
+                                                formData.household.zone_cert_url?.endsWith('.docx')) ? (
+                                                <p className="text-sm text-center">Zone Certificate: {formData.household.zone_cert_url.split('/').pop()}</p>
+                                            ) : (
+                                                <img
+                                                    src={signedZoneCertUrl}
+                                                    alt="Zone Certificate"
+                                                    className="w-48 h-48 object-contain mx-auto"
+                                                    onError={() => setSignedZoneCertUrl(null)}
+                                                />
+                                            )
+                                        )}
+                                    </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                         {[
                                             'firstName',
@@ -767,43 +845,62 @@ const ResidentProfiling = () => {
                                 <fieldset className="border p-3 sm:p-4 rounded-lg">
                                     <legend className="font-semibold text-sm sm:text-base">Spouse</legend>
                                     {formData.spouse ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                            {[
-                                                'firstName',
-                                                'middleName',
-                                                'lastName',
-                                                'address',
-                                                'region',
-                                                'province',
-                                                'city',
-                                                'barangay',
-                                                'dob',
-                                                'age',
-                                                'gender',
-                                                'civilStatus',
-                                                'phoneNumber',
-                                                'idType',
-                                                'idNo',
-                                                'education',
-                                                'employmentType',
-                                            ].map((key) => {
-                                                let label = capitalizeWords(key);
-                                                if (key === 'dob') label = 'Date of Birth';
-                                                if (key === 'idType') label = 'ID Type';
-                                                if (key === 'idNo') label = 'ID Number';
+                                        <>
+                                            <div className="mb-4">
+                                                <h3 className="text-sm font-semibold text-center mb-2">Spouse Valid ID</h3>
+                                                {signedSpouseValidIdUrl && (
+                                                    formData.spouse.valid_id_url?.endsWith('.pdf') ? (
+                                                        <p className="text-sm text-center">Valid ID (PDF): {formData.spouse.valid_id_url.split('/').pop()}</p>
+                                                    ) : (
+                                                        <img
+                                                            src={signedSpouseValidIdUrl}
+                                                            alt="Spouse Valid ID"
+                                                            className="w-48 h-48 object-contain mx-auto"
+                                                            onError={() => setSignedSpouseValidIdUrl(null)}
+                                                        />
+                                                    )
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                                {[
+                                                    'firstName',
+                                                    'middleName',
+                                                    'lastName',
+                                                    'address',
+                                                    'region',
+                                                    'province',
+                                                    'city',
+                                                    'barangay',
+                                                    'zone',
+                                                    'zipCode',
+                                                    'dob',
+                                                    'age',
+                                                    'gender',
+                                                    'civilStatus',
+                                                    'phoneNumber',
+                                                    'idType',
+                                                    'idNo',
+                                                    'employmentType',
+                                                    'education',
+                                                ].map((key) => {
+                                                    let label = capitalizeWords(key);
+                                                    if (key === 'dob') label = 'Date of Birth';
+                                                    if (key === 'idType') label = 'ID Type';
+                                                    if (key === 'idNo') label = 'ID Number';
 
-                                                return (
-                                                    <div key={key}>
-                                                        <label className="font-medium text-xs sm:text-sm">{label}:</label>
-                                                        <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
-                                                            {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                ? addressMappings[key][formData.spouse[key]] || 'N/A'
-                                                                : formData.spouse[key] || 'N/A'}
-                                                        </p>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    return (
+                                                        <div key={key}>
+                                                            <label className="font-medium text-xs sm:text-sm">{label}:</label>
+                                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
+                                                                {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                    ? addressMappings[key][formData.spouse[key]] || 'N/A'
+                                                                    : formData.spouse[key] || 'N/A'}
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
                                     ) : (
                                         <p className="text-xs sm:text-sm text-gray-600">No spouse data provided.</p>
                                     )}

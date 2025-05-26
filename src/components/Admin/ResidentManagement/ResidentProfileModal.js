@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaDownload } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { capitalizeWords } from './Utils';
 
-const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zIndex }) => {
+const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zIndex, validIdUrl, validIdPath, zoneCertUrl, zoneCertPath, spouseValidIdUrl, spouseValidIdPath }) => {
     const [activeProfileTab, setActiveProfileTab] = useState(0);
 
     const modalVariants = {
@@ -16,6 +16,59 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
         hidden: { opacity: 0 },
         visible: { opacity: 0.5, transition: { duration: 0.3 } },
         exit: { opacity: 0, transition: { duration: 0.2 } },
+    };
+
+    // Helper to render file display and download link
+    const renderFileDisplay = (label, url, filePath) => {
+        if (!url || !filePath) {
+            return (
+                <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">{label}</label>
+                    <p className="text-sm text-gray-500 italic">No {label.toLowerCase()} uploaded</p>
+                </div>
+            );
+        }
+
+        const fileExt = filePath.split('.').pop()?.toLowerCase();
+        const isImage = ['png', 'jpeg', 'jpg'].includes(fileExt);
+        const isDownloadable = ['pdf', 'doc', 'docx'].includes(fileExt);
+        const fileName = filePath.split('/').pop();
+
+        return (
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">{label}</label>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col items-center">
+                    {isImage && (
+                        <img
+                            src={url}
+                            alt={label}
+                            className="w-48 h-48 object-contain rounded-lg mb-2"
+                            onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'block';
+                            }}
+                        />
+                    )}
+                    <p className={`text-sm text-gray-500 italic text-center ${isImage ? 'hidden' : ''}`}>
+                        {isImage ? '' : 'Image preview not available'}
+                    </p>
+                    {isDownloadable && (
+                        <p className="text-sm text-gray-800 text-center mb-2">
+                            {fileName}
+                        </p>
+                    )}
+                    <a
+                        href={url}
+                        download={fileName}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200 text-sm"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <FaDownload /> Download {label}
+                    </a>
+                </div>
+            </div>
+        );
     };
 
     if (!isOpen || !resident) return null;
@@ -94,44 +147,50 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {[
-                                                'firstName',
-                                                'middleName',
-                                                'lastName',
-                                                'address',
-                                                'region',
-                                                'province',
-                                                'city',
-                                                'barangay',
-                                                'zone',
-                                                'zipCode',
-                                                'dob',
-                                                'age',
-                                                'gender',
-                                                'civilStatus',
-                                                'phoneNumber',
-                                                'idType',
-                                                'idNo',
-                                                'employmentType',
-                                                'education',
-                                            ].map((key) => {
-                                                let label = capitalizeWords(key);
-                                                if (key === 'dob') label = 'Date of Birth';
-                                                if (key === 'idType') label = 'ID Type';
-                                                if (key === 'idNo') label = 'ID Number';
-                                                if (key === 'zone') label = 'Purok/Zone';
-                                                return (
-                                                    <div key={key} className="space-y-1">
-                                                        <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
-                                                            {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                ? addressMappings[key][resident.householdData[key]] || 'N/A'
-                                                                : resident.householdData[key] || 'N/A'}
+                                        <div className="flex-1 space-y-6">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {[
+                                                    'firstName',
+                                                    'middleName',
+                                                    'lastName',
+                                                    'address',
+                                                    'region',
+                                                    'province',
+                                                    'city',
+                                                    'barangay',
+                                                    'zone',
+                                                    'zipCode',
+                                                    'dob',
+                                                    'age',
+                                                    'gender',
+                                                    'civilStatus',
+                                                    'phoneNumber',
+                                                    'idType',
+                                                    'idNo',
+                                                    'employmentType',
+                                                    'education',
+                                                ].map((key) => {
+                                                    let label = capitalizeWords(key);
+                                                    if (key === 'dob') label = 'Date of Birth';
+                                                    if (key === 'idType') label = 'ID Type';
+                                                    if (key === 'idNo') label = 'ID Number';
+                                                    if (key === 'zone') label = 'Purok/Zone';
+                                                    return (
+                                                        <div key={key} className="space-y-1">
+                                                            <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                    ? addressMappings[key][resident.householdData[key]] || 'N/A'
+                                                                    : resident.householdData[key] || 'N/A'}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                                {renderFileDisplay('Valid ID', validIdUrl, validIdPath)}
+                                                {renderFileDisplay('Zone Certificate', zoneCertUrl, zoneCertPath)}
+                                            </div>
                                         </div>
                                     </div>
                                 </fieldset>
@@ -140,44 +199,49 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                 <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                     <legend className="text-lg font-semibold text-gray-800 px-2">Spouse</legend>
                                     {resident.spouseData ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {[
-                                                'firstName',
-                                                'middleName',
-                                                'lastName',
-                                                'address',
-                                                'region',
-                                                'province',
-                                                'city',
-                                                'barangay',
-                                                'zone',
-                                                'zipCode',
-                                                'dob',
-                                                'age',
-                                                'gender',
-                                                'civilStatus',
-                                                'phoneNumber',
-                                                'idType',
-                                                'idNo',
-                                                'education',
-                                                'employmentType',
-                                            ].map((key) => {
-                                                let label = capitalizeWords(key);
-                                                if (key === 'dob') label = 'Date of Birth';
-                                                if (key === 'idType') label = 'ID Type';
-                                                if (key === 'idNo') label = 'ID Number';
-                                                if (key === 'zone') label = 'Purok/Zone';
-                                                return (
-                                                    <div key={key} className="space-y-1">
-                                                        <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
-                                                            {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                ? addressMappings[key][resident.spouseData[key]] || 'N/A'
-                                                                : resident.spouseData[key] || 'N/A'}
+                                        <div className="space-y-6">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {[
+                                                    'firstName',
+                                                    'middleName',
+                                                    'lastName',
+                                                    'address',
+                                                    'region',
+                                                    'province',
+                                                    'city',
+                                                    'barangay',
+                                                    'zone',
+                                                    'zipCode',
+                                                    'dob',
+                                                    'age',
+                                                    'gender',
+                                                    'civilStatus',
+                                                    'phoneNumber',
+                                                    'idType',
+                                                    'idNo',
+                                                    'education',
+                                                    'employmentType',
+                                                ].map((key) => {
+                                                    let label = capitalizeWords(key);
+                                                    if (key === 'dob') label = 'Date of Birth';
+                                                    if (key === 'idType') label = 'ID Type';
+                                                    if (key === 'idNo') label = 'ID Number';
+                                                    if (key === 'zone') label = 'Purok/Zone';
+                                                    return (
+                                                        <div key={key} className="space-y-1">
+                                                            <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
+                                                                {['region', 'province', 'city', 'barangay'].includes(key)
+                                                                    ? addressMappings[key][resident.spouseData[key]] || 'N/A'
+                                                                    : resident.spouseData[key] || 'N/A'}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                                {renderFileDisplay('Spouse Valid ID', spouseValidIdUrl, spouseValidIdPath)}
+                                            </div>
                                         </div>
                                     ) : (
                                         <p className="text-sm text-gray-500 italic">No spouse data available.</p>

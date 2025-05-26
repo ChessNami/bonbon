@@ -32,7 +32,13 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         image: null,
         image_preview: '',
         croppedImage: null,
+        valid_id: null,
+        valid_id_preview: '',
+        zone_cert: null,
+        zone_cert_preview: '',
     });
+    const [signedValidIdUrl, setSignedValidIdUrl] = useState(null);
+    const [signedZoneCertUrl, setSignedZoneCertUrl] = useState(null);
     const [regions, setRegions] = useState([]);
     const [provinces, setProvinces] = useState([]);
     const [cities, setCities] = useState([]);
@@ -54,7 +60,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         try {
             const { data: residentData, error } = await supabase
                 .from('residents')
-                .select('household, image_url')
+                .select('household, image_url, valid_id_url, zone_cert_url')
                 .eq('user_id', userId)
                 .single();
 
@@ -72,6 +78,10 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     image: null,
                     image_preview: '',
                     croppedImage: null,
+                    valid_id: null,
+                    valid_id_preview: '',
+                    zone_cert: null,
+                    zone_cert_preview: '',
                 };
                 setFormData(householdData);
                 setGender(residentData.household.gender || '');
@@ -79,17 +89,42 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 setEmploymentType(residentData.household.employmentType || '');
             }
 
-            // Fetch signed URL for existing image if image_url exists
+            // Fetch signed URL for existing image
             if (residentData?.image_url) {
                 const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                     .from('householdhead')
-                    .createSignedUrl(residentData.image_url, 7200); // 2 hours
-
+                    .createSignedUrl(residentData.image_url, 7200);
                 if (signedUrlError) {
-                    console.error('Error generating signed URL:', signedUrlError.message);
+                    console.error('Error generating signed URL for image:', signedUrlError.message);
                     setSignedImageUrl(null);
                 } else {
                     setSignedImageUrl(signedUrlData.signedUrl);
+                }
+            }
+
+            // Fetch signed URL for valid ID
+            if (residentData?.valid_id_url) {
+                const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                    .from('validid')
+                    .createSignedUrl(residentData.valid_id_url, 7200);
+                if (signedUrlError) {
+                    console.error('Error generating signed URL for valid ID:', signedUrlError.message);
+                    setSignedValidIdUrl(null);
+                } else {
+                    setSignedValidIdUrl(signedUrlData.signedUrl);
+                }
+            }
+
+            // Fetch signed URL for zone certificate
+            if (residentData?.zone_cert_url) {
+                const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                    .from('validid')
+                    .createSignedUrl(residentData.zone_cert_url, 7200);
+                if (signedUrlError) {
+                    console.error('Error generating signed URL for zone certificate:', signedUrlError.message);
+                    setSignedZoneCertUrl(null);
+                } else {
+                    setSignedZoneCertUrl(signedUrlData.signedUrl);
                 }
             }
         } catch (error) {
@@ -110,20 +145,41 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData((prev) => {
-            const updatedData = { ...prev, [name]: value };
-            if (name === 'middleName') {
-                updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
+        if (name === 'phoneNumber') {
+            // Allow only digits and limit to 11 characters
+            const cleanedValue = value.replace(/[^0-9]/g, '').slice(0, 11);
+            setFormData((prev) => ({
+                ...prev,
+                [name]: cleanedValue,
+            }));
+            // Validate format
+            if (cleanedValue && (!cleanedValue.startsWith('09') || cleanedValue.length !== 11)) {
+                setErrors((prev) => ({
+                    ...prev,
+                    phoneNumber: 'Phone number must be 11 digits starting with 09 (e.g., 09xxxxxxxxx)',
+                }));
+            } else {
+                setErrors((prev) => ({
+                    ...prev,
+                    phoneNumber: '',
+                }));
             }
-            if (name === 'idType' && value === 'No ID') {
-                updatedData.idNo = 'No ID';
-            }
-            if (name === 'dob') {
-                updatedData.age = calculateAge(value);
-            }
-            return updatedData;
-        });
-        setErrors({ ...errors, [name]: '' });
+        } else {
+            setFormData((prev) => {
+                const updatedData = { ...prev, [name]: value };
+                if (name === 'middleName') {
+                    updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
+                }
+                if (name === 'idType' && value === 'No ID') {
+                    updatedData.idNo = 'No ID';
+                }
+                if (name === 'dob') {
+                    updatedData.age = calculateAge(value);
+                }
+                return updatedData;
+            });
+            setErrors({ ...errors, [name]: '' });
+        }
 
         if (name === 'region') {
             setProvinces(getProvincesByRegion(value));
@@ -147,6 +203,51 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
     const handleEmploymentChange = (e) => {
         setEmploymentType(e.target.value);
         handleChange(e);
+    };
+
+    const handleValidIdChange = (e) => {
+        const file = e.target.files[0];
+        if (file && (file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'application/pdf')) {
+            setFormData({
+                ...formData,
+                valid_id: file,
+                valid_id_preview: file.type === 'application/pdf' ? '' : URL.createObjectURL(file),
+            });
+            setErrors({ ...errors, valid_id: '' });
+        } else {
+            setErrors({ ...errors, valid_id: 'Please upload a PNG, JPEG/JPG, or PDF file.' });
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid File',
+                text: 'Only PNG, JPEG/JPG, or PDF files are allowed.',
+            });
+        }
+    };
+
+    const handleZoneCertChange = (e) => {
+        const file = e.target.files[0];
+        if (
+            file &&
+            (file.type === 'image/png' ||
+                file.type === 'image/jpeg' ||
+                file.type === 'application/pdf' ||
+                file.type === 'application/msword' ||
+                file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        ) {
+            setFormData({
+                ...formData,
+                zone_cert: file,
+                zone_cert_preview: file.type === 'application/pdf' || file.type.includes('msword') ? '' : URL.createObjectURL(file),
+            });
+            setErrors({ ...errors, zone_cert: '' });
+        } else {
+            setErrors({ ...errors, zone_cert: 'Please upload a PNG, JPEG/JPG, PDF, or Word document.' });
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid File',
+                text: 'Only PNG, JPEG/JPG, PDF, or Word documents are allowed.',
+            });
+        }
     };
 
     const handleImageChange = (e) => {
@@ -212,13 +313,29 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             }
         }
 
-        // Only validate image if no image_url exists and no new image is selected
         if (!formData.image_url && !formData.image) {
             newErrors.image = 'image is required';
         }
 
+        if (!formData.valid_id_url && !formData.valid_id) {
+            newErrors.valid_id = 'valid ID is required';
+        }
+
+        if (!formData.zone_cert_url && !formData.zone_cert) {
+            newErrors.zone_cert = 'zone certificate is required';
+        }
+
         if (formData.idType !== 'No ID' && !formData.idNo) {
             newErrors.idNo = 'ID No. is required';
+        }
+
+        // Validate phone number format
+        if (formData.phoneNumber) {
+            if (!/^09[0-9]{9}$/.test(formData.phoneNumber)) {
+                newErrors.phoneNumber = 'Phone number must be 11 digits starting with 09 (e.g., 09xxxxxxxxx)';
+            }
+        } else {
+            newErrors.phoneNumber = 'phone number is required';
         }
 
         setErrors(newErrors);
@@ -244,7 +361,10 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             });
 
             let imageUrl = formData.image_url || null;
+            let validIdUrl = formData.valid_id_url || null;
+            let zoneCertUrl = formData.zone_cert_url || null;
 
+            // Handle profile image upload
             if (formData.image && cropperRef.current && cropperRef.current.cropper) {
                 const croppedCanvas = cropperRef.current.cropper.getCroppedCanvas({
                     width: 600,
@@ -289,18 +409,59 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 imageUrl = fileName;
             }
 
+            // Handle valid ID upload
+            // Handle valid ID upload
+            if (formData.valid_id) {
+                const fileExt = formData.valid_id.name.split('.').pop();
+                const fileName = `identification/${userId}/valid_id_${formData.idType.replace(/\s/g, '_')}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('validid')
+                    .upload(fileName, formData.valid_id, {
+                        cacheControl: '3600',
+                        upsert: true,
+                    });
+
+                if (uploadError) throw new Error(`Error uploading valid ID: ${uploadError.message}`);
+
+                validIdUrl = fileName;
+            }
+
+            // Handle zone certificate upload
+            if (formData.zone_cert) {
+                const fileExt = formData.zone_cert.name.split('.').pop();
+                const fileName = `zone_certification/${userId}/zone_cert.${fileExt}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('validid')
+                    .upload(fileName, formData.zone_cert, {
+                        cacheControl: '3600',
+                        upsert: true,
+                    });
+
+                if (uploadError) throw new Error(`Error uploading zone certificate: ${uploadError.message}`);
+
+                zoneCertUrl = fileName;
+            }
+
             const updatedData = {
                 ...formData,
                 gender,
                 customGender: gender === 'Other' ? customGender : '',
                 employmentType,
                 image_url: imageUrl,
+                valid_id_url: validIdUrl,
+                zone_cert_url: zoneCertUrl,
             };
 
             const { error: householdError } = await supabase
                 .from('residents')
                 .upsert(
-                    { user_id: userId, household: updatedData, image_url: imageUrl },
+                    {
+                        user_id: userId,
+                        household: updatedData,
+                        image_url: imageUrl,
+                        valid_id_url: validIdUrl,
+                        zone_cert_url: zoneCertUrl,
+                    },
                     { onConflict: 'user_id' }
                 );
 
@@ -347,9 +508,9 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                         </label>
                         <input
                             type="file"
-                            accept="image/png, image/jpeg"
+                            accept="image/png,image/jpeg"
                             onChange={handleImageChange}
-                            className={`input-style text-sm sm:text-base ${errors.image ? 'border-red-500' : ''}`}
+                            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.image ? 'border-red-500' : 'border-gray-300'}`}
                         />
                         {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
                     </div>
@@ -703,7 +864,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             </label>
                             <select
                                 name="idType"
-                                className={`input-style text-sm sm:text-base ${errors.idType ? 'border-red-500' : ''}`}
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idType ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idType || ''}
                                 onChange={handleChange}
                                 required
@@ -731,7 +892,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             <input
                                 type="text"
                                 name="idNo"
-                                className={`input-style text-sm sm:text-base ${errors.idNo ? 'border-red-500' : ''}`}
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idNo ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idNo || ''}
                                 onChange={handleChange}
                                 required
@@ -746,12 +907,53 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             <input
                                 type="text"
                                 name="phoneNumber"
-                                className={`input-style text-sm sm:text-base ${errors.phoneNumber ? 'border-red-500' : ''}`}
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.phoneNumber || ''}
                                 onChange={handleChange}
+                                maxLength={11}
+                                pattern="09[0-9]{9}"
+                                onInput={(e) => {
+                                    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                                    if (e.target.value && !e.target.value.startsWith('09')) {
+                                        e.target.setCustomValidity('Phone number must start with 09');
+                                    } else {
+                                        e.target.setCustomValidity('');
+                                    }
+                                }}
+                                placeholder="09xxxxxxxxx"
                                 required
                             />
                             {errors.phoneNumber && <p className="text-red-500 text-xs mt-1">{errors.phoneNumber}</p>}
+                        </div>
+                        <div className="sm:col-span-2 md:col-span-3">
+                            <label className="block text-xs sm:text-sm font-medium">
+                                Valid ID (PNG/JPEG/PDF) {formData.valid_id_url ? '' : <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                                type="file"
+                                accept="image/png,image/jpeg,application/pdf"
+                                onChange={handleValidIdChange}
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.valid_id ? 'border-red-500' : 'border-gray-300'}`}
+                            />
+                            {errors.valid_id && <p className="text-red-500 text-xs mt-1">{errors.valid_id}</p>}
+                            {signedValidIdUrl && !formData.valid_id_preview && formData.valid_id_url?.endsWith('.pdf') && (
+                                <p className="text-sm mt-2">PDF uploaded: {formData.valid_id_url.split('/').pop()}</p>
+                            )}
+                            {signedValidIdUrl && !formData.valid_id_preview && !formData.valid_id_url?.endsWith('.pdf') && (
+                                <img
+                                    src={signedValidIdUrl}
+                                    alt="Valid ID"
+                                    className="mt-2 w-48 h-48 object-contain"
+                                    onError={() => setSignedValidIdUrl(null)}
+                                />
+                            )}
+                            {formData.valid_id_preview && (
+                                <img
+                                    src={formData.valid_id_preview}
+                                    alt="Valid ID Preview"
+                                    className="mt-2 w-48 h-48 object-contain"
+                                />
+                            )}
                         </div>
                     </div>
                 </fieldset>
@@ -837,11 +1039,46 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     </div>
                 </fieldset>
 
+                {/* New Zone Certificate fieldset */}
+                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                    <legend className="font-semibold text-sm sm:text-base">Zone Certificate</legend>
+                    <div>
+                        <label className="block text-xs sm:text-sm font-medium">
+                            Zone Certificate (PNG/JPEG/PDF/Word Docs) {formData.zone_cert_url ? '' : <span className="text-red-500">*</span>}
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/png,image/jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            onChange={handleZoneCertChange}
+                            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.zone_cert ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        {errors.zone_cert && <p className="text-red-500 text-xs mt-1">{errors.zone_cert}</p>}
+                        {signedZoneCertUrl && !formData.zone_cert_preview && (formData.zone_cert_url?.endsWith('.pdf') || formData.zone_cert_url?.endsWith('.doc') || formData.zone_cert_url?.endsWith('.docx')) && (
+                            <p className="text-sm mt-2">File uploaded: {formData.zone_cert_url.split('/').pop()}</p>
+                        )}
+                        {signedZoneCertUrl && !formData.zone_cert_preview && !formData.zone_cert_url?.endsWith('.pdf') && !formData.zone_cert_url?.endsWith('.doc') && !formData.zone_cert_url?.endsWith('.docx') && (
+                            <img
+                                src={signedZoneCertUrl}
+                                alt="Zone Certificate"
+                                className="mt-2 w-48 h-48 object-contain"
+                                onError={() => setSignedZoneCertUrl(null)}
+                            />
+                        )}
+                        {formData.zone_cert_preview && (
+                            <img
+                                src={formData.zone_cert_preview}
+                                alt="Zone Certificate Preview"
+                                className="mt-2 w-48 h-48 object-contain"
+                            />
+                        )}
+                    </div>
+                </fieldset>
+
                 <div className="flex flex-col sm:flex-row justify-between mt-4 gap-4">
                     {onBack && (
                         <button
                             type="button"
-                            className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-150 hover:bg-gray-600 active:bg-gray-700 text-sm sm:text-base w-full sm:w-auto"
+                            className="bg-gray-500 text-white px-4 py-2 rounded-md transition duration-10 hover:bg-gray-600 active:bg-gray-700 text-sm sm:text-base w-full sm:w-auto"
                             onClick={handleBackClick}
                         >
                             Back
@@ -852,12 +1089,11 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                         className="bg-red-600 text-white px-4 py-2 rounded-md transition duration-150 hover:bg-red-700 active:bg-red-800 text-sm sm:text-base w-full sm:w-auto"
                         onClick={async () => {
                             try {
-                                // Check if resident data exists
                                 const { data: residentData, error: fetchError } = await supabase
                                     .from('residents')
-                                    .select('image_url, household, spouse, household_composition, census, children_count, number_of_household_members')
+                                    .select('image_url, valid_id_url, zone_cert_url, household, spouse, household_composition, census, children_count, number_of_household_members')
                                     .eq('user_id', userId)
-                                    .maybeSingle(); // Use maybeSingle to handle no rows gracefully
+                                    .maybeSingle();
 
                                 if (fetchError) {
                                     Swal.fire({
@@ -872,7 +1108,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                     return;
                                 }
 
-                                // If no resident data exists or all relevant fields are empty
                                 if (
                                     !residentData ||
                                     (Object.keys(residentData.household || {}).length === 0 &&
@@ -881,7 +1116,9 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                         !residentData.census &&
                                         residentData.children_count === 0 &&
                                         residentData.number_of_household_members === 0 &&
-                                        !residentData.image_url)
+                                        !residentData.image_url &&
+                                        !residentData.valid_id_url &&
+                                        !residentData.zone_cert_url)
                                 ) {
                                     Swal.fire({
                                         toast: true,
@@ -896,10 +1133,9 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                     return;
                                 }
 
-                                // Confirm deletion if data exists
                                 const result = await Swal.fire({
                                     title: 'Are you sure?',
-                                    text: 'This will clear all household data and delete the associated image. This action cannot be undone.',
+                                    text: 'This will clear all household data and delete associated files. This action cannot be undone.',
                                     icon: 'warning',
                                     showCancelButton: true,
                                     confirmButtonColor: '#d33',
@@ -910,38 +1146,52 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
 
                                 if (!result.isConfirmed) return;
 
-                                // Delete the image from storage if it exists
+                                // Delete files from storage
+                                const storagePromises = [];
                                 if (residentData?.image_url) {
-                                    const { error: storageError } = await supabase.storage
-                                        .from('householdhead')
-                                        .remove([residentData.image_url]);
+                                    storagePromises.push(
+                                        supabase.storage.from('householdhead').remove([residentData.image_url])
+                                    );
+                                }
+                                if (residentData?.valid_id_url) {
+                                    storagePromises.push(
+                                        supabase.storage.from('validid').remove([residentData.valid_id_url])
+                                    );
+                                }
+                                if (residentData?.zone_cert_url) {
+                                    storagePromises.push(
+                                        supabase.storage.from('validid').remove([residentData.zone_cert_url])
+                                    );
+                                }
 
-                                    if (storageError) {
-                                        console.error(`Failed to delete image: ${storageError.message}`);
+                                const storageResults = await Promise.all(storagePromises);
+                                storageResults.forEach(({ error }, index) => {
+                                    if (error) {
+                                        console.error(`Failed to delete file ${index + 1}: ${error.message}`);
                                         Swal.fire({
                                             toast: true,
                                             position: 'top-end',
                                             icon: 'warning',
-                                            title: `Image deletion failed: ${storageError.message}. Proceeding with data clearing.`,
+                                            title: `File deletion failed: ${error.message}. Proceeding with data clearing.`,
                                             showConfirmButton: false,
                                             timer: 3000,
                                             scrollbarPadding: false,
-                                            timerProgressBar: true,
                                         });
                                     }
-                                }
+                                });
 
-                                // Clear resident data, setting household to empty JSONB object
                                 const { error: updateError } = await supabase
                                     .from('residents')
                                     .update({
-                                        household: {}, // Empty JSONB object instead of null
+                                        household: {},
                                         spouse: null,
                                         household_composition: null,
                                         census: null,
                                         children_count: 0,
                                         number_of_household_members: 0,
                                         image_url: null,
+                                        valid_id_url: null,
+                                        zone_cert_url: null,
                                     })
                                     .eq('user_id', userId);
 
@@ -958,7 +1208,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                     return;
                                 }
 
-                                // Reset form state
                                 setFormData({
                                     age: '',
                                     dob: '',
@@ -984,17 +1233,23 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                     image: null,
                                     image_preview: '',
                                     croppedImage: null,
+                                    valid_id: null,
+                                    valid_id_preview: '',
+                                    zone_cert: null,
+                                    zone_cert_preview: '',
                                 });
                                 setGender('');
                                 setCustomGender('');
                                 setEmploymentType('');
                                 setSignedImageUrl(null);
+                                setSignedValidIdUrl(null);
+                                setSignedZoneCertUrl(null);
 
                                 Swal.fire({
                                     toast: true,
                                     position: 'top-end',
                                     icon: 'success',
-                                    title: 'Household data and associated image cleared successfully',
+                                    title: 'Household data and associated files cleared successfully',
                                     timer: 1500,
                                     showConfirmButton: false,
                                     scrollbarPadding: false,

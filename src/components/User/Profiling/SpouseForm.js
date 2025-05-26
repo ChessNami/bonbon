@@ -27,7 +27,11 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
     const [formData, setFormData] = useState({
         ...data,
         age: data?.dob ? calculateAge(data.dob) : data?.age || '',
+        valid_id: null,
+        valid_id_preview: '',
     });
+    const [errors, setErrors] = useState({});
+    const [signedValidIdUrl, setSignedValidIdUrl] = useState(null);
     const [isDirty, setIsDirty] = useState(false); // Track if form has unsaved changes
     const [regions, setRegions] = useState([]);
     const [provinces, setProvinces] = useState([]);
@@ -67,6 +71,19 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
             setCustomGender(residentData.spouse.customGender || '');
             setEmploymentType(residentData.spouse.employmentType || '');
         }
+
+        // Fetch signed URL for existing valid ID
+        if (residentData?.spouse?.valid_id_url) {
+            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                .from('validid')
+                .createSignedUrl(residentData.spouse.valid_id_url, 7200);
+            if (signedUrlError) {
+                console.error('Error generating signed URL for spouse valid ID:', signedUrlError.message);
+                setSignedValidIdUrl(null);
+            } else {
+                setSignedValidIdUrl(signedUrlData.signedUrl);
+            }
+        }
     }, [userId, isDirty]);
 
     // Load regions and fetch user data on mount
@@ -88,18 +105,60 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
 
     // Handle input changes
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, files } = e.target;
         setIsDirty(true); // Mark form as dirty on any change
-        setFormData((prev) => {
-            const updatedData = { ...prev, [name]: value };
-            if (name === 'middleName') {
-                updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
+        if (name === 'valid_id') {
+            const file = files[0];
+            if (file && (file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'application/pdf')) {
+                setFormData((prev) => ({
+                    ...prev,
+                    valid_id: file,
+                    valid_id_preview: file.type === 'application/pdf' ? '' : URL.createObjectURL(file),
+                }));
+                setErrors((prev) => ({ ...prev, valid_id: '' }));
+            } else {
+                setErrors((prev) => ({ ...prev, valid_id: 'Please upload a PNG, JPEG/JPG, or PDF file.' }));
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid File',
+                    text: 'Only PNG, JPEG/JPG, or PDF files are allowed.',
+                });
             }
-            if (name === 'dob') {
-                updatedData.age = calculateAge(value);
+        } else if (name === 'phoneNumber') {
+            // Allow only digits and limit to 11 characters
+            const cleanedValue = value.replace(/[^0-9]/g, '').slice(0, 11);
+            setFormData((prev) => ({
+                ...prev,
+                [name]: cleanedValue,
+            }));
+            // Validate format
+            if (cleanedValue && (!cleanedValue.startsWith('09') || cleanedValue.length !== 11)) {
+                setErrors((prev) => ({
+                    ...prev,
+                    phoneNumber: 'Phone number must be 11 digits starting with 09 (e.g., 09xxxxxxxxx)',
+                }));
+            } else {
+                setErrors((prev) => ({
+                    ...prev,
+                    phoneNumber: '',
+                }));
             }
-            return updatedData;
-        });
+        } else {
+            setFormData((prev) => {
+                const updatedData = { ...prev, [name]: value };
+                if (name === 'middleName') {
+                    updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
+                }
+                if (name === 'idType' && value === 'No ID') {
+                    updatedData.idNo = 'No ID';
+                }
+                if (name === 'dob') {
+                    updatedData.age = calculateAge(value);
+                }
+                return updatedData;
+            });
+            setErrors((prev) => ({ ...prev, [name]: '' }));
+        }
 
         // Update address dropdowns
         if (name === 'region') {
@@ -130,6 +189,8 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
 
     // Handle form submission
     const handleSubmit = async () => {
+        // Validate form
+        let newErrors = {};
         const requiredFields = [
             'firstName',
             'lastName',
@@ -138,6 +199,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
             'province',
             'city',
             'barangay',
+            'zipCode',
             'dob',
             'age',
             'gender',
@@ -151,44 +213,114 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
 
         for (const field of requiredFields) {
             if (!formData[field]) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'error',
-                    title: `Please fill in the required field: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`,
-                    timer: 1500,
-                    showConfirmButton: false,
-                });
-                return;
+                newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
             }
         }
 
-        const updatedData = {
-            ...formData,
-            gender,
-            customGender: gender === 'Other' ? customGender : '',
-            employmentType,
-        };
+        if (!formData.valid_id_url && !formData.valid_id) {
+            newErrors.valid_id = 'valid ID is required';
+        }
 
-        const { error } = await supabase
-            .from('residents')
-            .update({ spouse: updatedData })
-            .eq('user_id', userId);
+        if (formData.idType !== 'No ID' && !formData.idNo) {
+            newErrors.idNo = 'ID No. is required';
+        }
 
-        if (error) {
+        if (formData.phoneNumber) {
+            if (!/^09[0-9]{9}$/.test(formData.phoneNumber)) {
+                newErrors.phoneNumber = 'Phone number must be 11 digits starting with 09 (e.g., 09xxxxxxxxx)';
+            }
+        } else {
+            newErrors.phoneNumber = 'phone number is required';
+        }
+
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length > 0) {
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
-                title: `Failed to save data: ${error.message}`,
+                title: 'Please fill in all required fields correctly',
                 timer: 1500,
                 showConfirmButton: false,
+                scrollbarPadding: false,
             });
             return;
         }
 
-        setIsDirty(false); // Reset dirty state after saving
-        onNext(updatedData, 'householdComposition');
+        try {
+            Swal.fire({
+                title: 'Processing...',
+                text: 'Please wait while we save your data.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                scrollbarPadding: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
+            let validIdUrl = formData.valid_id_url || null;
+
+            // Handle valid ID upload
+            if (formData.valid_id) {
+                const fileExt = formData.valid_id.name.split('.').pop();
+                const fileName = `identification/${userId}/spouse_valid_id_${formData.idType.replace(/\s/g, '_')}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('validid')
+                    .upload(fileName, formData.valid_id, {
+                        cacheControl: '3600',
+                        upsert: true,
+                    });
+
+                if (uploadError) throw new Error(`Error uploading valid ID: ${uploadError.message}`);
+
+                validIdUrl = fileName;
+            }
+
+            const updatedData = {
+                ...formData,
+                gender,
+                customGender: gender === 'Other' ? customGender : '',
+                employmentType,
+                valid_id_url: validIdUrl,
+            };
+
+            const { error } = await supabase
+                .from('residents')
+                .update({
+                    spouse: updatedData,
+                    spouse_valid_id_url: validIdUrl,
+                })
+                .eq('user_id', userId);
+
+            if (error) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: `Failed to save data: ${error.message}`,
+                    timer: 1500,
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                });
+                return;
+            }
+
+            Swal.close();
+            setIsDirty(false); // Reset dirty state after saving
+            onNext(updatedData, 'householdComposition');
+        } catch (error) {
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: `Unexpected error: ${error.message}`,
+                timer: 1500,
+                showConfirmButton: false,
+                scrollbarPadding: false,
+            });
+        }
     };
 
     const handleBackClick = (e) => {
@@ -511,7 +643,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             </label>
                             <select
                                 name="idType"
-                                className="input-style text-sm sm:text-base"
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idType ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idType || ''}
                                 onChange={handleChange}
                                 required
@@ -530,6 +662,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 <option value="Student ID">Student ID</option>
                                 <option value="No ID">No ID</option>
                             </select>
+                            {errors.idType && <p className="text-red-500 text-xs mt-1">{errors.idType}</p>}
                         </div>
                         <div>
                             <label className="block text-xs sm:text-sm font-medium">
@@ -538,12 +671,13 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             <input
                                 type="text"
                                 name="idNo"
-                                className="input-style text-sm sm:text-base"
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idNo ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idNo || ''}
                                 onChange={handleChange}
                                 required
                                 disabled={formData.idType === 'No ID'}
                             />
+                            {errors.idNo && <p className="text-red-500 text-xs mt-1">{errors.idNo}</p>}
                         </div>
                         <div>
                             <label className="block text-xs sm:text-sm font-medium">
@@ -552,11 +686,54 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             <input
                                 type="text"
                                 name="phoneNumber"
-                                className="input-style text-sm sm:text-base"
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.phoneNumber || ''}
                                 onChange={handleChange}
+                                maxLength={11}
+                                pattern="09[0-9]{9}"
+                                onInput={(e) => {
+                                    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                                    if (e.target.value && !e.target.value.startsWith('09')) {
+                                        e.target.setCustomValidity('Phone number must start with 09');
+                                    } else {
+                                        e.target.setCustomValidity('');
+                                    }
+                                }}
+                                placeholder="09xxxxxxxxx"
                                 required
                             />
+                            {errors.phoneNumber && <p className="text-red-500 text-xs mt-1">{errors.phoneNumber}</p>}
+                        </div>
+                        <div className="sm:col-span-2 md:col-span-3">
+                            <label className="block text-xs sm:text-sm font-medium">
+                                Valid ID (PNG/JPEG/PDF) {formData.valid_id_url ? '' : <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                                type="file"
+                                name="valid_id"
+                                accept="image/png,image/jpeg,application/pdf"
+                                onChange={handleChange}
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.valid_id ? 'border-red-500' : 'border-gray-300'}`}
+                            />
+                            {errors.valid_id && <p className="text-red-500 text-xs mt-1">{errors.valid_id}</p>}
+                            {signedValidIdUrl && !formData.valid_id_preview && formData.valid_id_url?.endsWith('.pdf') && (
+                                <p className="text-sm mt-2">PDF uploaded: {formData.valid_id_url.split('/').pop()}</p>
+                            )}
+                            {signedValidIdUrl && !formData.valid_id_preview && !formData.valid_id_url?.endsWith('.pdf') && (
+                                <img
+                                    src={signedValidIdUrl}
+                                    alt="Valid ID"
+                                    className="mt-2 w-48 h-48 object-contain"
+                                    onError={() => setSignedValidIdUrl(null)}
+                                />
+                            )}
+                            {formData.valid_id_preview && (
+                                <img
+                                    src={formData.valid_id_preview}
+                                    alt="Valid ID Preview"
+                                    className="mt-2 w-48 h-48 object-contain"
+                                />
+                            )}
                         </div>
                     </div>
                 </fieldset>

@@ -104,23 +104,26 @@ const ResidentManagement = () => {
             const { data, error } = await supabase
                 .from('residents')
                 .select(`
+                id,
+                user_id,
+                household,
+                spouse,
+                household_composition,
+                census,
+                children_count,
+                number_of_household_members,
+                image_url,
+                valid_id_url,
+                zone_cert_url,
+                spouse_valid_id_url,
+                resident_profile_status (
                     id,
-                    user_id,
-                    household,
-                    spouse,
-                    household_composition,
-                    census,
-                    children_count,
-                    number_of_household_members,
-                    image_url,
-                    resident_profile_status (
-                        id,
-                        status,
-                        rejection_reason,
-                        created_at,
-                        updated_at
-                    )
-                `);
+                    status,
+                    rejection_reason,
+                    created_at,
+                    updated_at
+                )
+            `);
 
             if (error) {
                 throw new Error('Failed to fetch residents');
@@ -190,9 +193,47 @@ const ResidentManagement = () => {
                             .from('householdhead')
                             .createSignedUrl(resident.image_url, 7200);
                         if (signedUrlError) {
-                            console.error(`Error generating signed URL for resident ${resident.id}:`, signedUrlError.message);
+                            console.error(`Error generating signed URL for image ${resident.id}:`, signedUrlError.message);
                         } else {
                             profileImageUrl = signedUrlData.signedUrl;
+                        }
+                    }
+
+                    let validIdUrl = null;
+                    if (resident.valid_id_url) {
+                        const fileName = resident.valid_id_url;
+                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                            .from('validid')
+                            .createSignedUrl(fileName, 7200);
+                        if (signedUrlError) {
+                            console.error(`Error generating signed URL for valid ID ${resident.id}:`, signedUrlError.message);
+                        } else {
+                            validIdUrl = signedUrlData.signedUrl;
+                        }
+                    }
+
+                    let zoneCertUrl = null;
+                    if (resident.zone_cert_url) {
+                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                            .from('validid')
+                            .createSignedUrl(resident.zone_cert_url, 7200);
+                        if (signedUrlError) {
+                            console.error(`Error generating signed URL for zone certificate ${resident.id}:`, signedUrlError.message);
+                        } else {
+                            zoneCertUrl = signedUrlData.signedUrl;
+                        }
+                    }
+
+                    let spouseValidIdUrl = null;
+                    if (resident.spouse_valid_id_url) {
+                        const fileName = resident.spouse_valid_id_url;
+                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                            .from('validid')
+                            .createSignedUrl(fileName, 7200);
+                        if (signedUrlError) {
+                            console.error(`Error generating signed URL for spouse valid ID ${resident.id}:`, signedUrlError.message);
+                        } else {
+                            spouseValidIdUrl = signedUrlData.signedUrl;
                         }
                     }
 
@@ -218,6 +259,12 @@ const ResidentManagement = () => {
                         childrenCount: resident.children_count || 0,
                         numberOfHouseholdMembers: resident.number_of_household_members || 0,
                         profileImageUrl: profileImageUrl,
+                        validIdUrl: validIdUrl,
+                        validIdPath: resident.valid_id_url || null,
+                        zoneCertUrl: zoneCertUrl,
+                        zoneCertPath: resident.zone_cert_url || null,
+                        spouseValidIdUrl: spouseValidIdUrl,
+                        spouseValidIdPath: resident.spouse_valid_id_url || null,
                     };
                 })
             );
@@ -633,122 +680,122 @@ const ResidentManagement = () => {
         }
     };
 
-    const handleRejectProfile = async (resident) => {
-        if (!rejectionReason.trim()) {
-            await Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'warning',
-                title: 'Please provide a rejection reason',
-                showConfirmButton: false,
-                timer: 1500,
-                scrollbarPadding: false,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
-                    title: 'text-yellow-800 text-sm',
-                },
-            });
-            return;
-        }
+    // const handleRejectProfile = async (resident) => {
+    //     if (!rejectionReason.trim()) {
+    //         await Swal.fire({
+    //             toast: true,
+    //             position: 'top-end',
+    //             icon: 'warning',
+    //             title: 'Please provide a rejection reason',
+    //             showConfirmButton: false,
+    //             timer: 1500,
+    //             scrollbarPadding: false,
+    //             timerProgressBar: true,
+    //             customClass: {
+    //                 popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
+    //                 title: 'text-yellow-800 text-sm',
+    //             },
+    //         });
+    //         return;
+    //     }
 
-        try {
-            Swal.fire({
-                title: 'Rejecting resident...',
-                scrollbarPadding: false,
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                customClass: {
-                    popup: 'rounded-xl shadow-2xl',
-                    title: 'text-gray-800 text-lg font-semibold',
-                },
-                didOpen: () => {
-                    Swal.showLoading();
-                },
-            });
+    //     try {
+    //         Swal.fire({
+    //             title: 'Rejecting resident...',
+    //             scrollbarPadding: false,
+    //             allowOutsideClick: false,
+    //             allowEscapeKey: false,
+    //             customClass: {
+    //                 popup: 'rounded-xl shadow-2xl',
+    //                 title: 'text-gray-800 text-lg font-semibold',
+    //             },
+    //             didOpen: () => {
+    //                 Swal.showLoading();
+    //             },
+    //         });
 
-            const { data: residentData, error: residentError } = await supabase
-                .from('residents')
-                .select('user_id')
-                .eq('id', resident.id)
-                .single();
+    //         const { data: residentData, error: residentError } = await supabase
+    //             .from('residents')
+    //             .select('user_id')
+    //             .eq('id', resident.id)
+    //             .single();
 
-            if (residentError || !residentData.user_id) {
-                throw new Error(residentError?.message || 'Failed to fetch resident data');
-            }
+    //         if (residentError || !residentData.user_id) {
+    //             throw new Error(residentError?.message || 'Failed to fetch resident data');
+    //         }
 
-            const { error: statusError } = await supabase
-                .from('resident_profile_status')
-                .update({
-                    status: 2,
-                    rejection_reason: rejectionReason,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('resident_id', resident.id);
+    //         const { error: statusError } = await supabase
+    //             .from('resident_profile_status')
+    //             .update({
+    //                 status: 2,
+    //                 rejection_reason: rejectionReason,
+    //                 updated_at: new Date().toISOString(),
+    //             })
+    //             .eq('resident_id', resident.id);
 
-            if (statusError) {
-                throw new Error(statusError?.message || 'Failed to reject profile');
-            }
+    //         if (statusError) {
+    //             throw new Error(statusError?.message || 'Failed to reject profile');
+    //         }
 
-            try {
-                await axios.post('https://bonbon-express.vercel.app/api/email/send-rejection', {
-                    userId: residentData.user_id,
-                    rejectionReason,
-                });
-            } catch (emailError) {
-                console.error('Failed to send rejection email:', emailError.message);
-                await Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'warning',
-                    title: `Profile rejected, but failed to send rejection email: ${emailError.message}`,
-                    showConfirmButton: false,
-                    timer: 3000,
-                    scrollbarPadding: false,
-                    timerProgressBar: true,
-                    customClass: {
-                        popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
-                        title: 'text-yellow-800 text-sm',
-                    },
-                });
-            }
+    //         try {
+    //             await axios.post('https://bonbon-express.vercel.app/api/email/send-rejection', {
+    //                 userId: residentData.user_id,
+    //                 rejectionReason,
+    //             });
+    //         } catch (emailError) {
+    //             console.error('Failed to send rejection email:', emailError.message);
+    //             await Swal.fire({
+    //                 toast: true,
+    //                 position: 'top-end',
+    //                 icon: 'warning',
+    //                 title: `Profile rejected, but failed to send rejection email: ${emailError.message}`,
+    //                 showConfirmButton: false,
+    //                 timer: 3000,
+    //                 scrollbarPadding: false,
+    //                 timerProgressBar: true,
+    //                 customClass: {
+    //                     popup: 'rounded-lg shadow-lg bg-yellow-50 border border-yellow-200',
+    //                     title: 'text-yellow-800 text-sm',
+    //                 },
+    //             });
+    //         }
 
-            await Swal.close();
-            await Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Profile rejected successfully',
-                showConfirmButton: false,
-                timer: 1500,
-                scrollbarPadding: false,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'rounded-lg shadow-lg bg-green-50 border border-green-200',
-                    title: 'text-green-800 text-sm',
-                },
-            });
-            setShowRejectionForm(null);
-            setRejectionReason('');
-            await fetchResidents();
-        } catch (error) {
-            await Swal.close();
-            await Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'error',
-                title: error.message || 'Failed to reject profile',
-                showConfirmButton: false,
-                timer: 1500,
-                scrollbarPadding: false,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
-                    title: 'text-red-800 text-sm',
-                },
-            });
-        }
-    };
+    //         await Swal.close();
+    //         await Swal.fire({
+    //             toast: true,
+    //             position: 'top-end',
+    //             icon: 'success',
+    //             title: 'Profile rejected successfully',
+    //             showConfirmButton: false,
+    //             timer: 1500,
+    //             scrollbarPadding: false,
+    //             timerProgressBar: true,
+    //             customClass: {
+    //                 popup: 'rounded-lg shadow-lg bg-green-50 border border-green-200',
+    //                 title: 'text-green-800 text-sm',
+    //             },
+    //         });
+    //         setShowRejectionForm(null);
+    //         setRejectionReason('');
+    //         await fetchResidents();
+    //     } catch (error) {
+    //         await Swal.close();
+    //         await Swal.fire({
+    //             toast: true,
+    //             position: 'top-end',
+    //             icon: 'error',
+    //             title: error.message || 'Failed to reject profile',
+    //             showConfirmButton: false,
+    //             timer: 1500,
+    //             scrollbarPadding: false,
+    //             timerProgressBar: true,
+    //             customClass: {
+    //                 popup: 'rounded-lg shadow-lg bg-red-50 border border-red-200',
+    //                 title: 'text-red-800 text-sm',
+    //             },
+    //         });
+    //     }
+    // };
 
     const handleAcceptRequest = async (resident) => {
         try {
@@ -1069,20 +1116,26 @@ const ResidentManagement = () => {
                             setSelectedResident(null);
                         }}
                         zIndex={getModalZIndex('view')}
+                        validIdUrl={selectedResident?.validIdUrl}
+                        validIdPath={selectedResident?.validIdPath}
+                        zoneCertUrl={selectedResident?.zoneCertUrl}
+                        zoneCertPath={selectedResident?.zoneCertPath}
+                        spouseValidIdUrl={selectedResident?.spouseValidIdUrl}
+                        spouseValidIdPath={selectedResident?.spouseValidIdPath}
                     />
                     <PendingModal
                         isOpen={pendingModalOpen}
                         residents={residents.filter((r) => r.status === 3)}
-                        showRejectionForm={showRejectionForm}
-                        setShowRejectionForm={setShowRejectionForm}
-                        rejectionReason={rejectionReason}
-                        setRejectionReason={setRejectionReason}
                         onView={(resident) => {
                             setSelectedResident(resident);
                             setViewModalOpen(true);
                         }}
                         onAccept={handleAcceptProfile}
-                        onReject={handleRejectProfile}
+                        onUpdate={(resident) => {
+                            setSelectedResident(resident);
+                            setRejectionReason('');
+                            setUpdateModalOpen(true);
+                        }}
                         onClose={() => {
                             setPendingModalOpen(false);
                             setShowRejectionForm(null);

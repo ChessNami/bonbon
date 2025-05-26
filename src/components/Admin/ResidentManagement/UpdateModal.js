@@ -16,11 +16,14 @@ const UpdateModal = ({ isOpen, rejectionReason, setRejectionReason, onSubmit, on
     };
 
     const quickReasons = [
-        'Incomplete household information',
-        'Incorrect personal details',
-        'Missing census data',
-        'Outdated contact information',
-        'Invalid ID details',
+        { en: 'Incomplete household composition', ceb: 'Dili kompleto ang komposisyon sa panimalay' },
+        { en: 'Incorrect personal information', ceb: 'Sayop nga personal nga impormasyon' },
+        { en: 'Missing or incomplete census data', ceb: 'Nawala o dili kompleto ang datos sa sensus' },
+        { en: 'Outdated contact details', ceb: 'Karaang detalye sa kontak' },
+        { en: 'Invalid or missing ID information', ceb: 'Dili balido o nawala ang impormasyon sa ID' },
+        { en: 'Inconsistent household member counts', ceb: 'Dili magkatakdo ang ihap sa miyembro sa panimalay' },
+        { en: 'Missing or outdated spouse details', ceb: 'Nawala o karaan ang detalye sa bana/asawa' },
+        { en: 'Incorrect or outdated employment/education details', ceb: 'Sayop o karaan ang detalye sa trabaho/edukasyon' },
     ];
 
     if (!isOpen) return null;
@@ -64,12 +67,13 @@ const UpdateModal = ({ isOpen, rejectionReason, setRejectionReason, onSubmit, on
                                 {quickReasons.map((reason, index) => (
                                     <motion.button
                                         key={index}
-                                        onClick={() => setRejectionReason(reason)}
+                                        onClick={() => setRejectionReason(reason.en)}
+                                        title={reason.ceb} // Bisaya/Cebuano translation as tooltip
                                         className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-colors duration-200"
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                     >
-                                        {reason}
+                                        {reason.en}
                                     </motion.button>
                                 ))}
                             </div>

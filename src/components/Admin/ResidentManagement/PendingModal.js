@@ -7,7 +7,7 @@ const PendingModal = ({
     residents,
     onView,
     onAccept,
-    onUpdate, // Changed from onReject to onUpdate
+    onUpdate,
     onClose,
     zIndex,
     getStatusBadge,
