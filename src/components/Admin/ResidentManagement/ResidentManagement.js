@@ -351,17 +351,21 @@ const ResidentManagement = () => {
 
         filtered.sort((a, b) => {
             if (sortOption === 'default') {
-                if (a.status === 3 && b.status !== 3) return -1;
-                if (b.status === 3 && a.status !== 3) return 1;
-                if (a.status === 3 && b.status === 3) {
-                    return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+                // Define priority order: Pending (3), Update Requested (4), Update Approved (5), Update Profiling (6), Approved (1), then others
+                const priorityOrder = { 3: 1, 4: 2, 5: 3, 6: 4, 1: 5 };
+                const aPriority = priorityOrder[a.status] || 6; // Others get lowest priority
+                const bPriority = priorityOrder[b.status] || 6;
+
+                if (aPriority !== bPriority) {
+                    return aPriority - bPriority; // Lower priority number comes first
                 }
-                if (a.status === 1 && b.status === 1) {
-                    return a.lastName.localeCompare(b.lastName);
+
+                // Within same status, sort by createdAt (newest first)
+                if (aPriority === bPriority) {
+                    return (new Date(b.createdAt || '1970-01-01')) - (new Date(a.createdAt || '1970-01-01'));
                 }
-                if (a.status === 1 && b.status !== 1) return 1;
-                if (b.status === 1 && a.status !== 1) return -1;
-                return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+
+                return 0;
             }
 
             if (sortOption === 'name-asc') {
@@ -381,24 +385,14 @@ const ResidentManagement = () => {
             }
 
             if (sortOption === 'date-asc') {
-                return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+                return (new Date(a.createdAt || '1970-01-01')) - (new Date(b.createdAt || '1970-01-01'));
             }
 
             if (sortOption === 'date-desc') {
-                return new Date(b.rejectionDate || '1970-01-01') - new Date(a.rejectionDate || '1970-01-01');
+                return (new Date(b.createdAt || '1970-01-01')) - (new Date(a.createdAt || '1970-01-01'));
             }
 
-            if (a.status === 3 && b.status !== 3) return -1;
-            if (b.status === 3 && a.status !== 3) return 1;
-            if (a.status === 3 && b.status === 3) {
-                return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
-            }
-            if (a.status === 1 && b.status === 1) {
-                return a.lastName.localeCompare(b.lastName);
-            }
-            if (a.status === 1 && b.status !== 1) return 1;
-            if (b.status === 1 && a.status !== 1) return -1;
-            return new Date(a.rejectionDate || '1970-01-01') - new Date(b.rejectionDate || '1970-01-01');
+            return 0;
         });
 
         setFilteredResidents(filtered);
@@ -1069,7 +1063,7 @@ const ResidentManagement = () => {
                         isRentingFilter={isRentingFilter}
                         setIsRentingFilter={setIsRentingFilter}
                     />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {currentItems.length > 0 ? (
                             currentItems.map((resident) => (
                                 <ResidentCard

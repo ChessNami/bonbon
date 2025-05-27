@@ -58,10 +58,10 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
                                 >
                                     <option value="all">All Statuses</option>
                                     <option value="1">Approved</option>
-                                    <option value="2">Rejected</option>
                                     <option value="3">Pending</option>
                                     <option value="4">Update Requested</option>
                                     <option value="5">Update Approved</option>
+                                    <option value="6">Update Profiling</option>
                                 </select>
                             </div>
                             <div className="p-4 border-t border-gray-100">

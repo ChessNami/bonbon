@@ -520,11 +520,22 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             <input
                                 type="text"
                                 name="zipCode"
-                                className="input-style text-sm sm:text-base"
+                                className={`input-style text-sm sm:text-base ${errors.zipCode ? 'border-red-500' : ''}`}
                                 value={formData.zipCode || ''}
                                 onChange={handleChange}
+                                maxLength={4}
+                                pattern="[0-9]*"
+                                onInput={(e) => {
+                                    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                                    if (e.target.value.length > 0 && !/^[0-9]{4}$/.test(e.target.value)) {
+                                        e.target.setCustomValidity('Zip code must be 4 digits');
+                                    } else {
+                                        e.target.setCustomValidity('');
+                                    }
+                                }}
                                 required
                             />
+                            {errors.zipCode && <p className="text-red-500 text-xs mt-1">{errors.zipCode}</p>}
                         </div>
                     </div>
                 </fieldset>

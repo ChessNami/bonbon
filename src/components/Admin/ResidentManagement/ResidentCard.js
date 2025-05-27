@@ -21,44 +21,44 @@ const ResidentCard = ({ resident, onView, onUpdate, onDelete, getStatusBadge }) 
         switch (resident.status) {
             case 1:
                 return resident.updatedAt ? (
-                    <p className="flex items-center gap-3">
+                    <p className="flex items-center gap-2 text-xs sm:text-sm">
                         <FaClock className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Approved At:</span> {new Date(resident.updatedAt).toLocaleString()}</span>
+                        <span className="font-medium break-words"><span className="font-bold">Approved At:</span> {new Date(resident.updatedAt).toLocaleString()}</span>
                     </p>
                 ) : null;
             case 2:
                 return resident.updatedAt ? (
-                    <p className="flex items-center gap-3">
+                    <p className="flex items-center gap-2 text-xs sm:text-sm">
                         <FaClock className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Rejected At:</span> {new Date(resident.updatedAt).toLocaleString()}</span>
+                        <span className="font-medium break-words"><span className="font-bold">Rejected At:</span> {new Date(resident.updatedAt).toLocaleString()}</span>
                     </p>
                 ) : null;
             case 3:
                 return resident.createdAt ? (
-                    <p className="flex items-center gap-3">
+                    <p className="flex items-center gap-2 text-xs sm:text-sm">
                         <FaClock className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Submitted At:</span> {new Date(resident.createdAt).toLocaleString()}</span>
+                        <span className="font-medium break-words"><span className="font-bold">Submitted At:</span> {new Date(resident.createdAt).toLocaleString()}</span>
                     </p>
                 ) : null;
             case 4:
                 return resident.createdAt ? (
-                    <p className="flex items-center gap-3">
+                    <p className="flex items-center gap-2 text-xs sm:text-sm">
                         <FaClock className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Requested At:</span> {new Date(resident.createdAt).toLocaleString()}</span>
+                        <span className="font-medium break-words"><span className="font-bold">Requested At:</span> {new Date(resident.createdAt).toLocaleString()}</span>
                     </p>
                 ) : null;
             case 5:
                 return resident.updatedAt ? (
-                    <p className="flex items-center gap-3">
+                    <p className="flex items-center gap-2 text-xs sm:text-sm">
                         <FaClock className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Update Approved At:</span> {new Date(resident.updatedAt).toLocaleString()}</span>
+                        <span className="font-medium break-words"><span className="font-bold">Update Approved At:</span> {new Date(resident.updatedAt).toLocaleString()}</span>
                     </p>
                 ) : null;
             case 6:
                 return resident.updatedAt ? (
-                    <p className="flex items-center gap-3">
+                    <p className="flex items-center gap-2 text-xs sm:text-sm">
                         <FaClock className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Update Profiling At:</span> {new Date(resident.updatedAt).toLocaleString()}</span>
+                        <span className="font-medium break-words"><span className="font-bold">Update Profiling At:</span> {new Date(resident.updatedAt).toLocaleString()}</span>
                     </p>
                 ) : null;
             default:
@@ -68,7 +68,7 @@ const ResidentCard = ({ resident, onView, onUpdate, onDelete, getStatusBadge }) 
 
     return (
         <motion.div
-            className="relative bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border border-gray-100"
+            className="relative bg-white rounded-xl shadow-md overflow-hidden transition-all duration-500 hover:shadow-lg hover:-translate-y-1 border border-gray-100 max-w-sm w-full min-h-[300px]"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -77,63 +77,65 @@ const ResidentCard = ({ resident, onView, onUpdate, onDelete, getStatusBadge }) 
                 className="absolute top-0 left-0 w-2 h-full"
                 style={{ background: gradient }}
             />
-            <div className="p-6">
-                <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center space-x-4">
-                        <div className="relative w-16 h-16 rounded-full flex items-center justify-center text-white font-semibold text-xl shadow-md">
-                            {resident.profileImageUrl ? (
-                                <img
-                                    src={resident.profileImageUrl}
-                                    alt={`${resident.firstName} ${resident.lastName}`}
-                                    className="w-full h-full rounded-full object-cover"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'flex';
-                                    }}
+            <div className="p-4 sm:p-5 flex flex-col h-full justify-between">
+                <div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3 w-full">
+                            <div className="relative w-14 h-14 rounded-full flex items-center justify-center text-white font-semibold text-base shadow-md">
+                                {resident.profileImageUrl ? (
+                                    <img
+                                        src={resident.profileImageUrl}
+                                        alt={`${resident.firstName} ${resident.lastName}`}
+                                        className="w-full h-full rounded-full object-cover"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.style.display = 'flex';
+                                        }}
+                                    />
+                                ) : null}
+                                <div
+                                    className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full ${resident.profileImageUrl ? 'hidden' : ''}`}
+                                >
+                                    {resident.firstName.charAt(0).toUpperCase()}{resident.lastName.charAt(0).toUpperCase()}
+                                </div>
+                                <div
+                                    className={`absolute -top-1 -right-1 w-4 h-4 ${pulse} rounded-full border-2 border-white animate-pulse`}
                                 />
-                            ) : null}
-                            <div
-                                className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full ${resident.profileImageUrl ? 'hidden' : ''}`}
-                            >
-                                {resident.firstName.charAt(0).toUpperCase()}{resident.lastName.charAt(0).toUpperCase()}
                             </div>
-                            <div
-                                className={`absolute -top-1 -right-1 w-4 h-4 ${pulse} rounded-full border-2 border-white animate-pulse`}
-                            />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-extrabold text-gray-900 tracking-wide">
-                                {resident.firstName.charAt(0).toUpperCase() + resident.firstName.slice(1)} {resident.lastName.charAt(0).toUpperCase() + resident.lastName.slice(1)}
-                            </h3>
-                            <div className="mt-1">{getStatusBadge(resident.status)}</div>
+                            <div className="flex-1">
+                                <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-wide break-words">
+                                    {resident.firstName.charAt(0).toUpperCase() + resident.firstName.slice(1)} {resident.lastName.charAt(0).toUpperCase() + resident.lastName.slice(1)}
+                                </h3>
+                                <div className="mt-1 text-xs sm:text-sm">{getStatusBadge(resident.status)}</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="space-y-3 text-sm text-gray-700">
-                    <p className="flex items-center gap-3">
-                        <FaVenusMars className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Gender:</span> {resident.gender}</span>
-                    </p>
-                    <p className="flex items-center gap-3">
-                        <FaCalendarAlt className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Date of Birth:</span> {resident.dob}</span>
-                    </p>
-                    <p className="flex items-center gap-3 truncate">
-                        <FaMapMarkerAlt className="text-emerald-500" />
-                        <span className="font-medium"><span className="font-bold">Address:</span> {resident.address}</span>
-                    </p>
-                    {resident.status === 6 && resident.rejectionReason && (
-                        <p className="flex items-center gap-3 text-orange-600">
-                            <FaExclamationTriangle className="text-orange-500" />
-                            <span className="font-medium"><span className="font-bold">Reason:</span> {resident.rejectionReason}</span>
+                    <div className="space-y-2 text-xs sm:text-sm text-gray-700">
+                        <p className="flex items-center gap-2">
+                            <FaVenusMars className="text-emerald-500" />
+                            <span className="font-medium break-words"><span className="font-bold">Gender:</span> {resident.gender}</span>
                         </p>
-                    )}
-                    {getTimestampLabel()}
+                        <p className="flex items-center gap-2">
+                            <FaCalendarAlt className="text-emerald-500" />
+                            <span className="font-medium break-words"><span className="font-bold">Date of Birth:</span> {resident.dob}</span>
+                        </p>
+                        <p className="flex items-center gap-2">
+                            <FaMapMarkerAlt className="text-emerald-500" />
+                            <span className="font-medium break-words"><span className="font-bold">Address:</span> {resident.address}</span>
+                        </p>
+                        {resident.status === 6 && resident.rejectionReason && (
+                            <p className="flex items-center gap-2 text-orange-600">
+                                <FaExclamationTriangle className="text-orange-500" />
+                                <span className="font-medium break-words"><span className="font-bold">Reason:</span> {resident.rejectionReason}</span>
+                            </p>
+                        )}
+                        {getTimestampLabel()}
+                    </div>
                 </div>
-                <div className="flex flex-wrap gap-3 mt-6">
+                <div className="flex flex-wrap gap-3 mt-3">
                     <motion.button
                         onClick={onView}
-                        className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-full hover:bg-emerald-700 transition-colors duration-300"
+                        className="flex items-center gap-1 px-4 py-2 text-sm sm:text-base font-semibold text-white bg-emerald-600 rounded-full hover:bg-emerald-700 transition-colors duration-300"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
@@ -142,7 +144,7 @@ const ResidentCard = ({ resident, onView, onUpdate, onDelete, getStatusBadge }) 
                     </motion.button>
                     <motion.button
                         onClick={onUpdate}
-                        className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-amber-500 rounded-full hover:bg-amber-600 transition-colors duration-300"
+                        className="flex items-center gap-1 px-4 py-2 text-sm sm:text-base font-semibold text-white bg-amber-500 rounded-full hover:bg-amber-600 transition-colors duration-300"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
@@ -151,7 +153,7 @@ const ResidentCard = ({ resident, onView, onUpdate, onDelete, getStatusBadge }) 
                     </motion.button>
                     <motion.button
                         onClick={onDelete}
-                        className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-rose-500 rounded-full hover:bg-rose-600 transition-colors duration-300"
+                        className="flex items-center gap-1 px-4 py-2 text-sm sm:text-base font-semibold text-white bg-rose-500 rounded-full hover:bg-rose-600 transition-colors duration-300"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
