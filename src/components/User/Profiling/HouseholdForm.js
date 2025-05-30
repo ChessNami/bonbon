@@ -36,6 +36,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         valid_id_preview: '',
         zone_cert: null,
         zone_cert_preview: '',
+        hasZoneCertificate: data?.hasZoneCertCertificate || false,
     });
     const [signedValidIdUrl, setSignedValidIdUrl] = useState(null);
     const [signedZoneCertUrl, setSignedZoneCertUrl] = useState(null);
@@ -70,11 +71,14 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             }
 
             if (residentData?.household) {
+                // Compute age before defining householdData
+                const age = residentData.household.dob
+                    ? calculateAge(residentData.household.dob)
+                    : residentData.household.age || '';
+
                 const householdData = {
                     ...residentData.household,
-                    age: residentData.household.dob
-                        ? calculateAge(residentData.household.dob)
-                        : residentData.household.age || '',
+                    age,
                     image: null,
                     image_preview: '',
                     croppedImage: null,
@@ -82,6 +86,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     valid_id_preview: '',
                     zone_cert: null,
                     zone_cert_preview: '',
+                    hasZoneCertificate: residentData?.household?.hasZoneCertificate || false,
                 };
                 setFormData(householdData);
                 setGender(residentData.household.gender || '');
@@ -321,8 +326,8 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             newErrors.valid_id = 'valid ID is required';
         }
 
-        if (!formData.zone_cert_url && !formData.zone_cert) {
-            newErrors.zone_cert = 'zone certificate is required';
+        if (formData.hasZoneCertificate && !formData.zone_cert_url && !formData.zone_cert) {
+            newErrors.zone_cert = 'Zone certificate is required if you have one';
         }
 
         if (formData.idType !== 'No ID' && !formData.idNo) {
@@ -410,7 +415,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             }
 
             // Handle valid ID upload
-            // Handle valid ID upload
             if (formData.valid_id) {
                 const fileExt = formData.valid_id.name.split('.').pop();
                 const fileName = `identification/${userId}/valid_id_${formData.idType.replace(/\s/g, '_')}.${fileExt}`;
@@ -426,8 +430,8 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 validIdUrl = fileName;
             }
 
-            // Handle zone certificate upload
-            if (formData.zone_cert) {
+            // Handle zone certificate
+            if (formData.hasZoneCertificate && formData.zone_cert) {
                 const fileExt = formData.zone_cert.name.split('.').pop();
                 const fileName = `zone_certification/${userId}/zone_cert.${fileExt}`;
                 const { error: uploadError } = await supabase.storage
@@ -440,6 +444,18 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 if (uploadError) throw new Error(`Error uploading zone certificate: ${uploadError.message}`);
 
                 zoneCertUrl = fileName;
+            } else if (!formData.hasZoneCertificate && formData.zone_cert_url) {
+                // Delete existing zone certificate file if hasZoneCertificate is false
+                const { error: deleteError } = await supabase.storage
+                    .from('validid')
+                    .remove([formData.zone_cert_url]);
+
+                if (deleteError) {
+                    console.error('Error deleting zone certificate:', deleteError.message);
+                    showAlert(`Failed to delete existing zone certificate: ${deleteError.message}`);
+                    return;
+                }
+                zoneCertUrl = null;
             }
 
             const updatedData = {
@@ -450,6 +466,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 image_url: imageUrl,
                 valid_id_url: validIdUrl,
                 zone_cert_url: zoneCertUrl,
+                hasZoneCertificate: formData.hasZoneCertificate,
             };
 
             const { error: householdError } = await supabase
@@ -461,6 +478,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                         image_url: imageUrl,
                         valid_id_url: validIdUrl,
                         zone_cert_url: zoneCertUrl,
+                        zone_cert_availability: formData.hasZoneCertificate,
                     },
                     { onConflict: 'user_id' }
                 );
@@ -1052,36 +1070,58 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 {/* New Zone Certificate fieldset */}
                 <fieldset className="border p-3 sm:p-4 rounded-lg">
                     <legend className="font-semibold text-sm sm:text-base">Zone Certificate</legend>
-                    <div>
-                        <label className="block text-xs sm:text-sm font-medium">
-                            Zone Certificate (PNG/JPEG/PDF/Word Docs) {formData.zone_cert_url ? '' : <span className="text-red-500">*</span>}
+                    <div className="mb-4">
+                        <label className="flex items-center text-xs sm:text-sm font-medium">
+                            <input
+                                type="checkbox"
+                                name="hasZoneCertificate"
+                                checked={formData.hasZoneCertificate}
+                                onChange={(e) => {
+                                    setFormData({
+                                        ...formData,
+                                        hasZoneCertificate: e.target.checked,
+                                        zone_cert: e.target.checked ? formData.zone_cert : null,
+                                        zone_cert_preview: e.target.checked ? formData.zone_cert_preview : '',
+                                    });
+                                    setErrors({ ...errors, zone_cert: '' });
+                                }}
+                                className="mr-2"
+                            />
+                            Do you have a Zone Certificate?
                         </label>
-                        <input
-                            type="file"
-                            accept="image/png,image/jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            onChange={handleZoneCertChange}
-                            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.zone_cert ? 'border-red-500' : 'border-gray-300'}`}
-                        />
-                        {errors.zone_cert && <p className="text-red-500 text-xs mt-1">{errors.zone_cert}</p>}
-                        {signedZoneCertUrl && !formData.zone_cert_preview && (formData.zone_cert_url?.endsWith('.pdf') || formData.zone_cert_url?.endsWith('.doc') || formData.zone_cert_url?.endsWith('.docx')) && (
-                            <p className="text-sm mt-2">File uploaded: {formData.zone_cert_url.split('/').pop()}</p>
-                        )}
-                        {signedZoneCertUrl && !formData.zone_cert_preview && !formData.zone_cert_url?.endsWith('.pdf') && !formData.zone_cert_url?.endsWith('.doc') && !formData.zone_cert_url?.endsWith('.docx') && (
-                            <img
-                                src={signedZoneCertUrl}
-                                alt="Zone Certificate"
-                                className="mt-2 w-48 h-48 object-contain"
-                                onError={() => setSignedZoneCertUrl(null)}
-                            />
-                        )}
-                        {formData.zone_cert_preview && (
-                            <img
-                                src={formData.zone_cert_preview}
-                                alt="Zone Certificate Preview"
-                                className="mt-2 w-48 h-48 object-contain"
-                            />
-                        )}
                     </div>
+                    {formData.hasZoneCertificate && (
+                        <div>
+                            <label className="block text-xs sm:text-sm font-medium">
+                                Zone Certificate (PNG/JPEG/PDF/Word Docs) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="file"
+                                accept="image/png,image/jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                onChange={handleZoneCertChange}
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.zone_cert ? 'border-red-500' : 'border-gray-300'}`}
+                            />
+                            {errors.zone_cert && <p className="text-red-500 text-xs mt-1">{errors.zone_cert}</p>}
+                            {signedZoneCertUrl && !formData.zone_cert_preview && (formData.zone_cert_url?.endsWith('.pdf') || formData.zone_cert_url?.endsWith('.doc') || formData.zone_cert_url?.endsWith('.docx')) && (
+                                <p className="text-sm mt-2">File uploaded: {formData.zone_cert_url.split('/').pop()}</p>
+                            )}
+                            {signedZoneCertUrl && !formData.zone_cert_preview && !formData.zone_cert_url?.endsWith('.pdf') && !formData.zone_cert_url?.endsWith('.doc') && !formData.zone_cert_url?.endsWith('.docx') && (
+                                <img
+                                    src={signedZoneCertUrl}
+                                    alt="Zone Certificate"
+                                    className="mt-2 w-48 h-48 object-contain"
+                                    onError={() => setSignedZoneCertUrl(null)}
+                                />
+                            )}
+                            {formData.zone_cert_preview && (
+                                <img
+                                    src={formData.zone_cert_preview}
+                                    alt="Zone Certificate Preview"
+                                    className="mt-2 w-48 h-48 object-contain"
+                                />
+                            )}
+                        </div>
+                    )}
                 </fieldset>
 
                 <div className="flex flex-col sm:flex-row justify-between mt-4 gap-4">

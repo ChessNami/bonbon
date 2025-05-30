@@ -46,6 +46,7 @@ const ResidentManagement = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortOption, setSortOption] = useState('default');
     const [isRentingFilter, setIsRentingFilter] = useState('all');
+    const [hasZoneCertFilter, setHasZoneCertFilter] = useState('all');
 
     // Initialize address mappings
     useEffect(() => {
@@ -116,6 +117,7 @@ const ResidentManagement = () => {
                 valid_id_url,
                 zone_cert_url,
                 spouse_valid_id_url,
+                zone_cert_availability,
                 resident_profile_status (
                     id,
                     status,
@@ -252,7 +254,10 @@ const ResidentManagement = () => {
                         rejectionReason: resident.resident_profile_status?.status !== 4 ? resident.resident_profile_status?.rejection_reason : null,
                         createdAt: resident.resident_profile_status?.created_at || null,
                         updatedAt: resident.resident_profile_status?.updated_at || null,
-                        householdData: household,
+                        householdData: {
+                            ...household,
+                            hasZoneCertificate: resident.zone_cert_availability || false,
+                        },
                         spouseData: spouse,
                         householdComposition: householdComposition,
                         censusData: census,
@@ -349,20 +354,25 @@ const ResidentManagement = () => {
             });
         }
 
+        if (hasZoneCertFilter !== 'all') {
+            filtered = filtered.filter((resident) => {
+                const hasZoneCert = resident.householdData.hasZoneCertificate;
+                return hasZoneCertFilter === 'Yes' ? hasZoneCert : !hasZoneCert;
+            });
+        }
+
         filtered.sort((a, b) => {
             if (sortOption === 'default') {
-                // Define priority order: Pending (3), Update Requested (4), Update Approved (5), Update Profiling (6), Approved (1), then others
                 const priorityOrder = { 3: 1, 4: 2, 5: 3, 6: 4, 1: 5 };
-                const aPriority = priorityOrder[a.status] || 6; // Others get lowest priority
+                const aPriority = priorityOrder[a.status] || 6;
                 const bPriority = priorityOrder[b.status] || 6;
 
                 if (aPriority !== bPriority) {
-                    return aPriority - bPriority; // Lower priority number comes first
+                    return aPriority - bPriority;
                 }
 
-                // Within same status, sort by createdAt (newest first)
                 if (aPriority === bPriority) {
-                    return (new Date(b.createdAt || '1970-01-01')) - (new Date(a.createdAt || '1970-01-01'));
+                    return new Date(b.createdAt || '1970-01-01') - new Date(a.createdAt || '1970-01-01');
                 }
 
                 return 0;
@@ -385,18 +395,18 @@ const ResidentManagement = () => {
             }
 
             if (sortOption === 'date-asc') {
-                return (new Date(a.createdAt || '1970-01-01')) - (new Date(b.createdAt || '1970-01-01'));
+                return new Date(a.createdAt || '1970-01-01') - new Date(b.createdAt || '1970-01-01');
             }
 
             if (sortOption === 'date-desc') {
-                return (new Date(b.createdAt || '1970-01-01')) - (new Date(a.createdAt || '1970-01-01'));
+                return new Date(b.createdAt || '1970-01-01') - new Date(a.createdAt || '1970-01-01');
             }
 
             return 0;
         });
 
         setFilteredResidents(filtered);
-    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter]);
+    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter, hasZoneCertFilter]);
 
     // Disable scroll on body when modals are open
     useEffect(() => {
@@ -427,7 +437,8 @@ const ResidentManagement = () => {
         setStatusFilter('all');
         setSortOption('default');
         setItemsPerPage(10);
-        setIsRentingFilter('all'); // Reset the new filter
+        setIsRentingFilter('all');
+        setHasZoneCertFilter('all');
     };
 
     const handleUpdateStatus = async (resident, reason) => {
@@ -489,7 +500,7 @@ const ResidentManagement = () => {
     const handleDelete = async (id) => {
         const result = await Swal.fire({
             title: 'Are you sure?',
-            text: 'This action will permanently delete the resident profile and associated image.',
+            text: 'This action will permanently delete the resident profile and associated files (image, valid ID, zone certificate, spouse valid ID).',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -504,10 +515,10 @@ const ResidentManagement = () => {
         }
 
         try {
-            // Fetch the resident to get the image_url
+            // Fetch the resident to get file paths
             const { data: residentData, error: fetchError } = await supabase
                 .from('residents')
-                .select('image_url')
+                .select('image_url, valid_id_url, zone_cert_url, spouse_valid_id_url')
                 .eq('id', id)
                 .single();
 
@@ -515,20 +526,25 @@ const ResidentManagement = () => {
                 throw new Error(`Failed to fetch resident data: ${fetchError.message}`);
             }
 
-            // Delete the image from storage if it exists
-            if (residentData.image_url) {
+            // Delete files from storage if they exist
+            const filesToDelete = [];
+            if (residentData.image_url) filesToDelete.push({ bucket: 'householdhead', path: residentData.image_url });
+            if (residentData.valid_id_url) filesToDelete.push({ bucket: 'validid', path: residentData.valid_id_url });
+            if (residentData.zone_cert_url) filesToDelete.push({ bucket: 'validid', path: residentData.zone_cert_url });
+            if (residentData.spouse_valid_id_url) filesToDelete.push({ bucket: 'validid', path: residentData.spouse_valid_id_url });
+
+            for (const file of filesToDelete) {
                 const { error: storageError } = await supabase.storage
-                    .from('householdhead')
-                    .remove([residentData.image_url]);
+                    .from(file.bucket)
+                    .remove([file.path]);
 
                 if (storageError) {
-                    console.error(`Failed to delete image: ${storageError.message}`);
-                    // Log the error but continue with deletion to avoid orphaned resident data
+                    console.error(`Failed to delete ${file.path} from ${file.bucket}: ${storageError.message}`);
                     Swal.fire({
                         toast: true,
                         position: 'top-end',
                         icon: 'warning',
-                        title: `Image deletion failed: ${storageError.message}. Proceeding with resident deletion.`,
+                        title: `Failed to delete ${file.path.split('/').pop()}: ${storageError.message}. Proceeding with resident deletion.`,
                         showConfirmButton: false,
                         timer: 3000,
                         scrollbarPadding: false,
@@ -561,7 +577,7 @@ const ResidentManagement = () => {
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Resident and associated image deleted successfully',
+                title: 'Resident and associated files deleted successfully',
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
@@ -1062,6 +1078,8 @@ const ResidentManagement = () => {
                         onClearFilters={handleClearFilters}
                         isRentingFilter={isRentingFilter}
                         setIsRentingFilter={setIsRentingFilter}
+                        hasZoneCertFilter={hasZoneCertFilter}
+                        setHasZoneCertFilter={setHasZoneCertFilter}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {currentItems.length > 0 ? (

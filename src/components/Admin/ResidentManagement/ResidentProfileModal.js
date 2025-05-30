@@ -169,19 +169,23 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     'idNo',
                                                     'employmentType',
                                                     'education',
+                                                    'hasZoneCertificate',
                                                 ].map((key) => {
                                                     let label = capitalizeWords(key);
                                                     if (key === 'dob') label = 'Date of Birth';
                                                     if (key === 'idType') label = 'ID Type';
                                                     if (key === 'idNo') label = 'ID Number';
                                                     if (key === 'zone') label = 'Purok/Zone';
+                                                    if (key === 'hasZoneCertificate') label = 'Has Zone Certificate';
                                                     return (
                                                         <div key={key} className="space-y-1">
                                                             <label className="text-sm font-medium text-gray-700">{label}</label>
                                                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
                                                                 {['region', 'province', 'city', 'barangay'].includes(key)
                                                                     ? addressMappings[key][resident.householdData[key]] || 'N/A'
-                                                                    : resident.householdData[key] || 'N/A'}
+                                                                    : key === 'hasZoneCertificate'
+                                                                        ? resident.householdData[key] ? 'Yes' : 'No'
+                                                                        : resident.householdData[key] || 'N/A'}
                                                             </div>
                                                         </div>
                                                     );

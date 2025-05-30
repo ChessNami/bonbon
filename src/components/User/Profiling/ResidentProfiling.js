@@ -345,7 +345,6 @@ const ResidentProfiling = () => {
                 'education',
                 'image_url',
                 'valid_id_url',
-                'zone_cert_url',
             ];
             for (let field of requiredHouseholdFields) {
                 if (!formData.household[field]) {
@@ -820,11 +819,13 @@ const ResidentProfiling = () => {
                                             'idNo',
                                             'employmentType',
                                             'education',
+                                            'hasZoneCertificate',
                                         ].map((key) => {
                                             let label = capitalizeWords(key);
                                             if (key === 'dob') label = 'Date of Birth';
                                             if (key === 'idType') label = 'ID Type';
                                             if (key === 'idNo') label = 'ID Number';
+                                            if (key === 'hasZoneCertificate') label = 'Has Zone Certificate';
 
                                             return (
                                                 <div key={key}>
@@ -832,7 +833,9 @@ const ResidentProfiling = () => {
                                                     <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
                                                         {['region', 'province', 'city', 'barangay'].includes(key)
                                                             ? addressMappings[key][formData.household[key]] || 'N/A'
-                                                            : formData.household[key] || 'N/A'}
+                                                            : key === 'hasZoneCertificate'
+                                                                ? formData.household[key] ? 'Yes' : 'No'
+                                                                : formData.household[key] || 'N/A'}
                                                     </p>
                                                 </div>
                                             );

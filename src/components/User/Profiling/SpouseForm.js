@@ -844,9 +844,9 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 // Check if spouse data exists
                                 const { data: residentData, error: fetchError } = await supabase
                                     .from('residents')
-                                    .select('spouse')
+                                    .select('spouse, spouse_valid_id_url')
                                     .eq('user_id', userId)
-                                    .maybeSingle(); // Use maybeSingle to handle no rows gracefully
+                                    .maybeSingle();
 
                                 if (fetchError) {
                                     Swal.fire({
@@ -876,10 +876,10 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                     return;
                                 }
 
-                                // Confirm deletion if spouse data exists
+                                // Confirm deletion
                                 const result = await Swal.fire({
                                     title: 'Are you sure?',
-                                    text: 'This will clear all spouse data. This action cannot be undone.',
+                                    text: 'This will clear all spouse data and delete the uploaded valid ID file. This action cannot be undone.',
                                     icon: 'warning',
                                     showCancelButton: true,
                                     confirmButtonColor: '#d33',
@@ -890,10 +890,34 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
 
                                 if (!result.isConfirmed) return;
 
+                                // Delete the valid ID file from storage if it exists
+                                if (residentData.spouse_valid_id_url) {
+                                    const { error: storageError } = await supabase.storage
+                                        .from('validid')
+                                        .remove([residentData.spouse_valid_id_url]);
+
+                                    if (storageError) {
+                                        console.error(`Failed to delete spouse valid ID: ${storageError.message}`);
+                                        Swal.fire({
+                                            toast: true,
+                                            position: 'top-end',
+                                            icon: 'warning',
+                                            title: `Failed to delete valid ID file: ${storageError.message}. Proceeding with data clear.`,
+                                            showConfirmButton: false,
+                                            timer: 3000,
+                                            scrollbarPadding: false,
+                                            timerProgressBar: true,
+                                        });
+                                    }
+                                }
+
                                 // Clear spouse data
                                 const { error: updateError } = await supabase
                                     .from('residents')
-                                    .update({ spouse: null })
+                                    .update({
+                                        spouse: null,
+                                        spouse_valid_id_url: null,
+                                    })
                                     .eq('user_id', userId);
 
                                 if (updateError) {
@@ -937,16 +961,19 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                     skills: '',
                                     companyAddress: '',
                                     education: '',
+                                    valid_id: null,
+                                    valid_id_preview: '',
                                 });
                                 setGender('');
                                 setCustomGender('');
                                 setEmploymentType('');
+                                setSignedValidIdUrl(null);
 
                                 Swal.fire({
                                     toast: true,
                                     position: 'top-end',
                                     icon: 'success',
-                                    title: 'Spouse data cleared successfully',
+                                    title: 'Spouse data and valid ID cleared successfully',
                                     timer: 1500,
                                     showConfirmButton: false,
                                     scrollbarPadding: false,
