@@ -36,7 +36,12 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         valid_id_preview: '',
         zone_cert: null,
         zone_cert_preview: '',
-        hasZoneCertificate: data?.hasZoneCertCertificate || false,
+        hasZoneCertificate: data?.hasZoneCertificate || false,
+        zipCode: data?.zipCode || '9000',
+        region: data?.region || '100000000',
+        province: data?.province || '104300000',
+        city: data?.city || '104305000',
+        barangay: data?.barangay || '104305040',
     });
     const [signedValidIdUrl, setSignedValidIdUrl] = useState(null);
     const [signedZoneCertUrl, setSignedZoneCertUrl] = useState(null);
@@ -169,17 +174,61 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     phoneNumber: '',
                 }));
             }
+        } else if (name === 'dob') {
+            const selectedYear = new Date(value).getFullYear();
+            const currentYear = new Date().getFullYear();
+            const age = calculateAge(value);
+            if (selectedYear === currentYear) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Invalid date of birth: Cannot be in the current year',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                });
+                setErrors((prev) => ({
+                    ...prev,
+                    dob: 'Invalid date of birth',
+                }));
+                return;
+            }
+            if (age !== '' && age < 18) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Invalid date of birth: Must be at least 18 years old',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                });
+                setErrors((prev) => ({
+                    ...prev,
+                    dob: 'Must be at least 18 years old',
+                }));
+                setFormData((prev) => ({
+                    ...prev,
+                    [name]: '',
+                    age: '',
+                }));
+                return;
+            }
+            setFormData((prev) => ({
+                ...prev,
+                [name]: value,
+                age: age,
+            }));
+            setErrors((prev) => ({
+                ...prev,
+                dob: '',
+            }));
         } else {
             setFormData((prev) => {
                 const updatedData = { ...prev, [name]: value };
                 if (name === 'middleName') {
                     updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
-                }
-                if (name === 'idType' && value === 'No ID') {
-                    updatedData.idNo = 'No ID';
-                }
-                if (name === 'dob') {
-                    updatedData.age = calculateAge(value);
                 }
                 return updatedData;
             });
@@ -330,10 +379,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             newErrors.zone_cert = 'Zone certificate is required if you have one';
         }
 
-        if (formData.idType !== 'No ID' && !formData.idNo) {
-            newErrors.idNo = 'ID No. is required';
-        }
-
         // Validate phone number format
         if (formData.phoneNumber) {
             if (!/^09[0-9]{9}$/.test(formData.phoneNumber)) {
@@ -341,6 +386,14 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             }
         } else {
             newErrors.phoneNumber = 'phone number is required';
+        }
+
+        // Validate age
+        if (formData.dob) {
+            const age = calculateAge(formData.dob);
+            if (age < 18) {
+                newErrors.dob = 'Must be at least 18 years old';
+            }
         }
 
         setErrors(newErrors);
@@ -900,7 +953,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 <option value="">Select</option>
                                 <option value="Barangay ID">Barangay ID</option>
                                 <option value="Driver’s License">Driver’s License</option>
-                                <option value="No ID">No ID</option>
                                 <option value="Passport">Passport</option>
                                 <option value="PhilHealth">PhilHealth</option>
                                 <option value="PhilSys ID (National ID)">PhilSys ID (National ID)</option>
@@ -924,7 +976,6 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 value={formData.idNo || ''}
                                 onChange={handleChange}
                                 required
-                                disabled={formData.idType === 'No ID'}
                             />
                             {errors.idNo && <p className="text-red-500 text-xs mt-1">{errors.idNo}</p>}
                         </div>

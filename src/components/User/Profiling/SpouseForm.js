@@ -29,6 +29,11 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
         age: data?.dob ? calculateAge(data.dob) : data?.age || '',
         valid_id: null,
         valid_id_preview: '',
+        zipCode: data?.zipCode || '9000',
+        region: data?.region || '100000000',
+        province: data?.province || '104300000',
+        city: data?.city || '104305000',
+        barangay: data?.barangay || '104305040',
     });
     const [errors, setErrors] = useState({});
     const [signedValidIdUrl, setSignedValidIdUrl] = useState(null);
@@ -143,17 +148,43 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     phoneNumber: '',
                 }));
             }
+        } else if (name === 'dob') {
+            const age = calculateAge(value);
+            if (age !== '' && age < 18) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Invalid date of birth: Must be at least 18 years old',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                });
+                setErrors((prev) => ({
+                    ...prev,
+                    dob: 'Must be at least 18 years old',
+                }));
+                setFormData((prev) => ({
+                    ...prev,
+                    [name]: '',
+                    age: '',
+                }));
+                return;
+            }
+            setFormData((prev) => ({
+                ...prev,
+                [name]: value,
+                age: age,
+            }));
+            setErrors((prev) => ({
+                ...prev,
+                dob: '',
+            }));
         } else {
             setFormData((prev) => {
                 const updatedData = { ...prev, [name]: value };
                 if (name === 'middleName') {
                     updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
-                }
-                if (name === 'idType' && value === 'No ID') {
-                    updatedData.idNo = 'No ID';
-                }
-                if (name === 'dob') {
-                    updatedData.age = calculateAge(value);
                 }
                 return updatedData;
             });
@@ -221,7 +252,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
             newErrors.valid_id = 'valid ID is required';
         }
 
-        if (formData.idType !== 'No ID' && !formData.idNo) {
+        if (!formData.idNo) {
             newErrors.idNo = 'ID No. is required';
         }
 
@@ -231,6 +262,14 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
             }
         } else {
             newErrors.phoneNumber = 'phone number is required';
+        }
+
+        // Validate age
+        if (formData.dob) {
+            const age = calculateAge(formData.dob);
+            if (age < 18) {
+                newErrors.dob = 'Must be at least 18 years old';
+            }
         }
 
         setErrors(newErrors);
@@ -662,7 +701,6 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 <option value="">Select</option>
                                 <option value="Barangay ID">Barangay ID</option>
                                 <option value="Driver’s License">Driver’s License</option>
-                                <option value="No ID">No ID</option>
                                 <option value="Passport">Passport</option>
                                 <option value="PhilHealth">PhilHealth</option>
                                 <option value="PhilSys ID (National ID)">PhilSys ID (National ID)</option>
@@ -686,7 +724,6 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 value={formData.idNo || ''}
                                 onChange={handleChange}
                                 required
-                                disabled={formData.idType === 'No ID'}
                             />
                             {errors.idNo && <p className="text-red-500 text-xs mt-1">{errors.idNo}</p>}
                         </div>

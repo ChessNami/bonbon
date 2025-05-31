@@ -20,7 +20,13 @@ const ResidentProfiling = () => {
     const [activeTab, setActiveTab] = useState('householdForm');
     const [activeConfirmationTab, setActiveConfirmationTab] = useState('householdHead');
     const [formData, setFormData] = useState({
-        household: {},
+        household: {
+            zipCode: '9000',
+            region: '100000000',
+            province: '104300000',
+            city: '104305000',
+            barangay: '104305040',
+        },
         spouse: null,
         householdComposition: [],
         census: {},
@@ -89,8 +95,24 @@ const ResidentProfiling = () => {
 
                 if (data && !error) {
                     setFormData({
-                        household: data.household || {},
-                        spouse: data.spouse || null,
+                        household: {
+                            ...data.household,
+                            zipCode: data.household?.zipCode || '9000',
+                            region: data.household?.region || '100000000',
+                            province: data.household?.province || '104300000',
+                            city: data.household?.city || '104305000',
+                            barangay: data.household?.barangay || '104305040',
+                        },
+                        spouse: data.spouse
+                            ? {
+                                ...data.spouse,
+                                zipCode: data.spouse?.zipCode || '9000',
+                                region: data.spouse?.region || '100000000',
+                                province: data.spouse?.province || '104300000',
+                                city: data.spouse?.city || '104305000',
+                                barangay: data.spouse?.barangay || '104305040',
+                            }
+                            : null,
                         householdComposition: Array.isArray(data.household_composition)
                             ? data.household_composition
                             : [],
@@ -159,7 +181,13 @@ const ResidentProfiling = () => {
                     }
                 } else {
                     setFormData({
-                        household: {},
+                        household: {
+                            zipCode: '9000',
+                            region: '100000000',
+                            province: '104300000',
+                            city: '104305000',
+                            barangay: '104305040',
+                        },
                         spouse: null,
                         householdComposition: [],
                         census: {},

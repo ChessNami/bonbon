@@ -10,7 +10,6 @@ const MyAccount = () => {
     const [formData, setFormData] = useState({
         displayName: "",
         email: "",
-        dateOfBirth: "",
     });
 
     useEffect(() => {
@@ -25,7 +24,6 @@ const MyAccount = () => {
                     setFormData({
                         displayName: user.user_metadata?.display_name || "",
                         email: user.email || "",
-                        dateOfBirth: user.user_metadata?.date_of_birth || "",
                     });
                 }
             } catch (error) {
@@ -67,7 +65,6 @@ const MyAccount = () => {
             const { error } = await supabase.auth.updateUser({
                 data: {
                     display_name: formData.displayName,
-                    date_of_birth: formData.dateOfBirth,
                 },
             });
 
@@ -81,7 +78,6 @@ const MyAccount = () => {
                     user_metadata: {
                         ...prevUser.user_metadata,
                         display_name: formData.displayName,
-                        date_of_birth: formData.dateOfBirth,
                     },
                 };
                 return updatedUser;
@@ -153,17 +149,6 @@ const MyAccount = () => {
                         value={formData.email}
                         disabled
                         className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-                    />
-                </div>
-                <div>
-                    <label className="block text-gray-600 font-semibold">Date of Birth</label>
-                    <input
-                        type="date"
-                        name="dateOfBirth"
-                        value={formData.dateOfBirth}
-                        onChange={handleChange}
-                        disabled={!editing}
-                        className={`w-full p-2 border rounded-lg ${editing ? "border-blue-400" : "bg-gray-100 cursor-not-allowed"}`}
                     />
                 </div>
                 <div>
