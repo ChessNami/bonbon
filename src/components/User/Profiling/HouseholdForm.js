@@ -898,18 +898,18 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 required
                             >
                                 <option value="">Select</option>
-                                <option value="Passport">Passport</option>
+                                <option value="Barangay ID">Barangay ID</option>
                                 <option value="Driver’s License">Driver’s License</option>
-                                <option value="SSS">SSS</option>
+                                <option value="No ID">No ID</option>
+                                <option value="Passport">Passport</option>
                                 <option value="PhilHealth">PhilHealth</option>
-                                <option value="TIN">TIN</option>
-                                <option value="Voter's ID">Voter's ID</option>
+                                <option value="PhilSys ID (National ID)">PhilSys ID (National ID)</option>
                                 <option value="Postal ID">Postal ID</option>
                                 <option value="PRC ID">PRC ID</option>
+                                <option value="SSS">SSS</option>
+                                <option value="TIN">TIN</option>
                                 <option value="UMID">UMID</option>
-                                <option value="Barangay ID">Barangay ID</option>
-                                <option value="Student ID">Student ID</option>
-                                <option value="No ID">No ID</option>
+                                <option value="Voter's ID">Voter's ID</option>
                             </select>
                             {errors.idType && <p className="text-red-500 text-xs mt-1">{errors.idType}</p>}
                         </div>
