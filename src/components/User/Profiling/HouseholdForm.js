@@ -471,6 +471,17 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             if (formData.valid_id) {
                 const fileExt = formData.valid_id.name.split('.').pop();
                 const fileName = `identification/${userId}/valid_id_${formData.idType.replace(/\s/g, '_')}.${fileExt}`;
+
+                // Remove existing valid ID if it exists
+                if (formData.valid_id_url) {
+                    const { error: deleteError } = await supabase.storage
+                        .from('validid')
+                        .remove([formData.valid_id_url]);
+                    if (deleteError) {
+                        console.error('Error deleting existing valid ID:', deleteError.message);
+                    }
+                }
+
                 const { error: uploadError } = await supabase.storage
                     .from('validid')
                     .upload(fileName, formData.valid_id, {
@@ -952,7 +963,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             >
                                 <option value="">Select</option>
                                 <option value="Barangay ID">Barangay ID</option>
-                                <option value="Driver’s License">Driver’s License</option>
+                                <option value="Drivers License">Driver’s License</option>
                                 <option value="Passport">Passport</option>
                                 <option value="PhilHealth">PhilHealth</option>
                                 <option value="PhilSys ID (National ID)">PhilSys ID (National ID)</option>
