@@ -112,6 +112,24 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
     const handleChange = (e) => {
         const { name, value, files } = e.target;
         setIsDirty(true); // Mark form as dirty on any change
+
+        // Define dropdown and excluded fields
+        const isDropdown = [
+            'region',
+            'province',
+            'city',
+            'barangay',
+            'zone',
+            'extension',
+            'gender',
+            'customGender',
+            'civilStatus',
+            'idType',
+            'employmentType',
+            'education',
+        ].includes(name);
+        const upperCaseValue = isDropdown ? value : value.toUpperCase();
+
         if (name === 'valid_id') {
             const file = files[0];
             if (file && (file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'application/pdf')) {
@@ -149,7 +167,25 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                 }));
             }
         } else if (name === 'dob') {
+            const selectedYear = new Date(value).getFullYear();
+            const currentYear = new Date().getFullYear();
             const age = calculateAge(value);
+            if (selectedYear === currentYear) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Invalid date of birth: Cannot be in the current year',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    scrollbarPadding: false,
+                });
+                setErrors((prev) => ({
+                    ...prev,
+                    dob: 'Invalid date of birth',
+                }));
+                return;
+            }
             if (age !== '' && age < 18) {
                 Swal.fire({
                     toast: true,
@@ -180,9 +216,28 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                 ...prev,
                 dob: '',
             }));
+        } else if (name === 'zipCode') {
+            // Allow only digits and limit to 4 characters
+            const cleanedValue = value.replace(/[^0-9]/g, '').slice(0, 4);
+            setFormData((prev) => ({
+                ...prev,
+                [name]: cleanedValue,
+            }));
+            // Validate format
+            if (cleanedValue && !/^[0-9]{4}$/.test(cleanedValue)) {
+                setErrors((prev) => ({
+                    ...prev,
+                    zipCode: 'Zip code must be 4 digits',
+                }));
+            } else {
+                setErrors((prev) => ({
+                    ...prev,
+                    zipCode: '',
+                }));
+            }
         } else {
             setFormData((prev) => {
-                const updatedData = { ...prev, [name]: value };
+                const updatedData = { ...prev, [name]: upperCaseValue };
                 if (name === 'middleName') {
                     updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
                 }
@@ -327,13 +382,32 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                 validIdUrl = fileName;
             }
 
-            const updatedData = {
-                ...formData,
-                gender,
-                customGender: gender === 'Other' ? customGender : '',
-                employmentType,
-                valid_id_url: validIdUrl,
-            };
+            // Convert text fields to uppercase, excluding URLs, dropdowns, and non-text fields
+            const updatedData = Object.keys(formData).reduce((acc, key) => {
+                const isUrlField = ['valid_id_url', 'valid_id_preview'].includes(key);
+                const isDropdownField = [
+                    'region',
+                    'province',
+                    'city',
+                    'barangay',
+                    'zone',
+                    'extension',
+                    'gender',
+                    'customGender',
+                    'civilStatus',
+                    'idType',
+                    'employmentType',
+                    'education',
+                ].includes(key);
+                const isNonTextField = ['valid_id', 'age'].includes(key);
+                acc[key] = isUrlField || isDropdownField || isNonTextField ? formData[key] : formData[key]?.toString().toUpperCase() || formData[key];
+                return acc;
+            }, {});
+
+            updatedData.gender = gender;
+            updatedData.customGender = gender === 'Other' ? customGender : '';
+            updatedData.employmentType = employmentType;
+            updatedData.valid_id_url = validIdUrl;
 
             const { error } = await supabase
                 .from('residents')
@@ -394,6 +468,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.firstName || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                         </div>
@@ -407,6 +482,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.lastName || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                         </div>
@@ -417,6 +493,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 name="middleName"
                                 className="input-style text-sm sm:text-base"
                                 value={formData.middleName || ''}
+                                style={{ textTransform: 'uppercase' }}
                                 onChange={handleChange}
                             />
                         </div>
@@ -427,6 +504,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 name="middleInitial"
                                 className="input-style text-sm sm:text-base"
                                 value={formData.middleInitial || ''}
+                                style={{ textTransform: 'uppercase' }}
                                 readOnly
                             />
                         </div>
@@ -436,6 +514,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 name="extension"
                                 className="input-style text-sm sm:text-base"
                                 value={formData.extension || ''}
+                                style={{ textTransform: 'uppercase' }}
                                 onChange={handleChange}
                             >
                                 <option value="">Select</option>
@@ -463,6 +542,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.address || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                         </div>
@@ -475,6 +555,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.region || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -494,6 +575,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.province || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -513,6 +595,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.city || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -532,6 +615,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.barangay || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -553,6 +637,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                         className="input-style text-sm sm:text-base"
                                         value={formData.zone || ''}
                                         onChange={handleChange}
+                                        style={{ textTransform: 'uppercase' }}
                                     >
                                         <option value="">Select</option>
                                         {[...Array(9)].map((_, i) => (
@@ -603,6 +688,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.dob || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                         </div>
@@ -627,6 +713,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={gender}
                                 onChange={handleGenderChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -641,6 +728,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 <select
                                     name="customGender"
                                     className="input-style text-sm sm:text-base"
+                                    style={{ textTransform: 'uppercase' }}
                                     value={customGender}
                                     onChange={(e) => {
                                         setCustomGender(e.target.value);
@@ -670,6 +758,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.civilStatus || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -690,6 +779,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.religion || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                             />
                         </div>
                     </div>
@@ -707,6 +797,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idType ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idType || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -735,6 +826,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idNo ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idNo || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                             {errors.idNo && <p className="text-red-500 text-xs mt-1">{errors.idNo}</p>}
@@ -749,6 +841,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.phoneNumber || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 maxLength={11}
                                 pattern="09[0-9]{9}"
                                 onInput={(e) => {
@@ -809,6 +902,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             className="input-style text-sm sm:text-base"
                             value={employmentType}
                             onChange={handleEmploymentChange}
+                            style={{ textTransform: 'uppercase' }}
                             required
                         >
                             <option value="">Select</option>
@@ -829,6 +923,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                     className="input-style text-sm sm:text-base"
                                     value={formData.occupation || ''}
                                     onChange={handleChange}
+                                    style={{ textTransform: 'uppercase' }}
                                 />
                             </div>
                             <div>
@@ -839,6 +934,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                     className="input-style text-sm sm:text-base"
                                     value={formData.skills || ''}
                                     onChange={handleChange}
+                                    style={{ textTransform: 'uppercase' }}
                                 />
                             </div>
                             <div>
@@ -849,6 +945,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                     className="input-style text-sm sm:text-base"
                                     value={formData.companyAddress || ''}
                                     onChange={handleChange}
+                                    style={{ textTransform: 'uppercase' }}
                                 />
                             </div>
                         </div>
@@ -866,6 +963,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             className="input-style text-sm sm:text-base"
                             value={formData.education || ''}
                             onChange={handleChange}
+                            style={{ textTransform: 'uppercase' }}
                             required
                         >
                             <option value="">Select</option>

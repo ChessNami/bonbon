@@ -515,15 +515,53 @@ const ResidentProfiling = () => {
                 return;
             }
 
+            // Convert text fields to uppercase for household, spouse, householdComposition, and census, excluding URLs and dropdowns
+            const convertToUpperCase = (obj) => {
+                if (!obj) return obj;
+                return Object.keys(obj).reduce((acc, key) => {
+                    const isUrlField = ['image_url', 'valid_id_url', 'zone_cert_url'].includes(key);
+                    const isDropdownField = [
+                        'region',
+                        'province',
+                        'city',
+                        'barangay',
+                        'zone',
+                        'extension',
+                        'gender',
+                        'customGender',
+                        'civilStatus',
+                        'idType',
+                        'employmentType',
+                        'education',
+                        'relation',
+                        'isLivingWithParents',
+                        'ownsHouse',
+                        'isRenting',
+                        'isRegisteredVoter',
+                        'hasOwnComfortRoom',
+                        'hasOwnWaterSupply',
+                        'hasOwnElectricity',
+                    ].includes(key);
+                    const isNonTextField = ['age', 'childrenCount', 'numberOfhouseholdMembers'].includes(key);
+                    acc[key] = isUrlField || isDropdownField || isNonTextField ? obj[key] : obj[key]?.toString().toUpperCase() || obj[key];
+                    return acc;
+                }, {});
+            };
+
+            const convertedHousehold = convertToUpperCase(formData.household);
+            const convertedSpouse = convertToUpperCase(formData.spouse);
+            const convertedHouseholdComposition = formData.householdComposition.map(convertToUpperCase);
+            const convertedCensus = convertToUpperCase(formData.census);
+
             const { data: residentData, error: residentError } = await supabase
                 .from('residents')
                 .upsert(
                     {
                         user_id: userId,
-                        household: formData.household,
-                        spouse: formData.spouse,
-                        household_composition: formData.householdComposition,
-                        census: formData.census,
+                        household: convertedHousehold,
+                        spouse: convertedSpouse,
+                        household_composition: convertedHouseholdComposition,
+                        census: convertedCensus,
                         children_count: parseInt(formData.childrenCount, 10) || 0,
                         number_of_household_members: parseInt(formData.numberOfhouseholdMembers, 10) || 0,
                         image_url: formData.household.image_url,
@@ -855,15 +893,26 @@ const ResidentProfiling = () => {
                                             if (key === 'idNo') label = 'ID Number';
                                             if (key === 'hasZoneCertificate') label = 'Has Zone Certificate';
 
+                                            // Get the display value
+                                            let displayValue;
+                                            if (['region', 'province', 'city', 'barangay'].includes(key)) {
+                                                displayValue = addressMappings[key][formData.household[key]] || 'N/A';
+                                            } else if (key === 'hasZoneCertificate') {
+                                                displayValue = formData.household[key] ? 'Yes' : 'No';
+                                            } else {
+                                                displayValue = formData.household[key] || 'N/A';
+                                            }
+
+                                            // Apply uppercase to all display values (except 'N/A')
+                                            if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                displayValue = displayValue.toUpperCase();
+                                            }
+
                                             return (
                                                 <div key={key}>
                                                     <label className="font-medium text-xs sm:text-sm">{label}:</label>
-                                                    <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
-                                                        {['region', 'province', 'city', 'barangay'].includes(key)
-                                                            ? addressMappings[key][formData.household[key]] || 'N/A'
-                                                            : key === 'hasZoneCertificate'
-                                                                ? formData.household[key] ? 'Yes' : 'No'
-                                                                : formData.household[key] || 'N/A'}
+                                                    <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm break-words">
+                                                        {displayValue}
                                                     </p>
                                                 </div>
                                             );
@@ -919,13 +968,21 @@ const ResidentProfiling = () => {
                                                     if (key === 'idType') label = 'ID Type';
                                                     if (key === 'idNo') label = 'ID Number';
 
+                                                    // Get the display value
+                                                    let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
+                                                        ? addressMappings[key][formData.spouse[key]] || 'N/A'
+                                                        : formData.spouse[key] || 'N/A';
+
+                                                    // Apply uppercase to all display values (except 'N/A')
+                                                    if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                        displayValue = displayValue.toUpperCase();
+                                                    }
+
                                                     return (
                                                         <div key={key}>
                                                             <label className="font-medium text-xs sm:text-sm">{label}:</label>
-                                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
-                                                                {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                    ? addressMappings[key][formData.spouse[key]] || 'N/A'
-                                                                    : formData.spouse[key] || 'N/A'}
+                                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm break-words">
+                                                                {displayValue}
                                                             </p>
                                                         </div>
                                                     );
@@ -933,7 +990,7 @@ const ResidentProfiling = () => {
                                             </div>
                                         </>
                                     ) : (
-                                        <p className="text-xs sm:text-sm text-gray-600">No spouse data provided.</p>
+                                        <p className="text-xs sm:text-sm text-gray-600">NO SPOUSE DATA PROVIDED.</p>
                                     )}
                                 </fieldset>
                             )}
@@ -944,11 +1001,11 @@ const ResidentProfiling = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                                         <div>
                                             <label className="font-medium text-xs sm:text-sm">No. of Children:</label>
-                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm">{formData.childrenCount}</p>
+                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm">{formData.childrenCount.toString().toUpperCase()}</p>
                                         </div>
                                         <div>
                                             <label className="font-medium text-xs sm:text-sm">No. of Other Household Members:</label>
-                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm">{formData.numberOfhouseholdMembers}</p>
+                                            <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm">{formData.numberOfhouseholdMembers.toString().toUpperCase()}</p>
                                         </div>
                                     </div>
 
@@ -984,13 +1041,21 @@ const ResidentProfiling = () => {
                                                                 if (key === 'age') label = 'Age';
                                                                 if (key === 'isLivingWithParents') label = 'Is Living with Parents';
 
+                                                                // Get the display value
+                                                                let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
+                                                                    ? addressMappings[key][member[key]] || 'N/A'
+                                                                    : member[key] || 'N/A';
+
+                                                                // Apply uppercase to all display values (except 'N/A')
+                                                                if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                                    displayValue = displayValue.toUpperCase();
+                                                                }
+
                                                                 return (
                                                                     <div key={key}>
                                                                         <label className="font-medium text-xs sm:text-sm">{label}:</label>
-                                                                        <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
-                                                                            {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                                ? addressMappings[key][member[key]] || 'N/A'
-                                                                                : member[key] || 'N/A'}
+                                                                        <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm break-words">
+                                                                            {displayValue}
                                                                         </p>
                                                                     </div>
                                                                 );
@@ -1028,11 +1093,19 @@ const ResidentProfiling = () => {
                                                                 if (key === 'customGender') label = 'Custom Gender';
                                                                 if (key === 'age') label = 'Age';
 
+                                                                // Get the display value
+                                                                let displayValue = member[key] || 'N/A';
+
+                                                                // Apply uppercase to all display values (except 'N/A')
+                                                                if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                                    displayValue = displayValue.toUpperCase();
+                                                                }
+
                                                                 return (
                                                                     <div key={key}>
                                                                         <label className="font-medium text-xs sm:text-sm">{label}:</label>
-                                                                        <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
-                                                                            {member[key] || 'N/A'}
+                                                                        <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm break-words">
+                                                                            {displayValue}
                                                                         </p>
                                                                     </div>
                                                                 );
@@ -1044,7 +1117,7 @@ const ResidentProfiling = () => {
                                     )}
 
                                     {formData.childrenCount === 0 && formData.numberOfhouseholdMembers === 0 && (
-                                        <p className="text-xs sm:text-sm">No household members or children added.</p>
+                                        <p className="text-xs sm:text-sm">NO HOUSEHOLD MEMBERS OR CHILDREN ADDED.</p>
                                     )}
                                 </fieldset>
                             )}
@@ -1062,14 +1135,24 @@ const ResidentProfiling = () => {
                                             { key: 'hasOwnComfortRoom', label: 'Has Own Comfort Room (C.R.)' },
                                             { key: 'hasOwnWaterSupply', label: 'Has Own Water Supply' },
                                             { key: 'hasOwnElectricity', label: 'Has Own Electricity' },
-                                        ].map(({ key, label }) => (
-                                            <div key={key}>
-                                                <label className="font-medium text-xs sm:text-sm">{label}:</label>
-                                                <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm capitalize break-words">
-                                                    {formData.census[key] || 'N/A'}
-                                                </p>
-                                            </div>
-                                        ))}
+                                        ].map(({ key, label }) => {
+                                            // Get the display value
+                                            let displayValue = formData.census[key] || 'N/A';
+
+                                            // Apply uppercase to all display values (except 'N/A')
+                                            if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                displayValue = displayValue.toUpperCase();
+                                            }
+
+                                            return (
+                                                <div key={key}>
+                                                    <label className="font-medium text-xs sm:text-sm">{label}:</label>
+                                                    <p className="p-1 sm:p-2 border rounded text-xs sm:text-sm break-words">
+                                                        {displayValue}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </fieldset>
                             )}

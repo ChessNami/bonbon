@@ -155,6 +155,23 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        // Convert input value to uppercase for text inputs, excluding dropdowns and specific fields
+        const isDropdown = [
+            'region',
+            'province',
+            'city',
+            'barangay',
+            'zone',
+            'extension',
+            'gender',
+            'customGender',
+            'civilStatus',
+            'idType',
+            'employmentType',
+            'education',
+        ].includes(name);
+        const upperCaseValue = isDropdown ? value : value.toUpperCase();
+
         if (name === 'phoneNumber') {
             // Allow only digits and limit to 11 characters
             const cleanedValue = value.replace(/[^0-9]/g, '').slice(0, 11);
@@ -226,7 +243,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             }));
         } else {
             setFormData((prev) => {
-                const updatedData = { ...prev, [name]: value };
+                const updatedData = { ...prev, [name]: upperCaseValue };
                 if (name === 'middleName') {
                     updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
                 }
@@ -522,16 +539,44 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 zoneCertUrl = null;
             }
 
-            const updatedData = {
-                ...formData,
-                gender,
-                customGender: gender === 'Other' ? customGender : '',
-                employmentType,
-                image_url: imageUrl,
-                valid_id_url: validIdUrl,
-                zone_cert_url: zoneCertUrl,
-                hasZoneCertificate: formData.hasZoneCertificate,
-            };
+            // Convert text fields to uppercase for saving, excluding URLs and dropdowns
+            const updatedData = Object.keys(formData).reduce((acc, key) => {
+                const isUrlField = ['image_url', 'valid_id_url', 'zone_cert_url'].includes(key);
+                const isDropdownField = [
+                    'region',
+                    'province',
+                    'city',
+                    'barangay',
+                    'zone',
+                    'extension',
+                    'gender',
+                    'customGender',
+                    'civilStatus',
+                    'idType',
+                    'employmentType',
+                    'education',
+                ].includes(key);
+                const isNonTextField = [
+                    'image',
+                    'valid_id',
+                    'zone_cert',
+                    'image_preview',
+                    'valid_id_preview',
+                    'zone_cert_preview',
+                    'hasZoneCertificate',
+                    'age',
+                ].includes(key);
+                acc[key] = isUrlField || isDropdownField || isNonTextField ? formData[key] : formData[key]?.toString().toUpperCase() || formData[key];
+                return acc;
+            }, {});
+
+            updatedData.gender = gender;
+            updatedData.customGender = gender === 'Other' ? customGender : '';
+            updatedData.employmentType = employmentType;
+            updatedData.image_url = imageUrl;
+            updatedData.valid_id_url = validIdUrl;
+            updatedData.zone_cert_url = zoneCertUrl;
+            updatedData.hasZoneCertificate = formData.hasZoneCertificate;
 
             const { error: householdError } = await supabase
                 .from('residents')
@@ -539,9 +584,9 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     {
                         user_id: userId,
                         household: updatedData,
-                        image_url: imageUrl,
-                        valid_id_url: validIdUrl,
-                        zone_cert_url: zoneCertUrl,
+                        image_url: updatedData.image_url,
+                        valid_id_url: updatedData.valid_id_url,
+                        zone_cert_url: updatedData.zone_cert_url,
                         zone_cert_availability: formData.hasZoneCertificate,
                     },
                     { onConflict: 'user_id' }
@@ -581,7 +626,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
 
     return (
         <div className="p-4 sm:p-6 md:p-8 shadow-lg rounded-lg max-w-4xl mx-auto">
-            <form className="space-y-4 sm:space-y-6">
+            <form className="space-y-4 sm:space-y-6 ">
                 <fieldset className="border p-3 sm:p-4 rounded-lg">
                     <legend className="font-semibold text-sm sm:text-base">Profile Image</legend>
                     <div>
@@ -638,6 +683,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.firstName ? 'border-red-500' : ''}`}
                                 value={formData.firstName || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                             {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
@@ -652,6 +698,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.lastName ? 'border-red-500' : ''}`}
                                 value={formData.lastName || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                             {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
@@ -664,6 +711,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.middleName || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                             />
                         </div>
                         <div>
@@ -674,6 +722,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.middleInitial || ''}
                                 readOnly
+                                style={{ textTransform: 'uppercase' }}
                             />
                         </div>
                         <div>
@@ -683,6 +732,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.extension || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                             >
                                 <option value="">Select</option>
                                 <option value="Jr.">Jr.</option>
@@ -709,6 +759,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.address ? 'border-red-500' : ''}`}
                                 value={formData.address || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                             {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
@@ -722,6 +773,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.region ? 'border-red-500' : ''}`}
                                 value={formData.region || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -742,6 +794,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.province ? 'border-red-500' : ''}`}
                                 value={formData.province || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -762,6 +815,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.city ? 'border-red-500' : ''}`}
                                 value={formData.city || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -782,6 +836,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.barangay ? 'border-red-500' : ''}`}
                                 value={formData.barangay || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -804,6 +859,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                         className="input-style text-sm sm:text-base"
                                         value={formData.zone || ''}
                                         onChange={handleChange}
+                                        style={{ textTransform: 'uppercase' }}
                                     >
                                         <option value="">Select</option>
                                         {[...Array(9)].map((_, i) => (
@@ -880,6 +936,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.gender ? 'border-red-500' : ''}`}
                                 value={gender}
                                 onChange={handleGenderChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -896,6 +953,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                     name="customGender"
                                     className="input-style text-sm sm:text-base"
                                     value={customGender}
+                                    style={{ textTransform: 'uppercase' }}
                                     onChange={(e) => setCustomGender(e.target.value)}
                                 >
                                     <option value="">Select</option>
@@ -921,6 +979,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`input-style text-sm sm:text-base ${errors.civilStatus ? 'border-red-500' : ''}`}
                                 value={formData.civilStatus || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -942,6 +1001,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className="input-style text-sm sm:text-base"
                                 value={formData.religion || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                             />
                         </div>
                     </div>
@@ -959,6 +1019,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idType ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idType || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             >
                                 <option value="">Select</option>
@@ -987,6 +1048,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idNo ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idNo || ''}
                                 onChange={handleChange}
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                             {errors.idNo && <p className="text-red-500 text-xs mt-1">{errors.idNo}</p>}
@@ -1060,6 +1122,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             className={`input-style text-sm sm:text-base ${errors.employmentType ? 'border-red-500' : ''}`}
                             value={employmentType}
                             onChange={handleEmploymentChange}
+                            style={{ textTransform: 'uppercase' }}
                             required
                         >
                             <option value="">Select</option>
@@ -1081,6 +1144,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                     className="input-style text-sm sm:text-base"
                                     value={formData.occupation || ''}
                                     onChange={handleChange}
+                                    style={{ textTransform: 'uppercase' }}
                                 />
                             </div>
                             <div>
@@ -1091,6 +1155,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                     className="input-style text-sm sm:text-base"
                                     value={formData.skills || ''}
                                     onChange={handleChange}
+                                    style={{ textTransform: 'uppercase' }}
                                 />
                             </div>
                             <div>
@@ -1101,6 +1166,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                     className="input-style text-sm sm:text-base"
                                     value={formData.companyAddress || ''}
                                     onChange={handleChange}
+                                    style={{ textTransform: 'uppercase' }}
                                 />
                             </div>
                         </div>
@@ -1118,6 +1184,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             className={`input-style text-sm sm:text-base ${errors.education ? 'border-red-500' : ''}`}
                             value={formData.education || ''}
                             onChange={handleChange}
+                            style={{ textTransform: 'uppercase' }}
                             required
                         >
                             <option value="">Select</option>

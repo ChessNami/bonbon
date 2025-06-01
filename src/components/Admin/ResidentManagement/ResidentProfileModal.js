@@ -24,7 +24,7 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
             return (
                 <div className="space-y-1">
                     <label className="text-sm font-medium text-gray-700">{label}</label>
-                    <p className="text-sm text-gray-500 italic">No {label.toLowerCase()} uploaded</p>
+                    <p className="text-sm text-gray-500 italic">NO {label.toUpperCase()} UPLOADED</p>
                 </div>
             );
         }
@@ -37,7 +37,9 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
         return (
             <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">{label}</label>
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col items-center">
+                <div className="bg-gray-50 p-4
+
+ rounded-lg border border-gray-200 flex flex-col items-center">
                     {isImage && (
                         <img
                             src={url}
@@ -50,7 +52,7 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                         />
                     )}
                     <p className={`text-sm text-gray-500 italic text-center ${isImage ? 'hidden' : ''}`}>
-                        {isImage ? '' : 'Image preview not available'}
+                        {isImage ? '' : 'IMAGE PREVIEW NOT AVAILABLE'}
                     </p>
                     {isDownloadable && (
                         <p className="text-sm text-gray-800 text-center mb-2">
@@ -177,15 +179,24 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     if (key === 'idNo') label = 'ID Number';
                                                     if (key === 'zone') label = 'Purok/Zone';
                                                     if (key === 'hasZoneCertificate') label = 'Has Zone Certificate';
+
+                                                    // Get the display value
+                                                    let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
+                                                        ? addressMappings[key][resident.householdData[key]] || 'N/A'
+                                                        : key === 'hasZoneCertificate'
+                                                            ? resident.householdData[key] ? 'YES' : 'NO'
+                                                            : resident.householdData[key] || 'N/A';
+
+                                                    // Apply uppercase to all display values (except 'N/A')
+                                                    if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                        displayValue = displayValue.toUpperCase();
+                                                    }
+
                                                     return (
                                                         <div key={key} className="space-y-1">
                                                             <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
-                                                                {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                    ? addressMappings[key][resident.householdData[key]] || 'N/A'
-                                                                    : key === 'hasZoneCertificate'
-                                                                        ? resident.householdData[key] ? 'Yes' : 'No'
-                                                                        : resident.householdData[key] || 'N/A'}
+                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                                {displayValue}
                                                             </div>
                                                         </div>
                                                     );
@@ -231,13 +242,22 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     if (key === 'idType') label = 'ID Type';
                                                     if (key === 'idNo') label = 'ID Number';
                                                     if (key === 'zone') label = 'Purok/Zone';
+
+                                                    // Get the display value
+                                                    let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
+                                                        ? addressMappings[key][resident.spouseData[key]] || 'N/A'
+                                                        : resident.spouseData[key] || 'N/A';
+
+                                                    // Apply uppercase to all display values (except 'N/A')
+                                                    if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                        displayValue = displayValue.toUpperCase();
+                                                    }
+
                                                     return (
                                                         <div key={key} className="space-y-1">
                                                             <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
-                                                                {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                    ? addressMappings[key][resident.spouseData[key]] || 'N/A'
-                                                                    : resident.spouseData[key] || 'N/A'}
+                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                                {displayValue}
                                                             </div>
                                                         </div>
                                                     );
@@ -248,7 +268,7 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                             </div>
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-gray-500 italic">No spouse data available.</p>
+                                        <p className="text-sm text-gray-500 italic">NO SPOUSE DATA AVAILABLE.</p>
                                     )}
                                 </fieldset>
                             )}
@@ -259,13 +279,13 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                         <div className="space-y-1">
                                             <label className="text-sm font-medium text-gray-700">Number of Children</label>
                                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
-                                                {resident.childrenCount || 0}
+                                                {(resident.childrenCount || 0).toString().toUpperCase()}
                                             </div>
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-sm font-medium text-gray-700">Number of Other Household Members</label>
                                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
-                                                {resident.numberOfHouseholdMembers || 0}
+                                                {(resident.numberOfHouseholdMembers || 0).toString().toUpperCase()}
                                             </div>
                                         </div>
                                     </div>
@@ -300,13 +320,22 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                                 if (key === 'customGender') label = 'Custom Gender';
                                                                 if (key === 'isLivingWithParents') label = 'Is Living with Parents';
                                                                 if (key === 'zone') label = 'Purok/Zone';
+
+                                                                // Get the display value
+                                                                let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
+                                                                    ? addressMappings[key][member[key]] || 'N/A'
+                                                                    : member[key] || 'N/A';
+
+                                                                // Apply uppercase to all display values (except 'N/A')
+                                                                if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                                    displayValue = displayValue.toUpperCase();
+                                                                }
+
                                                                 return (
                                                                     <div key={key} className="space-y-1">
                                                                         <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                                        <div className="bg-white p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
-                                                                            {['region', 'province', 'city', 'barangay'].includes(key)
-                                                                                ? addressMappings[key][member[key]] || 'N/A'
-                                                                                : member[key] || 'N/A'}
+                                                                        <div className="bg-white p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                                            {displayValue}
                                                                         </div>
                                                                     </div>
                                                                 );
@@ -341,11 +370,20 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                                 let label = capitalizeWords(key);
                                                                 if (key === 'dob') label = 'Date of Birth';
                                                                 if (key === 'customGender') label = 'Custom Gender';
+
+                                                                // Get the display value
+                                                                let displayValue = member[key] || 'N/A';
+
+                                                                // Apply uppercase to all display values (except 'N/A')
+                                                                if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                                    displayValue = displayValue.toUpperCase();
+                                                                }
+
                                                                 return (
                                                                     <div key={key} className="space-y-1">
                                                                         <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                                        <div className="bg-white p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
-                                                                            {member[key] || 'N/A'}
+                                                                        <div className="bg-white p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                                            {displayValue}
                                                                         </div>
                                                                     </div>
                                                                 );
@@ -356,7 +394,7 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                         </div>
                                     )}
                                     {resident.childrenCount === 0 && resident.numberOfHouseholdMembers === 0 && (
-                                        <p className="text-sm text-gray-500 italic">No household members or children added.</p>
+                                        <p className="text-sm text-gray-500 italic">NO HOUSEHOLD MEMBERS OR CHILDREN ADDED.</p>
                                     )}
                                 </fieldset>
                             )}
@@ -374,17 +412,27 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                 { key: 'hasOwnComfortRoom', label: 'Own Comfort Room' },
                                                 { key: 'hasOwnWaterSupply', label: 'Own Water Supply' },
                                                 { key: 'hasOwnElectricity', label: 'Own Electricity' },
-                                            ].map(({ key, label }) => (
-                                                <div key={key} className="space-y-1">
-                                                    <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 capitalize text-sm">
-                                                        {resident.censusData[key] || 'N/A'}
+                                            ].map(({ key, label }) => {
+                                                // Get the display value
+                                                let displayValue = resident.censusData[key] || 'N/A';
+
+                                                // Apply uppercase to all display values (except 'N/A')
+                                                if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                    displayValue = displayValue.toUpperCase();
+                                                }
+
+                                                return (
+                                                    <div key={key} className="space-y-1">
+                                                        <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                            {displayValue}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-gray-500 italic">No census data available.</p>
+                                        <p className="text-sm text-gray-500 italic">NO CENSUS DATA AVAILABLE.</p>
                                     )}
                                 </fieldset>
                             )}

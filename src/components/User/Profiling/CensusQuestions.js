@@ -376,7 +376,7 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
                     >
                         Back
                     </button>
-                    <button
+                    {/* <button
                         type="button"
                         className="bg-red-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-red-700 active:bg-red-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={async () => {
@@ -484,7 +484,7 @@ const CensusQuestions = ({ data, onNext, onBack, userId }) => {
                         }}
                     >
                         Clear Data
-                    </button>
+                    </button> */}
                     <button
                         type="button"
                         className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"

@@ -257,7 +257,23 @@ const HouseholdComposition = ({
         const { name, value } = e.target;
         setChildren((prev) => {
             const updatedChildren = Array.isArray(prev) ? [...prev] : [];
-            updatedChildren[index] = { ...updatedChildren[index], [name]: value };
+            // Convert text inputs to uppercase, excluding dropdowns and numeric fields
+            const isDropdown = [
+                'relation',
+                'gender',
+                'customGender',
+                'education',
+                'isLivingWithParents',
+                'region',
+                'province',
+                'city',
+                'barangay',
+                'zone',
+            ].includes(name);
+            const isNumeric = ['zipCode'].includes(name);
+            let updatedValue = isDropdown ? value : isNumeric ? value.replace(/[^0-9]/g, '').slice(0, 4) : value.toUpperCase();
+
+            updatedChildren[index] = { ...updatedChildren[index], [name]: updatedValue };
             if (name === 'middleName') {
                 updatedChildren[index].middleInitial = value ? value.charAt(0).toUpperCase() : '';
             }
@@ -270,7 +286,7 @@ const HouseholdComposition = ({
             }
             if (name === 'isLivingWithParents') {
                 if (value === 'Yes') {
-                    updatedChildren[index].address = householdHeadAddress.address || '';
+                    updatedChildren[index].address = householdHeadAddress.address?.toUpperCase() || '';
                     updatedChildren[index].region = householdHeadAddress.region || '';
                     updatedChildren[index].province = householdHeadAddress.province || '';
                     updatedChildren[index].city = householdHeadAddress.city || '';
@@ -305,6 +321,18 @@ const HouseholdComposition = ({
                 setBarangays((prev) => ({ ...prev, [index]: getBarangaysByMunicipality(value) }));
                 updatedChildren[index].barangay = '';
             }
+            if (name === 'zipCode') {
+                if (updatedValue && !/^[0-9]{4}$/.test(updatedValue)) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Zip code must be 4 digits',
+                        timer: 1500,
+                        showConfirmButton: false,
+                    });
+                }
+            }
             return updatedChildren;
         });
     };
@@ -313,7 +341,16 @@ const HouseholdComposition = ({
         const { name, value } = e.target;
         setHouseholdMembers((prev) => {
             const updatedMembers = Array.isArray(prev) ? [...prev] : [];
-            updatedMembers[index] = { ...updatedMembers[index], [name]: value };
+            // Convert text inputs to uppercase, excluding dropdowns
+            const isDropdown = [
+                'relation',
+                'gender',
+                'customGender',
+                'education',
+            ].includes(name);
+            const updatedValue = isDropdown ? value : value.toUpperCase();
+
+            updatedMembers[index] = { ...updatedMembers[index], [name]: updatedValue };
             if (name === 'middleName') {
                 updatedMembers[index].middleInitial = value ? value.charAt(0).toUpperCase() : '';
             }
@@ -381,13 +418,49 @@ const HouseholdComposition = ({
                     });
                     return;
                 }
+                // Validate zipCode if required
+                if (member.isLivingWithParents === 'No' && member.zipCode && !/^[0-9]{4}$/.test(member.zipCode)) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: `Please provide a valid 4-digit zip code for ${member.firstName} ${member.lastName}`,
+                        timer: 1500,
+                        showConfirmButton: false,
+                    });
+                    return;
+                }
             }
         }
+
+        // Convert text fields to uppercase, excluding dropdowns and non-text fields
+        const convertToUpperCase = (obj) => {
+            if (!obj) return null;
+            return Object.keys(obj).reduce((acc, key) => {
+                const isDropdownField = [
+                    'relation',
+                    'gender',
+                    'customGender',
+                    'education',
+                    'isLivingWithParents',
+                    'region',
+                    'province',
+                    'city',
+                    'barangay',
+                    'zone',
+                ].includes(key);
+                const isNonTextField = ['age', 'dob'].includes(key);
+                acc[key] = isDropdownField || isNonTextField ? obj[key] : obj[key]?.toString().toUpperCase() || '';
+                return acc;
+            }, {});
+        };
+
+        const convertedMembers = allMembers.map(convertToUpperCase);
 
         const { error } = await supabase
             .from('residents')
             .update({
-                household_composition: allMembers,
+                household_composition: convertedMembers,
                 children_count: parseInt(localChildrenCount, 10) || 0,
                 number_of_household_members: parseInt(localNumberOfhouseholdMembers, 10) || 0,
             })
@@ -405,7 +478,7 @@ const HouseholdComposition = ({
             return;
         }
 
-        onNext(allMembers, 'confirmation', localChildrenCount, localNumberOfhouseholdMembers);
+        onNext(convertedMembers, 'confirmation', localChildrenCount, localNumberOfhouseholdMembers);
     };
 
     const handleBackClick = (e) => {
@@ -469,6 +542,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={child.firstName || ''}
                                             onChange={(e) => handleChildChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         />
                                     </div>
@@ -482,6 +556,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={child.lastName || ''}
                                             onChange={(e) => handleChildChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         />
                                     </div>
@@ -491,6 +566,7 @@ const HouseholdComposition = ({
                                             type="text"
                                             name="middleName"
                                             className="input-style text-sm sm:text-base"
+                                            style={{ textTransform: 'uppercase' }}
                                             value={child.middleName || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                         />
@@ -502,6 +578,7 @@ const HouseholdComposition = ({
                                             name="middleInitial"
                                             className="input-style text-sm sm:text-base"
                                             value={child.middleInitial || ''}
+                                            style={{ textTransform: 'uppercase' }}
                                             readOnly
                                         />
                                     </div>
@@ -514,6 +591,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={child.relation || ''}
                                             onChange={(e) => handleChildChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         >
                                             <option value="Son">Son</option>
@@ -529,6 +607,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={child.gender || ''}
                                             onChange={(e) => handleChildGenderChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         >
                                             <option value="Male" disabled={child.relation !== 'Son'}>Male</option>
@@ -543,6 +622,7 @@ const HouseholdComposition = ({
                                                 type="text"
                                                 name="customGender"
                                                 className="input-style text-sm sm:text-base"
+                                                style={{ textTransform: 'uppercase' }}
                                                 value={child.customGender || ''}
                                                 onChange={(e) => handleChildChange(index, e)}
                                             />
@@ -583,6 +663,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={child.education || ''}
                                             onChange={(e) => handleChildChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         >
                                             <option value="" disabled>Select</option>
@@ -599,6 +680,7 @@ const HouseholdComposition = ({
                                             type="text"
                                             name="occupation"
                                             className="input-style text-sm sm:text-base"
+                                            style={{ textTransform: 'uppercase' }}
                                             value={child.occupation || ''}
                                             onChange={(e) => handleChildChange(index, e)}
                                         />
@@ -612,6 +694,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={child.isLivingWithParents || 'Yes'}
                                             onChange={(e) => handleChildChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         >
                                             <option value="Yes">Yes</option>
@@ -630,6 +713,7 @@ const HouseholdComposition = ({
                                                     className="input-style text-sm sm:text-base"
                                                     value={child.address || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
+                                                    style={{ textTransform: 'uppercase' }}
                                                     required
                                                 />
                                             </div>
@@ -642,6 +726,7 @@ const HouseholdComposition = ({
                                                     className="input-style text-sm sm:text-base"
                                                     value={child.region || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
+                                                    style={{ textTransform: 'uppercase' }}
                                                     required
                                                 >
                                                     <option value="">Select</option>
@@ -661,6 +746,7 @@ const HouseholdComposition = ({
                                                     className="input-style text-sm sm:text-base"
                                                     value={child.province || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
+                                                    style={{ textTransform: 'uppercase' }}
                                                     required
                                                 >
                                                     <option value="">Select</option>
@@ -680,6 +766,7 @@ const HouseholdComposition = ({
                                                     className="input-style text-sm sm:text-base"
                                                     value={child.city || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
+                                                    style={{ textTransform: 'uppercase' }}
                                                     required
                                                 >
                                                     <option value="">Select</option>
@@ -699,6 +786,7 @@ const HouseholdComposition = ({
                                                     className="input-style text-sm sm:text-base"
                                                     value={child.barangay || ''}
                                                     onChange={(e) => handleChildChange(index, e)}
+                                                    style={{ textTransform: 'uppercase' }}
                                                     required
                                                 >
                                                     <option value="">Select</option>
@@ -768,6 +856,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={member.firstName || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         />
                                     </div>
@@ -781,6 +870,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={member.lastName || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         />
                                     </div>
@@ -790,6 +880,7 @@ const HouseholdComposition = ({
                                             type="text"
                                             name="middleName"
                                             className="input-style text-sm sm:text-base"
+                                            style={{ textTransform: 'uppercase' }}
                                             value={member.middleName || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                         />
@@ -801,6 +892,7 @@ const HouseholdComposition = ({
                                             name="middleInitial"
                                             className="input-style text-sm sm:text-base"
                                             value={member.middleInitial || ''}
+                                            style={{ textTransform: 'uppercase' }}
                                             readOnly
                                         />
                                     </div>
@@ -813,6 +905,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={member.relation || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         >
                                             <option value="">Select</option>
@@ -841,6 +934,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={member.gender || ''}
                                             onChange={(e) => handleMemberGenderChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         >
                                             <option value="">Select</option>
@@ -855,6 +949,7 @@ const HouseholdComposition = ({
                                             <select
                                                 name="customGender"
                                                 className="input-style text-sm sm:text-base"
+                                                style={{ textTransform: 'uppercase' }}
                                                 value={member.customGender || ''}
                                                 onChange={(e) => handleMemberChange(index, e)}
                                             >
@@ -907,6 +1002,7 @@ const HouseholdComposition = ({
                                             className="input-style text-sm sm:text-base"
                                             value={member.education || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
                                             required
                                         >
                                             <option value="" disabled>Select</option>
@@ -923,6 +1019,7 @@ const HouseholdComposition = ({
                                             type="text"
                                             name="occupation"
                                             className="input-style text-sm sm:text-base"
+                                            style={{ textTransform: 'uppercase' }}
                                             value={member.occupation || ''}
                                             onChange={(e) => handleMemberChange(index, e)}
                                         />
@@ -941,7 +1038,7 @@ const HouseholdComposition = ({
                     >
                         Back
                     </button>
-                    <button
+                    {/* <button
                         type="button"
                         className="bg-red-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-red-700 active:bg-red-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={async () => {
@@ -1055,7 +1152,7 @@ const HouseholdComposition = ({
                         }}
                     >
                         Clear Data
-                    </button>
+                    </button> */}
                     <button
                         type="button"
                         className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
