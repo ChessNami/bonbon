@@ -717,6 +717,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 <option value="PhilSys ID (National ID)">PhilSys ID (National ID)</option>
                                 <option value="Postal ID">Postal ID</option>
                                 <option value="PRC ID">PRC ID</option>
+                                <option value="Senior Citizen ID">Senior Citizen ID</option>
                                 <option value="SSS">SSS</option>
                                 <option value="TIN">TIN</option>
                                 <option value="UMID">UMID</option>
@@ -884,7 +885,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     >
                         Back
                     </button>
-                    <button
+                    {/* <button
                         type="button"
                         className="bg-red-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-red-700 active:bg-red-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
                         onClick={async () => {
@@ -1040,7 +1041,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                         }}
                     >
                         Clear Data
-                    </button>
+                    </button> */}
                     <button
                         type="button"
                         className="bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out hover:bg-blue-700 active:bg-blue-800 text-sm sm:text-base w-full sm:w-auto transform hover:scale-105 active:scale-95"
