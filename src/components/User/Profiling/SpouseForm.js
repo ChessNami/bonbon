@@ -720,7 +720,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 <option value="SSS">SSS</option>
                                 <option value="TIN">TIN</option>
                                 <option value="UMID">UMID</option>
-                                <option value="Voter's ID">Voter's ID</option>
+                                <option value="Voters ID">Voter's ID</option>
                             </select>
                             {errors.idType && <p className="text-red-500 text-xs mt-1">{errors.idType}</p>}
                         </div>
