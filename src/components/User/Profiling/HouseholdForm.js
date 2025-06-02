@@ -659,6 +659,11 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             onChange={handleImageChange}
                             className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.image ? 'border-red-500' : 'border-gray-300'}`}
                         />
+                        {!formData.image_preview && !signedImageUrl && (
+                            <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                                Please upload a clear photo of the household head's face.
+                            </p>
+                        )}
                         {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
                     </div>
                     {signedImageUrl && !formData.image_preview && (

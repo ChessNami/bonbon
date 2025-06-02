@@ -324,7 +324,11 @@ const ResidentProfiling = () => {
     const handleBack = () => {
         const currentIndex = tabs.findIndex((tab) => tab.key === activeTab);
         if (currentIndex > 0) {
-            setActiveTab(tabs[currentIndex - 1].key);
+            if (activeTab === 'householdComposition' && formData.household.civilStatus !== 'Married') {
+                setActiveTab('householdForm');
+            } else {
+                setActiveTab(tabs[currentIndex - 1].key);
+            }
         }
     };
 
@@ -353,6 +357,7 @@ const ResidentProfiling = () => {
         });
 
         try {
+            // Validate HouseholdForm
             const requiredHouseholdFields = [
                 'firstName',
                 'lastName',
@@ -385,6 +390,7 @@ const ResidentProfiling = () => {
                         scrollbarPadding: false,
                         showConfirmButton: false,
                     });
+                    setActiveTab('householdForm');
                     return;
                 }
             }
@@ -399,24 +405,68 @@ const ResidentProfiling = () => {
                     scrollbarPadding: false,
                     showConfirmButton: false,
                 });
+                setActiveTab('householdForm');
                 return;
             }
-
-            if (formData.household.civilStatus === 'Married' && !formData.spouse) {
+            if (!formData.household.image_url) {
                 await loadingSwal.close();
                 await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
-                    title: 'Spouse information is required for married status',
+                    title: 'Household form is incomplete: Image is required',
                     timer: 1500,
                     scrollbarPadding: false,
                     showConfirmButton: false,
                 });
+                setActiveTab('householdForm');
+                return;
+            }
+            if (!formData.household.valid_id_url) {
+                await loadingSwal.close();
+                await Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Household form is incomplete: Valid ID is required',
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    showConfirmButton: false,
+                });
+                setActiveTab('householdForm');
+                return;
+            }
+            if (formData.household.hasZoneCertificate && !formData.household.zone_cert_url) {
+                await loadingSwal.close();
+                await Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Household form is incomplete: Zone certificate is required',
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    showConfirmButton: false,
+                });
+                setActiveTab('householdForm');
                 return;
             }
 
-            if (formData.spouse) {
+            // Validate SpouseForm (if applicable)
+            if (formData.household.civilStatus === 'Married') {
+                if (!formData.spouse) {
+                    await loadingSwal.close();
+                    await Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Spouse information is required for married status',
+                        timer: 1500,
+                        scrollbarPadding: false,
+                        showConfirmButton: false,
+                    });
+                    setActiveTab('spouseForm');
+                    return;
+                }
                 const requiredSpouseFields = [
                     'firstName',
                     'lastName',
@@ -449,6 +499,7 @@ const ResidentProfiling = () => {
                             scrollbarPadding: false,
                             showConfirmButton: false,
                         });
+                        setActiveTab('spouseForm');
                         return;
                     }
                 }
@@ -463,11 +514,41 @@ const ResidentProfiling = () => {
                         scrollbarPadding: false,
                         showConfirmButton: false,
                     });
+                    setActiveTab('spouseForm');
+                    return;
+                }
+                if (!formData.spouse.valid_id_url) {
+                    await loadingSwal.close();
+                    await Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Spouse form is incomplete: Valid ID is required',
+                        timer: 1500,
+                        scrollbarPadding: false,
+                        showConfirmButton: false,
+                    });
+                    setActiveTab('spouseForm');
                     return;
                 }
             }
 
+            // Validate HouseholdComposition
             if (formData.numberOfhouseholdMembers > 0 || formData.childrenCount > 0) {
+                if (!Array.isArray(formData.householdComposition) || formData.householdComposition.length === 0) {
+                    await loadingSwal.close();
+                    await Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Household composition is incomplete: At least one member is required',
+                        timer: 1500,
+                        scrollbarPadding: false,
+                        showConfirmButton: false,
+                    });
+                    setActiveTab('householdComposition');
+                    return;
+                }
                 for (let [index, member] of formData.householdComposition.entries()) {
                     const requiredMemberFields = [
                         'firstName',
@@ -500,12 +581,14 @@ const ResidentProfiling = () => {
                                 scrollbarPadding: false,
                                 showConfirmButton: false,
                             });
+                            setActiveTab('householdComposition');
                             return;
                         }
                     }
                 }
             }
 
+            // Validate CensusQuestions
             const requiredCensusFields = [
                 'ownsHouse',
                 'isRenting',
@@ -525,23 +608,24 @@ const ResidentProfiling = () => {
                         title: `Census form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
                         timer: 1500,
                         scrollbarPadding: false,
-                        showConfirmButton: false,
+                        showConfirmButton: false
                     });
+                    setActiveTab('censusQuestions');
                     return;
                 }
             }
-
             if (formData.census.isRegisteredVoter === 'Yes' && !formData.census.voterPrecinctNo) {
                 await loadingSwal.close();
                 await Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
-                    title: 'Census form is incomplete: Voter’s Precinct Number is required',
+                    title: 'Census form is incomplete: Voter’s Precinct number is required',
                     timer: 1500,
                     scrollbarPadding: false,
-                    showConfirmButton: false,
+                    showConfirmButton: false
                 });
+                setActiveTab('censusQuestions');
                 return;
             }
 
@@ -550,8 +634,7 @@ const ResidentProfiling = () => {
                 if (!obj) return obj;
                 return Object.keys(obj).reduce((acc, key) => {
                     const isUrlField = ['image_url', 'valid_id_url', 'zone_cert_url'].includes(key);
-                    const isDropdownField = [
-                        'region',
+                    const isDropdownField = ['region',
                         'province',
                         'city',
                         'barangay',
@@ -587,22 +670,20 @@ const ResidentProfiling = () => {
 
             const { data: residentData, error: residentError } = await supabase
                 .from('residents')
-                .upsert(
-                    {
-                        user_id: userId,
-                        household: convertedHousehold,
-                        spouse: convertedSpouse,
-                        household_composition: convertedHouseholdComposition,
-                        census: convertedCensus,
-                        children_count: parseInt(formData.childrenCount, 10) || 0,
-                        number_of_household_members: parseInt(formData.numberOfhouseholdMembers, 10) || 0,
-                        image_url: formData.household.image_url,
-                        valid_id_url: formData.household.valid_id_url,
-                        zone_cert_url: formData.household.zone_cert_url,
-                        spouse_valid_id_url: formData.spouse?.valid_id_url || null,
-                    },
-                    { onConflict: 'user_id' }
-                )
+                .upsert({
+                    user_id: userId,
+                    household: convertedHousehold,
+                    spouse: convertedSpouse,
+                    household_composition: convertedHouseholdComposition,
+                    census: convertedCensus,
+                    children_count: parseInt(formData.childrenCount, 10) || 0,
+                    number_of_household_members: parseInt(formData.numberOfhouseholdMembers, 10) || 0,
+                    image_url: formData.household.image_url,
+                    valid_id_url: formData.household.valid_id_url,
+                    zone_cert_url: formData.household.zone_cert_url,
+                    spouse_valid_id_url: formData.spouse?.valid_id_url || null,
+                },
+                    { onConflict: 'user_id' })
                 .select()
                 .single();
 
@@ -625,13 +706,11 @@ const ResidentProfiling = () => {
 
             const { error: statusError } = await supabase
                 .from('resident_profile_status')
-                .upsert(
-                    {
-                        resident_id: residentData.id,
-                        status: newStatus,
-                    },
-                    { onConflict: 'resident_id' }
-                );
+                .upsert({
+                    resident_id: residentData.id,
+                    status: newStatus,
+                },
+                    { onConflict: 'resident_id' });
 
             if (statusError) {
                 console.error('Error setting resident profile status:', statusError);
@@ -650,7 +729,7 @@ const ResidentProfiling = () => {
 
             if (newStatus === 3) {
                 try {
-                    await axios.post('https://bonbon-express.vercel.app/api/email/send-pending', {
+                    await axios.post('https://bonbon-experiment.vercel.app/api/email/send-pending', {
                         userId,
                     });
                 } catch (emailError) {
@@ -661,10 +740,9 @@ const ResidentProfiling = () => {
                         position: 'top-end',
                         icon: 'warning',
                         title: `Form submitted, but failed to send notification email: ${emailError.message}`,
-                        showConfirmButton: false,
                         timer: 3000,
                         scrollbarPadding: false,
-                        timerProgressBar: true,
+                        showConfirmButton: false,
                     });
                     return;
                 }
@@ -675,7 +753,7 @@ const ResidentProfiling = () => {
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: `Profile submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
+                title: `Profile submitted successfully with status: newStatus === 5 ? 'Update Approved' : 'Pending'}`,
                 timer: 1500,
                 scrollbarPadding: false,
                 showConfirmButton: false,
@@ -1230,23 +1308,64 @@ const ResidentProfiling = () => {
             <div className="w-full relative">
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">Resident Profiling</h2>
                 <div className="border-b bg-gray-100 flex flex-wrap mt-2">
-                    {tabs.map((tab) => (
-                        <div
-                            key={tab.key}
-                            onClick={() => {
-                                if (profileStatus !== 1 && profileStatus !== 4) {
-                                    setActiveTab(tab.key);
-                                    setIsEditing(true);
-                                }
-                            }}
-                            className={`cursor-pointer px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium flex-shrink-0 ${activeTab === tab.key
-                                ? 'border-b-2 border-blue-700 text-blue-700'
-                                : 'text-gray-600 hover:text-blue-700'
-                                } ${profileStatus === 1 || profileStatus === 4 ? 'pointer-events-none opacity-50' : ''}`}
-                        >
-                            {tab.label}
-                        </div>
-                    ))}
+                    {tabs.map((tab) => {
+                        const isTabAccessible = () => {
+                            if (profileStatus === 1 || profileStatus === 4) return false;
+                            if (tab.key === 'householdForm') return true;
+                            if (!formData.household || Object.keys(formData.household).length === 0) return false;
+                            if (tab.key === 'spouseForm') {
+                                return formData.household.civilStatus === 'Married';
+                            }
+                            if (tab.key === 'householdComposition') {
+                                return formData.household.civilStatus !== 'Married' || (formData.spouse && Object.keys(formData.spouse).length > 0);
+                            }
+                            if (tab.key === 'censusQuestions') {
+                                return (
+                                    formData.householdComposition !== null &&
+                                    (formData.numberOfhouseholdMembers > 0 || formData.childrenCount > 0
+                                        ? Array.isArray(formData.householdComposition) && formData.householdComposition.length > 0
+                                        : true)
+                                );
+                            }
+                            if (tab.key === 'confirmation') {
+                                return (
+                                    formData.census &&
+                                    Object.keys(formData.census).length > 0 &&
+                                    ['ownsHouse', 'isRenting', 'yearsInBarangay', 'isRegisteredVoter', 'hasOwnComfortRoom', 'hasOwnWaterSupply', 'hasOwnElectricity'].every(
+                                        (field) => formData.census[field]
+                                    ) &&
+                                    (formData.census.isRegisteredVoter !== 'Yes' || formData.census.voterPrecinctNo)
+                                );
+                            }
+                            return true;
+                        };
+
+                        return (
+                            <div
+                                key={tab.key}
+                                onClick={() => {
+                                    if (isTabAccessible()) {
+                                        setActiveTab(tab.key);
+                                        setIsEditing(true);
+                                    } else {
+                                        Swal.fire({
+                                            toast: true,
+                                            position: 'top-end',
+                                            icon: 'warning',
+                                            title: 'Please complete the previous required forms first',
+                                            timer: 1500,
+                                            scrollbarPadding: false,
+                                            showConfirmButton: false,
+                                        });
+                                    }
+                                }}
+                                className={`cursor-pointer px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium flex-shrink-0 ${activeTab === tab.key ? 'border-b-2 border-blue-700 text-blue-700' : 'text-gray-600 hover:text-blue-700'
+                                    } ${!isTabAccessible() ? 'pointer-events-auto opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {tab.label}
+                            </div>
+                        );
+                    })}
                 </div>
                 <div className="p-2 sm:p-4">
                     <AnimatePresence mode="wait">
