@@ -11,6 +11,7 @@ import {
 import Compressor from 'compressorjs';
 import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
+import exampleProfileImage from '../../../img/Placeholder/example.png';
 
 // Utility function to calculate age from date of birth
 const calculateAge = (dob) => {
@@ -58,6 +59,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
     const [errors, setErrors] = useState({});
     const [signedImageUrl, setSignedImageUrl] = useState(null);
     const cropperRef = useRef(null);
+    const fileInputRef = useRef(null);
 
     const fetchUserData = useCallback(async () => {
         if (!userId) {
@@ -658,11 +660,21 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             accept="image/png,image/jpeg"
                             onChange={handleImageChange}
                             className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.image ? 'border-red-500' : 'border-gray-300'}`}
+                            ref={fileInputRef}
                         />
                         {!formData.image_preview && !signedImageUrl && (
-                            <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                                Please upload a clear photo of the household head's face.
-                            </p>
+                            <div className="mt-2 flex flex-col items-center">
+                                <img
+                                    src={exampleProfileImage}
+                                    alt="Example Profile"
+                                    className="w-36 h-36 object-contain cursor-pointer border-2 border-gray-300 hover:border-blue-500 transition duration-150"
+                                    onClick={() => fileInputRef.current.click()}
+                                    title="Click to upload a similar photo"
+                                />
+                                <p className="text-xs sm:text-sm text-gray-600 mt-1 text-center">
+                                    Select a clear, well-lit photo of the household head’s face, like this example.
+                                </p>
+                            </div>
                         )}
                         {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
                     </div>
