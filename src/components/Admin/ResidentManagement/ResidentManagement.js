@@ -47,6 +47,7 @@ const ResidentManagement = () => {
     const [sortOption, setSortOption] = useState('default');
     const [isRentingFilter, setIsRentingFilter] = useState('all');
     const [hasZoneCertFilter, setHasZoneCertFilter] = useState('all');
+    const [pwdStatusFilter, setPwdStatusFilter] = useState('all');
 
     // Initialize address mappings
     useEffect(() => {
@@ -361,6 +362,17 @@ const ResidentManagement = () => {
             });
         }
 
+        if (pwdStatusFilter !== 'all') {
+            filtered = filtered.filter((resident) => {
+                const hasPwd = (
+                    resident.householdData.pwdStatus?.toUpperCase() === 'YES' ||
+                    resident.spouseData?.pwdStatus?.toUpperCase() === 'YES' ||
+                    resident.householdComposition.some((member) => member.pwdStatus?.toUpperCase() === 'YES')
+                );
+                return pwdStatusFilter === 'Yes' ? hasPwd : !hasPwd;
+            });
+        }
+
         filtered.sort((a, b) => {
             if (sortOption === 'default') {
                 const priorityOrder = { 3: 1, 4: 2, 5: 3, 6: 4, 1: 5 };
@@ -391,7 +403,7 @@ const ResidentManagement = () => {
             }
 
             if (sortOption === 'status-desc') {
-                return b.status - a.status;
+                return b.status - b.status;
             }
 
             if (sortOption === 'date-asc') {
@@ -406,7 +418,7 @@ const ResidentManagement = () => {
         });
 
         setFilteredResidents(filtered);
-    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter, hasZoneCertFilter]);
+    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter, hasZoneCertFilter, pwdStatusFilter]);
 
     // Disable scroll on body when modals are open
     useEffect(() => {
@@ -439,6 +451,7 @@ const ResidentManagement = () => {
         setItemsPerPage(10);
         setIsRentingFilter('all');
         setHasZoneCertFilter('all');
+        setPwdStatusFilter('all');
     };
 
     const handleUpdateStatus = async (resident, reason) => {
@@ -1080,6 +1093,8 @@ const ResidentManagement = () => {
                         setIsRentingFilter={setIsRentingFilter}
                         hasZoneCertFilter={hasZoneCertFilter}
                         setHasZoneCertFilter={setHasZoneCertFilter}
+                        pwdStatusFilter={pwdStatusFilter}
+                        setPwdStatusFilter={setPwdStatusFilter}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {currentItems.length > 0 ? (

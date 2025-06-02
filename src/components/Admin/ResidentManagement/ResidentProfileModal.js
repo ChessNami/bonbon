@@ -172,6 +172,8 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     'employmentType',
                                                     'education',
                                                     'hasZoneCertificate',
+                                                    'pwdStatus',
+                                                    ...(resident.householdData.pwdStatus?.toUpperCase() === 'YES' ? ['disabilityType'] : []),
                                                 ].map((key) => {
                                                     let label = capitalizeWords(key);
                                                     if (key === 'dob') label = 'Date of Birth';
@@ -179,6 +181,8 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     if (key === 'idNo') label = 'ID Number';
                                                     if (key === 'zone') label = 'Purok/Zone';
                                                     if (key === 'hasZoneCertificate') label = 'Has Zone Certificate';
+                                                    if (key === 'pwdStatus') label = 'PWD Status';
+                                                    if (key === 'disabilityType') label = 'Type of Disability';
 
                                                     // Get the display value
                                                     let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
@@ -236,12 +240,16 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     'idNo',
                                                     'education',
                                                     'employmentType',
+                                                    'pwdStatus',
+                                                    ...(resident.spouseData?.pwdStatus?.toUpperCase() === 'YES' ? ['disabilityType'] : []),
                                                 ].map((key) => {
                                                     let label = capitalizeWords(key);
                                                     if (key === 'dob') label = 'Date of Birth';
                                                     if (key === 'idType') label = 'ID Type';
                                                     if (key === 'idNo') label = 'ID Number';
                                                     if (key === 'zone') label = 'Purok/Zone';
+                                                    if (key === 'pwdStatus') label = 'PWD Status';
+                                                    if (key === 'disabilityType') label = 'Type of Disability';
 
                                                     // Get the display value
                                                     let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
@@ -311,6 +319,8 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                                 'education',
                                                                 'occupation',
                                                                 'isLivingWithParents',
+                                                                'pwdStatus',
+                                                                ...(member.pwdStatus?.toUpperCase() === 'YES' ? ['disabilityType'] : []),
                                                                 ...(member.isLivingWithParents === 'No'
                                                                     ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
                                                                     : []),
@@ -320,6 +330,8 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                                 if (key === 'customGender') label = 'Custom Gender';
                                                                 if (key === 'isLivingWithParents') label = 'Is Living with Parents';
                                                                 if (key === 'zone') label = 'Purok/Zone';
+                                                                if (key === 'pwdStatus') label = 'PWD Status';
+                                                                if (key === 'disabilityType') label = 'Type of Disability';
 
                                                                 // Get the display value
                                                                 let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
@@ -366,10 +378,14 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                                 'dob',
                                                                 'education',
                                                                 'occupation',
+                                                                'pwdStatus',
+                                                                ...(member.pwdStatus?.toUpperCase() === 'YES' ? ['disabilityType'] : []),
                                                             ].map((key) => {
                                                                 let label = capitalizeWords(key);
                                                                 if (key === 'dob') label = 'Date of Birth';
                                                                 if (key === 'customGender') label = 'Custom Gender';
+                                                                if (key === 'pwdStatus') label = 'PWD Status';
+                                                                if (key === 'disabilityType') label = 'Type of Disability';
 
                                                                 // Get the display value
                                                                 let displayValue = member[key] || 'N/A';

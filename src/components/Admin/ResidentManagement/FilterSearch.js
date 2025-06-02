@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaSearch, FaFilter } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter, sortOption, setSortOption, itemsPerPage, setItemsPerPage, onClearFilters, isRentingFilter, setIsRentingFilter, hasZoneCertFilter, setHasZoneCertFilter }) => {
+const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter, sortOption, setSortOption, itemsPerPage, setItemsPerPage, onClearFilters, isRentingFilter, setIsRentingFilter, hasZoneCertFilter, setHasZoneCertFilter, pwdStatusFilter, setPwdStatusFilter }) => {
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const filterDropdownRef = useRef(null);
 
@@ -86,6 +86,18 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
                                     <option value="all">All Zone Certificate Statuses</option>
                                     <option value="Yes">Has Zone Certificate</option>
                                     <option value="No">No Zone Certificate</option>
+                                </select>
+                            </div>
+                            <div className="p-4 border-t border-gray-100">
+                                <h3 className="text-sm font-semibold text-gray-800 mb-3">Filter by PWD Status</h3>
+                                <select
+                                    value={pwdStatusFilter}
+                                    onChange={(e) => setPwdStatusFilter(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                                >
+                                    <option value="all">All PWD Statuses</option>
+                                    <option value="Yes">Has PWD</option>
+                                    <option value="No">No PWD</option>
                                 </select>
                             </div>
                             <div className="p-4 border-t border-gray-100">

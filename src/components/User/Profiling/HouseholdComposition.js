@@ -83,12 +83,16 @@ const HouseholdComposition = ({
                         ...member,
                         age: member.dob ? calculateAge(member.dob) : member.age || '',
                         isLivingWithParents: member.isLivingWithParents || 'Yes',
+                        pwdStatus: member.pwdStatus || '',
+                        disabilityType: member.disabilityType || '',
                     }));
                 const otherMembers = composition
                     .filter((member) => member.relation !== 'Son' && member.relation !== 'Daughter')
                     .map((member) => ({
                         ...member,
                         age: member.dob ? calculateAge(member.dob) : member.age || '',
+                        pwdStatus: member.pwdStatus || '',
+                        disabilityType: member.disabilityType || '',
                     }));
                 setChildren(childMembers);
                 setHouseholdMembers(otherMembers);
@@ -163,6 +167,8 @@ const HouseholdComposition = ({
                         barangay: householdHeadAddress.barangay || '',
                         zipCode: householdHeadAddress.zipCode || '',
                         zone: householdHeadAddress.zone || '',
+                        pwdStatus: '',
+                        disabilityType: '',
                     });
                 }
                 return newChildren.slice(0, localChildrenCount).map((child) => ({
@@ -175,6 +181,8 @@ const HouseholdComposition = ({
                     barangay: child.isLivingWithParents === 'Yes' ? householdHeadAddress.barangay || '' : child.barangay || '',
                     zipCode: child.isLivingWithParents === 'Yes' ? householdHeadAddress.zipCode || '' : child.zipCode || '',
                     zone: child.isLivingWithParents === 'Yes' ? householdHeadAddress.zone || '' : child.zone || '',
+                    pwdStatus: child.pwdStatus || '',
+                    disabilityType: child.disabilityType || '',
                 }));
             });
         } else {
@@ -201,11 +209,15 @@ const HouseholdComposition = ({
                         dob: '',
                         education: '',
                         occupation: '',
+                        pwdStatus: '',
+                        disabilityType: '',
                     });
                 }
                 return newHousehold.slice(0, localNumberOfhouseholdMembers).map((member) => ({
                     ...member,
                     age: member.dob ? calculateAge(member.dob) : member.age || '',
+                    pwdStatus: member.pwdStatus || '',
+                    disabilityType: member.disabilityType || '',
                 }));
             });
         } else {
@@ -269,6 +281,8 @@ const HouseholdComposition = ({
                 'city',
                 'barangay',
                 'zone',
+                'pwdStatus',
+                'disabilityType',
             ].includes(name);
             const isNumeric = ['zipCode'].includes(name);
             let updatedValue = isDropdown ? value : isNumeric ? value.replace(/[^0-9]/g, '').slice(0, 4) : value.toUpperCase();
@@ -333,6 +347,9 @@ const HouseholdComposition = ({
                     });
                 }
             }
+            if (name === 'pwdStatus') {
+                updatedChildren[index].disabilityType = value === 'No' ? '' : updatedChildren[index].disabilityType;
+            }
             return updatedChildren;
         });
     };
@@ -347,6 +364,8 @@ const HouseholdComposition = ({
                 'gender',
                 'customGender',
                 'education',
+                'pwdStatus',
+                'disabilityType',
             ].includes(name);
             const updatedValue = isDropdown ? value : value.toUpperCase();
 
@@ -356,6 +375,9 @@ const HouseholdComposition = ({
             }
             if (name === 'dob') {
                 updatedMembers[index].age = calculateAge(value);
+            }
+            if (name === 'pwdStatus') {
+                updatedMembers[index].disabilityType = value === 'No' ? '' : updatedMembers[index].disabilityType;
             }
             return updatedMembers;
         });
@@ -386,12 +408,15 @@ const HouseholdComposition = ({
         const allMembers = [...children, ...householdMembers];
         if (allMembers.length > 0) {
             for (let member of allMembers) {
-                const requiredFields = ['firstName', 'lastName', 'relation', 'gender', 'age', 'dob', 'education'];
+                const requiredFields = ['firstName', 'lastName', 'relation', 'gender', 'age', 'dob', 'education', 'pwdStatus'];
                 if (member.relation === 'Son' || member.relation === 'Daughter') {
                     requiredFields.push('isLivingWithParents');
                     if (member.isLivingWithParents === 'No') {
                         requiredFields.push('address', 'region', 'province', 'city', 'barangay', 'zipCode');
                     }
+                }
+                if (member.pwdStatus === 'Yes') {
+                    requiredFields.push('disabilityType');
                 }
                 for (let field of requiredFields) {
                     if (!member[field]) {
@@ -448,6 +473,8 @@ const HouseholdComposition = ({
                     'city',
                     'barangay',
                     'zone',
+                    'pwdStatus',
+                    'disabilityType',
                 ].includes(key);
                 const isNonTextField = ['age', 'dob'].includes(key);
                 acc[key] = isDropdownField || isNonTextField ? obj[key] : obj[key]?.toString().toUpperCase() || '';
@@ -685,6 +712,47 @@ const HouseholdComposition = ({
                                             onChange={(e) => handleChildChange(index, e)}
                                         />
                                     </div>
+                                    <div>
+                                        <label className="block text-xs sm:text-sm font-medium">
+                                            PWD Status <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            name="pwdStatus"
+                                            className="input-style text-sm sm:text-base"
+                                            value={child.pwdStatus || ''}
+                                            onChange={(e) => handleChildChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
+                                            required
+                                        >
+                                            <option value="">Select</option>
+                                            <option value="No">No</option>
+                                            <option value="Yes">Yes</option>
+                                        </select>
+                                    </div>
+                                    {child.pwdStatus === 'Yes' && (
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium">
+                                                Type of Disability <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="disabilityType"
+                                                className="input-style text-sm sm:text-base"
+                                                value={child.disabilityType || ''}
+                                                onChange={(e) => handleChildChange(index, e)}
+                                                style={{ textTransform: 'uppercase' }}
+                                                required
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="Physical Disability">Physical Disability</option>
+                                                <option value="Visual Impairment">Visual Impairment</option>
+                                                <option value="Hearing Impairment">Hearing Impairment</option>
+                                                <option value="Intellectual Disability">Intellectual Disability</option>
+                                                <option value="Psychosocial Disability">Psychosocial Disability</option>
+                                                <option value="Speech Impairment">Speech Impairment</option>
+                                                <option value="Multiple Disabilities">Multiple Disabilities</option>
+                                            </select>
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="block text-xs sm:text-sm font-medium">
                                             Is Living with Parent/s? <span className="text-red-500">*</span>
@@ -1024,6 +1092,47 @@ const HouseholdComposition = ({
                                             onChange={(e) => handleMemberChange(index, e)}
                                         />
                                     </div>
+                                    <div>
+                                        <label className="block text-xs sm:text-sm font-medium">
+                                            PWD Status <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            name="pwdStatus"
+                                            className="input-style text-sm sm:text-base"
+                                            value={member.pwdStatus || ''}
+                                            onChange={(e) => handleMemberChange(index, e)}
+                                            style={{ textTransform: 'uppercase' }}
+                                            required
+                                        >
+                                            <option value="">Select</option>
+                                            <option value="No">No</option>
+                                            <option value="Yes">Yes</option>
+                                        </select>
+                                    </div>
+                                    {member.pwdStatus === 'Yes' && (
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-medium">
+                                                Type of Disability <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="disabilityType"
+                                                className="input-style text-sm sm:text-base"
+                                                value={member.disabilityType || ''}
+                                                onChange={(e) => handleMemberChange(index, e)}
+                                                style={{ textTransform: 'uppercase' }}
+                                                required
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="Physical Disability">Physical Disability</option>
+                                                <option value="Visual Impairment">Visual Impairment</option>
+                                                <option value="Hearing Impairment">Hearing Impairment</option>
+                                                <option value="Intellectual Disability">Intellectual Disability</option>
+                                                <option value="Psychosocial Disability">Psychosocial Disability</option>
+                                                <option value="Speech Impairment">Speech Impairment</option>
+                                                <option value="Multiple Disabilities">Multiple Disabilities</option>
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
                             </fieldset>
                         ))}

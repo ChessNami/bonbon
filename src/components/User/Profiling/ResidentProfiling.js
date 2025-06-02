@@ -371,8 +371,7 @@ const ResidentProfiling = () => {
                 'idNo',
                 'employmentType',
                 'education',
-                'image_url',
-                'valid_id_url',
+                'pwdStatus',
             ];
             for (let field of requiredHouseholdFields) {
                 if (!formData.household[field]) {
@@ -388,6 +387,19 @@ const ResidentProfiling = () => {
                     });
                     return;
                 }
+            }
+            if (formData.household.pwdStatus === 'YES' && !formData.household.disabilityType) {
+                await loadingSwal.close();
+                await Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Household form is incomplete: Type of disability is required',
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    showConfirmButton: false,
+                });
+                return;
             }
 
             if (formData.household.civilStatus === 'Married' && !formData.spouse) {
@@ -423,6 +435,7 @@ const ResidentProfiling = () => {
                     'idNo',
                     'education',
                     'employmentType',
+                    'pwdStatus',
                 ];
                 for (let field of requiredSpouseFields) {
                     if (!formData.spouse[field]) {
@@ -439,6 +452,19 @@ const ResidentProfiling = () => {
                         return;
                     }
                 }
+                if (formData.spouse.pwdStatus === 'Yes' && !formData.spouse.disabilityType) {
+                    await loadingSwal.close();
+                    await Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Spouse form is incomplete: Type of disability is required',
+                        timer: 1500,
+                        scrollbarPadding: false,
+                        showConfirmButton: false,
+                    });
+                    return;
+                }
             }
 
             if (formData.numberOfhouseholdMembers > 0 || formData.childrenCount > 0) {
@@ -451,12 +477,16 @@ const ResidentProfiling = () => {
                         'age',
                         'dob',
                         'education',
+                        'pwdStatus',
                     ];
                     if (member.relation === 'Son' || member.relation === 'Daughter') {
                         requiredMemberFields.push('isLivingWithParents');
                         if (member.isLivingWithParents === 'No') {
                             requiredMemberFields.push('address', 'region', 'province', 'city', 'barangay', 'zipCode');
                         }
+                    }
+                    if (member.pwdStatus === 'Yes') {
+                        requiredMemberFields.push('disabilityType');
                     }
                     for (let field of requiredMemberFields) {
                         if (!member[field]) {
@@ -541,6 +571,8 @@ const ResidentProfiling = () => {
                         'hasOwnComfortRoom',
                         'hasOwnWaterSupply',
                         'hasOwnElectricity',
+                        'pwdStatus',
+                        'disabilityType',
                     ].includes(key);
                     const isNonTextField = ['age', 'childrenCount', 'numberOfhouseholdMembers'].includes(key);
                     acc[key] = isUrlField || isDropdownField || isNonTextField ? obj[key] : obj[key]?.toString().toUpperCase() || obj[key];
@@ -886,14 +918,17 @@ const ResidentProfiling = () => {
                                             'employmentType',
                                             'education',
                                             'hasZoneCertificate',
+                                            'pwdStatus', // Added
+                                            'disabilityType', // Added
                                         ].map((key) => {
                                             let label = capitalizeWords(key);
                                             if (key === 'dob') label = 'Date of Birth';
                                             if (key === 'idType') label = 'ID Type';
                                             if (key === 'idNo') label = 'ID Number';
                                             if (key === 'hasZoneCertificate') label = 'Has Zone Certificate';
+                                            if (key === 'pwdStatus') label = 'PWD Status';
+                                            if (key === 'disabilityType') label = 'Type of Disability';
 
-                                            // Get the display value
                                             let displayValue;
                                             if (['region', 'province', 'city', 'barangay'].includes(key)) {
                                                 displayValue = addressMappings[key][formData.household[key]] || 'N/A';
@@ -903,7 +938,6 @@ const ResidentProfiling = () => {
                                                 displayValue = formData.household[key] || 'N/A';
                                             }
 
-                                            // Apply uppercase to all display values (except 'N/A')
                                             if (displayValue !== 'N/A' && typeof displayValue === 'string') {
                                                 displayValue = displayValue.toUpperCase();
                                             }
@@ -962,11 +996,15 @@ const ResidentProfiling = () => {
                                                     'idNo',
                                                     'employmentType',
                                                     'education',
+                                                    'pwdStatus', // Added
+                                                    'disabilityType', // Added
                                                 ].map((key) => {
                                                     let label = capitalizeWords(key);
                                                     if (key === 'dob') label = 'Date of Birth';
                                                     if (key === 'idType') label = 'ID Type';
                                                     if (key === 'idNo') label = 'ID Number';
+                                                    if (key === 'pwdStatus') label = 'PWD Status';
+                                                    if (key === 'disabilityType') label = 'Type of Disability';
 
                                                     // Get the display value
                                                     let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
@@ -1031,6 +1069,8 @@ const ResidentProfiling = () => {
                                                                 'education',
                                                                 'occupation',
                                                                 'isLivingWithParents',
+                                                                'pwdStatus',
+                                                                ...(member.pwdStatus === 'Yes' ? ['disabilityType'] : []),
                                                                 ...(member.isLivingWithParents === 'No'
                                                                     ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
                                                                     : []),
@@ -1040,6 +1080,8 @@ const ResidentProfiling = () => {
                                                                 if (key === 'customGender') label = 'Custom Gender';
                                                                 if (key === 'age') label = 'Age';
                                                                 if (key === 'isLivingWithParents') label = 'Is Living with Parents';
+                                                                if (key === 'pwdStatus') label = 'PWD Status';
+                                                                if (key === 'disabilityType') label = 'Type of Disability';
 
                                                                 // Get the display value
                                                                 let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
@@ -1087,11 +1129,15 @@ const ResidentProfiling = () => {
                                                                 'dob',
                                                                 'education',
                                                                 'occupation',
+                                                                'pwdStatus',
+                                                                ...(member.pwdStatus === 'Yes' ? ['disabilityType'] : []),
                                                             ].map((key) => {
                                                                 let label = capitalizeWords(key);
                                                                 if (key === 'dob') label = 'Date of Birth';
                                                                 if (key === 'customGender') label = 'Custom Gender';
                                                                 if (key === 'age') label = 'Age';
+                                                                if (key === 'pwdStatus') label = 'PWD Status';
+                                                                if (key === 'disabilityType') label = 'Type of Disability';
 
                                                                 // Get the display value
                                                                 let displayValue = member[key] || 'N/A';

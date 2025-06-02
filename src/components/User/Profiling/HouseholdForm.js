@@ -42,6 +42,8 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         province: data?.province || '104300000',
         city: data?.city || '104305000',
         barangay: data?.barangay || '104305040',
+        pwdStatus: data?.pwdStatus || '', // Added
+        disabilityType: data?.disabilityType || '', // Added
     });
     const [signedValidIdUrl, setSignedValidIdUrl] = useState(null);
     const [signedZoneCertUrl, setSignedZoneCertUrl] = useState(null);
@@ -76,11 +78,9 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             }
 
             if (residentData?.household) {
-                // Compute age before defining householdData
                 const age = residentData.household.dob
                     ? calculateAge(residentData.household.dob)
                     : residentData.household.age || '';
-
                 const householdData = {
                     ...residentData.household,
                     age,
@@ -92,6 +92,8 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     zone_cert: null,
                     zone_cert_preview: '',
                     hasZoneCertificate: residentData?.household?.hasZoneCertificate || false,
+                    pwdStatus: residentData?.household?.pwdStatus || '', // Added
+                    disabilityType: residentData?.household?.disabilityType || '', // Added
                 };
                 setFormData(householdData);
                 setGender(residentData.household.gender || '');
@@ -169,6 +171,8 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             'idType',
             'employmentType',
             'education',
+            'pwdStatus', // Added
+            'disabilityType', // Added
         ].includes(name);
         const upperCaseValue = isDropdown ? value : value.toUpperCase();
 
@@ -241,6 +245,17 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 ...prev,
                 dob: '',
             }));
+        } else if (name === 'pwdStatus') {
+            setFormData((prev) => ({
+                ...prev,
+                [name]: value,
+                disabilityType: value === 'No' ? '' : prev.disabilityType, // Reset disabilityType if "No" is selected
+            }));
+            setErrors((prev) => ({
+                ...prev,
+                pwdStatus: '',
+                disabilityType: value === 'No' ? '' : prev.disabilityType, // Clear disabilityType error if "No"
+            }));
         } else {
             setFormData((prev) => {
                 const updatedData = { ...prev, [name]: upperCaseValue };
@@ -249,7 +264,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 }
                 return updatedData;
             });
-            setErrors({ ...errors, [name]: '' });
+            setErrors((prev) => ({ ...prev, [name]: '' }));
         }
 
         if (name === 'region') {
@@ -376,12 +391,17 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             'idNo',
             'employmentType',
             'education',
+            'pwdStatus', // Added PWD Status
         ];
 
         for (const field of requiredFields) {
             if (!formData[field]) {
                 newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
             }
+        }
+
+        if (formData.pwdStatus === 'Yes' && !formData.disabilityType) {
+            newErrors.disabilityType = 'Type of disability is required';
         }
 
         if (!formData.image_url && !formData.image) {
@@ -1004,6 +1024,57 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 style={{ textTransform: 'uppercase' }}
                             />
                         </div>
+                        <div>
+                            <label className="block text-xs sm:text-sm font-medium">
+                                PWD Status <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                name="pwdStatus"
+                                className={`input-style text-sm sm:text-base ${errors.pwdStatus ? 'border-red-500' : ''}`}
+                                value={formData.pwdStatus || ''}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        pwdStatus: value,
+                                        disabilityType: value === 'No' ? '' : prev.disabilityType, // Reset disabilityType if "No" is selected
+                                    }));
+                                    setErrors((prev) => ({ ...prev, pwdStatus: '', disabilityType: '' }));
+                                }}
+                                style={{ textTransform: 'uppercase' }}
+                                required
+                            >
+                                <option value="">Select</option>
+                                <option value="No">No</option>
+                                <option value="Yes">Yes</option>
+                            </select>
+                            {errors.pwdStatus && <p className="text-red-500 text-xs mt-1">{errors.pwdStatus}</p>}
+                        </div>
+                        {formData.pwdStatus === 'Yes' && (
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium">
+                                    Type of Disability <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    name="disabilityType"
+                                    className={`input-style text-sm sm:text-base ${errors.disabilityType ? 'border-red-500' : ''}`}
+                                    value={formData.disabilityType || ''}
+                                    onChange={handleChange}
+                                    style={{ textTransform: 'uppercase' }}
+                                    required
+                                >
+                                    <option value="">Select</option>
+                                    <option value="Physical Disability">Physical Disability</option>
+                                    <option value="Visual Impairment">Visual Impairment</option>
+                                    <option value="Hearing Impairment">Hearing Impairment</option>
+                                    <option value="Intellectual Disability">Intellectual Disability</option>
+                                    <option value="Psychosocial Disability">Psychosocial Disability</option>
+                                    <option value="Speech Impairment">Speech Impairment</option>
+                                    <option value="Multiple Disabilities">Multiple Disabilities</option>
+                                </select>
+                                {errors.disabilityType && <p className="text-red-500 text-xs mt-1">{errors.disabilityType}</p>}
+                            </div>
+                        )}
                     </div>
                 </fieldset>
 
