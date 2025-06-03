@@ -393,13 +393,24 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             'idNo',
             'employmentType',
             'education',
-            'pwdStatus', // Added PWD Status
+            'pwdStatus',
         ];
 
         for (const field of requiredFields) {
             if (!formData[field]) {
                 newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
             }
+        }
+
+        // Validate zone if specific location is selected
+        if (
+            formData.region === '100000000' &&
+            formData.province === '104300000' &&
+            formData.city === '104305000' &&
+            formData.barangay === '104305040' &&
+            !formData.zone
+        ) {
+            newErrors.zone = 'Zone is required for Barangay Bonbon';
         }
 
         if (formData.pwdStatus === 'Yes' && !formData.disabilityType) {
@@ -890,13 +901,16 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             formData.city === '104305000' &&
                             formData.barangay === '104305040' && (
                                 <div>
-                                    <label className="block text-xs sm:text-sm font-medium">Zone#</label>
+                                    <label className="block text-xs sm:text-sm font-medium">
+                                        Zone# <span className="text-red-500">*</span>
+                                    </label>
                                     <select
                                         name="zone"
-                                        className="input-style text-sm sm:text-base"
+                                        className={`input-style text-sm sm:text-base ${errors.zone ? 'border-red-500' : ''}`}
                                         value={formData.zone || ''}
                                         onChange={handleChange}
                                         style={{ textTransform: 'uppercase' }}
+                                        required
                                     >
                                         <option value="">Select</option>
                                         {[...Array(9)].map((_, i) => (
@@ -905,6 +919,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                             </option>
                                         ))}
                                     </select>
+                                    {errors.zone && <p className="text-red-500 text-xs mt-1">{errors.zone}</p>}
                                 </div>
                             )}
                         <div>

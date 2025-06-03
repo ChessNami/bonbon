@@ -2,10 +2,10 @@ import React, { useState, useEffect, Suspense } from "react";
 import Calendar from "./Calendar";
 import TotalResident from "./TotalResident";
 import ApprovedProfile from "./ApprovedProfile";
-import RejectedProfile from "./RejectedProfile";
 import PendingProfile from "./PendingProfile";
 import BarangayCouncilTable from "./BarangayCouncilTable";
 import ZonePopulationTable from "./ZonePopulationTable";
+import ToUpdateProfile from "./ToUpdateProfile";
 
 const AdminHome = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -42,7 +42,7 @@ const AdminHome = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 py-4 px-4">
                         <TotalResident />
                         <ApprovedProfile />
-                        <RejectedProfile />
+                        <ToUpdateProfile />
                         <PendingProfile />
                     </div>
                 )}

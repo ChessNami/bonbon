@@ -394,6 +394,27 @@ const ResidentProfiling = () => {
                     return;
                 }
             }
+            // Validate zone if specific location is selected
+            if (
+                formData.household.region === '100000000' &&
+                formData.household.province === '104300000' &&
+                formData.household.city === '104305000' &&
+                formData.household.barangay === '104305040' &&
+                !formData.household.zone
+            ) {
+                await loadingSwal.close();
+                await Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Household form is incomplete: Zone is required for Barangay Bonbon',
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    showConfirmButton: false,
+                });
+                setActiveTab('householdForm');
+                return;
+            }
             if (formData.household.pwdStatus === 'YES' && !formData.household.disabilityType) {
                 await loadingSwal.close();
                 await Swal.fire({
@@ -425,7 +446,7 @@ const ResidentProfiling = () => {
             if (!formData.household.valid_id_url) {
                 await loadingSwal.close();
                 await Swal.fire({
-                    toast: true,
+                    toast: 'true',
                     position: 'top-end',
                     icon: 'error',
                     title: 'Household form is incomplete: Valid ID is required',
@@ -608,7 +629,7 @@ const ResidentProfiling = () => {
                         title: `Census form is incomplete: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`,
                         timer: 1500,
                         scrollbarPadding: false,
-                        showConfirmButton: false
+                        showConfirmButton: false,
                     });
                     setActiveTab('censusQuestions');
                     return;
@@ -620,10 +641,10 @@ const ResidentProfiling = () => {
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
-                    title: 'Census form is incomplete: Voter’s Precinct number is required',
+                    title: `Census form is incomplete: Voter's precinct number is required`,
                     timer: 1500,
                     scrollbarPadding: false,
-                    showConfirmButton: false
+                    showConfirmButton: false,
                 });
                 setActiveTab('censusQuestions');
                 return;
@@ -634,7 +655,8 @@ const ResidentProfiling = () => {
                 if (!obj) return obj;
                 return Object.keys(obj).reduce((acc, key) => {
                     const isUrlField = ['image_url', 'valid_id_url', 'zone_cert_url'].includes(key);
-                    const isDropdownField = ['region',
+                    const isDropdownField = [
+                        'region',
                         'province',
                         'city',
                         'barangay',
@@ -753,7 +775,7 @@ const ResidentProfiling = () => {
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: `Profile submitted successfully with status: newStatus === 5 ? 'Update Approved' : 'Pending'}`,
+                title: `Profile submitted successfully with status: ${newStatus === 5 ? 'Update Approved' : 'Pending'}`,
                 timer: 1500,
                 scrollbarPadding: false,
                 showConfirmButton: false,
