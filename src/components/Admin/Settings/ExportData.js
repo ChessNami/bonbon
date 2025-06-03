@@ -198,7 +198,9 @@ const ExportData = ({ onFetchResidents }) => {
             { header: 'Resident ID', key: 'id', width: 15 },
             { header: 'First Name', key: 'firstName', width: 25 },
             { header: 'Middle Name', key: 'middleName', width: 25 },
+            { header: 'Middle Initial', key: 'middleInitial', width: 15 },
             { header: 'Last Name', key: 'lastName', width: 25 },
+            { header: 'Extension', key: 'extension', width: 15 },
             { header: 'Address', key: 'address', width: 40 },
             { header: 'Region', key: 'region', width: 25 },
             { header: 'Province', key: 'province', width: 25 },
@@ -209,15 +211,30 @@ const ExportData = ({ onFetchResidents }) => {
             { header: 'Date of Birth', key: 'dob', width: 20 },
             { header: 'Age', key: 'age', width: 10 },
             { header: 'Gender', key: 'gender', width: 15 },
+            { header: 'Custom Gender', key: 'customGender', width: 20 },
             { header: 'Civil Status', key: 'civilStatus', width: 15 },
+            { header: 'Religion', key: 'religion', width: 20 },
             { header: 'Phone Number', key: 'phoneNumber', width: 20 },
             { header: 'ID Type', key: 'idType', width: 20 },
             { header: 'ID Number', key: 'idNo', width: 20 },
             { header: 'Employment Type', key: 'employmentType', width: 20 },
+            { header: 'Occupation', key: 'occupation', width: 25 },
+            { header: 'Skills', key: 'skills', width: 30 },
+            { header: 'Company Address', key: 'companyAddress', width: 40 },
             { header: 'Education', key: 'education', width: 20 },
+            { header: 'PWD Status', key: 'pwdStatus', width: 15 },
+            { header: 'Disability Type', key: 'disabilityType', width: 25 },
             { header: 'Status', key: 'status', width: 15 },
             { header: 'Children Count', key: 'childrenCount', width: 15 },
-            { header: 'Household Members', key: 'numberOfHouseholdMembers', width: 20 }
+            { header: 'Household Members', key: 'numberOfHouseholdMembers', width: 20 },
+            { header: 'Owns House', key: 'ownsHouse', width: 15 },
+            { header: 'Is Renting', key: 'isRenting', width: 15 },
+            { header: 'Years in Barangay', key: 'yearsInBarangay', width: 20 },
+            { header: 'Registered Voter', key: 'isRegisteredVoter', width: 20 },
+            { header: 'Voter Precinct No', key: 'voterPrecinctNo', width: 20 },
+            { header: 'Has Own Comfort Room', key: 'hasOwnComfortRoom', width: 20 },
+            { header: 'Has Own Water Supply', key: 'hasOwnWaterSupply', width: 20 },
+            { header: 'Has Own Electricity', key: 'hasOwnElectricity', width: 20 },
         ];
 
         householdHeadWorksheet.columns = householdHeadColumns;
@@ -226,21 +243,32 @@ const ExportData = ({ onFetchResidents }) => {
             { header: 'Resident ID', key: 'residentId', width: 15 },
             { header: 'First Name', key: 'firstName', width: 25 },
             { header: 'Middle Name', key: 'middleName', width: 25 },
+            { header: 'Middle Initial', key: 'middleInitial', width: 15 },
             { header: 'Last Name', key: 'lastName', width: 25 },
+            { header: 'Extension', key: 'extension', width: 15 },
             { header: 'Address', key: 'address', width: 40 },
             { header: 'Region', key: 'region', width: 25 },
             { header: 'Province', key: 'province', width: 25 },
             { header: 'City', key: 'city', width: 25 },
             { header: 'Barangay', key: 'barangay', width: 25 },
+            { header: 'Zone/Purok', key: 'zone', width: 20 },
+            { header: 'Zip Code', key: 'zipCode', width: 15 },
             { header: 'Date of Birth', key: 'dob', width: 20 },
             { header: 'Age', key: 'age', width: 10 },
             { header: 'Gender', key: 'gender', width: 15 },
+            { header: 'Custom Gender', key: 'customGender', width: 20 },
             { header: 'Civil Status', key: 'civilStatus', width: 15 },
+            { header: 'Religion', key: 'religion', width: 20 },
             { header: 'Phone Number', key: 'phoneNumber', width: 20 },
             { header: 'ID Type', key: 'idType', width: 20 },
             { header: 'ID Number', key: 'idNo', width: 20 },
+            { header: 'Employment Type', key: 'employmentType', width: 20 },
+            { header: 'Occupation', key: 'occupation', width: 25 },
+            { header: 'Skills', key: 'skills', width: 30 },
+            { header: 'Company Address', key: 'companyAddress', width: 40 },
             { header: 'Education', key: 'education', width: 20 },
-            { header: 'Employment Type', key: 'employmentType', width: 20 }
+            { header: 'PWD Status', key: 'pwdStatus', width: 15 },
+            { header: 'Disability Type', key: 'disabilityType', width: 25 },
         ];
 
         spouseWorksheet.columns = spouseColumns;
@@ -251,13 +279,14 @@ const ExportData = ({ onFetchResidents }) => {
             { header: 'Middle Name', key: 'middleName', width: 25 },
             { header: 'Middle Initial', key: 'middleInitial', width: 15 },
             { header: 'Last Name', key: 'lastName', width: 25 },
+            { header: 'Extension', key: 'extension', width: 15 },
             { header: 'Relation', key: 'relation', width: 15 },
             { header: 'Gender', key: 'gender', width: 15 },
             { header: 'Custom Gender', key: 'customGender', width: 20 },
             { header: 'Age', key: 'age', width: 10 },
             { header: 'Date of Birth', key: 'dob', width: 20 },
             { header: 'Education', key: 'education', width: 20 },
-            { header: 'Occupation', key: 'occupation', width: 20 },
+            { header: 'Occupation', key: 'occupation', width: 25 },
             { header: 'Living with Parents', key: 'isLivingWithParents', width: 20 },
             { header: 'Address', key: 'address', width: 40 },
             { header: 'Region', key: 'region', width: 25 },
@@ -265,7 +294,9 @@ const ExportData = ({ onFetchResidents }) => {
             { header: 'City', key: 'city', width: 25 },
             { header: 'Barangay', key: 'barangay', width: 25 },
             { header: 'Zone/Purok', key: 'zone', width: 20 },
-            { header: 'Zip Code', key: 'zipCode', width: 15 }
+            { header: 'Zip Code', key: 'zipCode', width: 15 },
+            { header: 'PWD Status', key: 'pwdStatus', width: 15 },
+            { header: 'Disability Type', key: 'disabilityType', width: 25 },
         ];
 
         childrenWorksheet.columns = childrenColumns;
@@ -276,13 +307,16 @@ const ExportData = ({ onFetchResidents }) => {
             { header: 'Middle Name', key: 'middleName', width: 25 },
             { header: 'Middle Initial', key: 'middleInitial', width: 15 },
             { header: 'Last Name', key: 'lastName', width: 25 },
+            { header: 'Extension', key: 'extension', width: 15 },
             { header: 'Relation', key: 'relation', width: 15 },
             { header: 'Gender', key: 'gender', width: 15 },
             { header: 'Custom Gender', key: 'customGender', width: 20 },
             { header: 'Age', key: 'age', width: 10 },
             { header: 'Date of Birth', key: 'dob', width: 20 },
             { header: 'Education', key: 'education', width: 20 },
-            { header: 'Occupation', key: 'occupation', width: 20 }
+            { header: 'Occupation', key: 'occupation', width: 25 },
+            { header: 'PWD Status', key: 'pwdStatus', width: 15 },
+            { header: 'Disability Type', key: 'disabilityType', width: 25 },
         ];
 
         householdMembersWorksheet.columns = householdMembersColumns;
@@ -303,17 +337,22 @@ const ExportData = ({ onFetchResidents }) => {
         residents.forEach(resident => {
             const statusMap = {
                 1: 'Approved',
-                2: 'Rejected',
                 3: 'Pending',
                 4: 'Update Requested',
-                5: 'Update Approved'
+                5: 'Update Approved',
+                6: 'Update Profiling',
+                'not_submitted': 'Not yet submitted',
+                null: 'Not yet submitted'
             };
             const householdData = resident.householdData || {};
+            const censusData = resident.censusData || {};
             const rowData = {
                 id: resident.id || 'N/A',
                 firstName: householdData.firstName || 'N/A',
                 middleName: householdData.middleName || 'N/A',
+                middleInitial: householdData.middleInitial || 'N/A',
                 lastName: householdData.lastName || 'N/A',
+                extension: householdData.extension || 'N/A',
                 address: householdData.address || 'N/A',
                 region: addressMappings.region[householdData.region] || 'N/A',
                 province: addressMappings.province[householdData.province] || 'N/A',
@@ -324,15 +363,30 @@ const ExportData = ({ onFetchResidents }) => {
                 dob: householdData.dob || 'N/A',
                 age: householdData.age || 'N/A',
                 gender: householdData.gender || 'N/A',
+                customGender: householdData.customGender || 'N/A',
                 civilStatus: householdData.civilStatus || 'N/A',
+                religion: householdData.religion || 'N/A',
                 phoneNumber: householdData.phoneNumber || 'N/A',
                 idType: householdData.idType || 'N/A',
                 idNo: householdData.idNo || 'N/A',
                 employmentType: householdData.employmentType || 'N/A',
+                occupation: householdData.occupation || 'N/A',
+                skills: householdData.skills || 'N/A',
+                companyAddress: householdData.companyAddress || 'N/A',
                 education: householdData.education || 'N/A',
-                status: statusMap[resident.status] || 'Unknown',
+                pwdStatus: householdData.pwdStatus || 'N/A',
+                disabilityType: householdData.disabilityType || 'N/A',
+                status: statusMap[resident.status] || 'Not yet submitted',
                 childrenCount: resident.childrenCount || 0,
-                numberOfHouseholdMembers: resident.numberOfHouseholdMembers || 0
+                numberOfHouseholdMembers: resident.numberOfHouseholdMembers || 0,
+                ownsHouse: censusData.ownsHouse || 'N/A',
+                isRenting: censusData.isRenting || 'N/A',
+                yearsInBarangay: censusData.yearsInBarangay || 'N/A',
+                isRegisteredVoter: censusData.isRegisteredVoter || 'N/A',
+                voterPrecinctNo: censusData.voterPrecinctNo || 'N/A',
+                hasOwnComfortRoom: censusData.hasOwnComfortRoom || 'N/A',
+                hasOwnWaterSupply: censusData.hasOwnWaterSupply || 'N/A',
+                hasOwnElectricity: censusData.hasOwnElectricity || 'N/A',
             };
             householdHeadWorksheet.addRow(rowData);
 
@@ -342,21 +396,32 @@ const ExportData = ({ onFetchResidents }) => {
                     residentId: resident.id || 'N/A',
                     firstName: spouseData.firstName || 'N/A',
                     middleName: spouseData.middleName || 'N/A',
+                    middleInitial: spouseData.middleInitial || 'N/A',
                     lastName: spouseData.lastName || 'N/A',
+                    extension: spouseData.extension || 'N/A',
                     address: spouseData.address || 'N/A',
                     region: addressMappings.region[spouseData.region] || 'N/A',
                     province: addressMappings.province[spouseData.province] || 'N/A',
                     city: addressMappings.city[spouseData.city] || 'N/A',
                     barangay: addressMappings.barangay[spouseData.barangay] || 'N/A',
+                    zone: spouseData.zone || 'N/A',
+                    zipCode: spouseData.zipCode || 'N/A',
                     dob: spouseData.dob || 'N/A',
                     age: spouseData.age || 'N/A',
                     gender: spouseData.gender || 'N/A',
+                    customGender: spouseData.customGender || 'N/A',
                     civilStatus: spouseData.civilStatus || 'N/A',
+                    religion: spouseData.religion || 'N/A',
                     phoneNumber: spouseData.phoneNumber || 'N/A',
                     idType: spouseData.idType || 'N/A',
                     idNo: spouseData.idNo || 'N/A',
+                    employmentType: spouseData.employmentType || 'N/A',
+                    occupation: spouseData.occupation || 'N/A',
+                    skills: spouseData.skills || 'N/A',
+                    companyAddress: spouseData.companyAddress || 'N/A',
                     education: spouseData.education || 'N/A',
-                    employmentType: spouseData.employmentType || 'N/A'
+                    pwdStatus: spouseData.pwdStatus || 'N/A',
+                    disabilityType: spouseData.disabilityType || 'N/A',
                 };
                 spouseWorksheet.addRow(spouseRowData);
             }
@@ -371,6 +436,7 @@ const ExportData = ({ onFetchResidents }) => {
                             middleName: member.middleName || 'N/A',
                             middleInitial: member.middleInitial || 'N/A',
                             lastName: member.lastName || 'N/A',
+                            extension: member.extension || 'N/A',
                             relation: member.relation || 'N/A',
                             gender: member.gender || 'N/A',
                             customGender: member.customGender || 'N/A',
@@ -385,7 +451,9 @@ const ExportData = ({ onFetchResidents }) => {
                             city: addressMappings.city[member.city] || 'N/A',
                             barangay: addressMappings.barangay[member.barangay] || 'N/A',
                             zone: member.zone || 'N/A',
-                            zipCode: member.zipCode || 'N/A'
+                            zipCode: member.zipCode || 'N/A',
+                            pwdStatus: member.pwdStatus || 'N/A',
+                            disabilityType: member.disabilityType || 'N/A',
                         };
                         childrenWorksheet.addRow(childRowData);
                     });
@@ -399,274 +467,104 @@ const ExportData = ({ onFetchResidents }) => {
                             middleName: member.middleName || 'N/A',
                             middleInitial: member.middleInitial || 'N/A',
                             lastName: member.lastName || 'N/A',
+                            extension: member.extension || 'N/A',
                             relation: member.relation || 'N/A',
                             gender: member.gender || 'N/A',
                             customGender: member.customGender || 'N/A',
                             age: member.age || 'N/A',
                             dob: member.dob || 'N/A',
                             education: member.education || 'N/A',
-                            occupation: member.occupation || 'N/A'
+                            occupation: member.occupation || 'N/A',
+                            pwdStatus: member.pwdStatus || 'N/A',
+                            disabilityType: member.disabilityType || 'N/A',
                         };
                         householdMembersWorksheet.addRow(memberRowData);
                     });
             }
         });
 
-        householdHeadWorksheet.getRow(1).eachCell(cell => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: '2B6CB0' }
-            };
-            cell.font = {
-                name: 'Calibri',
-                size: 12,
-                bold: true,
-                color: { argb: 'FFFFFF' }
-            };
-            cell.alignment = {
-                vertical: 'middle',
-                horizontal: 'center',
-                wrapText: true
-            };
-            cell.border = {
-                top: { style: 'medium', color: { argb: '1A4971' } },
-                bottom: { style: 'medium', color: { argb: '1A4971' } },
-                left: { style: 'medium', color: { argb: '1A4971' } },
-                right: { style: 'medium', color: { argb: '1A4971' } }
-            };
-        });
-
-        householdHeadWorksheet.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return;
-
-            const rowColor = rowNumber % 2 === 0 ? 'EDF2F7' : 'FFFFFF';
-
-            row.eachCell((cell, colNumber) => {
-                cell.font = {
-                    name: 'Calibri',
-                    size: 11,
-                    color: { argb: '1A202C' },
-                    bold: colNumber === 2 || colNumber === 4
-                };
+        // Styling for all worksheets
+        [householdHeadWorksheet, spouseWorksheet, childrenWorksheet, householdMembersWorksheet].forEach(worksheet => {
+            worksheet.getRow(1).eachCell(cell => {
                 cell.fill = {
                     type: 'pattern',
                     pattern: 'solid',
-                    fgColor: { argb: rowColor }
+                    fgColor: { argb: '2B6CB0' }
                 };
-                cell.border = {
-                    top: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    bottom: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    left: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    right: { style: 'thin', color: { argb: 'A0AEC0' } }
-                };
-                cell.alignment = {
-                    vertical: 'middle',
-                    horizontal: colNumber === 5 ? 'left' : 'center',
-                    wrapText: true
-                };
-
-                if (colNumber === 21) {
-                    const statusColors = {
-                        'Approved': 'C6F6D5',
-                        'Rejected': 'FED7D7',
-                        'Pending': 'FEFCBF',
-                        'Update Requested': 'BEE3F8',
-                        'Update Approved': 'D6BCFA'
-                    };
-                    cell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: statusColors[cell.value] || 'FFFFFF' }
-                    };
-                    cell.font = {
-                        ...cell.font,
-                        color: { argb: cell.value === 'Rejected' ? '9B2C2C' : '2D3748' },
-                        italic: cell.value === 'Rejected'
-                    };
-                }
-            });
-            row.height = 28;
-        });
-
-        householdHeadWorksheet.getRow(1).height = 35;
-
-        spouseWorksheet.getRow(1).eachCell(cell => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: '2B6CB0' }
-            };
-            cell.font = {
-                name: 'Calibri',
-                size: 12,
-                bold: true,
-                color: { argb: 'FFFFFF' }
-            };
-            cell.alignment = {
-                vertical: 'middle',
-                horizontal: 'center',
-                wrapText: true
-            };
-            cell.border = {
-                top: { style: 'medium', color: { argb: '1A4971' } },
-                bottom: { style: 'medium', color: { argb: '1A4971' } },
-                left: { style: 'medium', color: { argb: '1A4971' } },
-                right: { style: 'medium', color: { argb: '1A4971' } }
-            };
-        });
-
-        spouseWorksheet.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return;
-
-            const rowColor = rowNumber % 2 === 0 ? 'EDF2F7' : 'FFFFFF';
-
-            row.eachCell((cell, colNumber) => {
                 cell.font = {
                     name: 'Calibri',
-                    size: 11,
-                    color: { argb: '1A202C' },
-                    bold: colNumber === 2 || colNumber === 4
-                };
-                cell.fill = {
-                    type: 'pattern',
-                    pattern: 'solid',
-                    fgColor: { argb: rowColor }
-                };
-                cell.border = {
-                    top: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    bottom: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    left: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    right: { style: 'thin', color: { argb: 'A0AEC0' } }
-                };
-                cell.alignment = {
-                    vertical: 'middle',
-                    horizontal: colNumber === 5 ? 'left' : 'center',
-                    wrapText: true
-                };
-            });
-            row.height = 28;
-        });
-
-        spouseWorksheet.getRow(1).height = 35;
-
-        childrenWorksheet.getRow(1).eachCell(cell => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: '2B6CB0' }
-            };
-            cell.font = {
-                name: 'Calibri',
-                size: 12,
-                bold: true,
-                color: { argb: 'FFFFFF' }
-            };
-            cell.alignment = {
-                vertical: 'middle',
-                horizontal: 'center',
-                wrapText: true
-            };
-            cell.border = {
-                top: { style: 'medium', color: { argb: '1A4971' } },
-                bottom: { style: 'medium', color: { argb: '1A4971' } },
-                left: { style: 'medium', color: { argb: '1A4971' } },
-                right: { style: 'medium', color: { argb: '1A4971' } }
-            };
-        });
-
-        childrenWorksheet.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return;
-
-            const rowColor = rowNumber % 2 === 0 ? 'EDF2F7' : 'FFFFFF';
-
-            row.eachCell((cell, colNumber) => {
-                cell.font = {
-                    name: 'Calibri',
-                    size: 11,
-                    color: { argb: '1A202C' },
-                    bold: colNumber === 2 || colNumber === 5
-                };
-                cell.fill = {
-                    type: 'pattern',
-                    pattern: 'solid',
-                    fgColor: { argb: rowColor }
-                };
-                cell.border = {
-                    top: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    bottom: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    left: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    right: { style: 'thin', color: { argb: 'A0AEC0' } }
-                };
-                cell.alignment = {
-                    vertical: 'middle',
-                    horizontal: colNumber === 14 ? 'left' : 'center',
-                    wrapText: true
-                };
-            });
-            row.height = 28;
-        });
-
-        childrenWorksheet.getRow(1).height = 35;
-
-        householdMembersWorksheet.getRow(1).eachCell(cell => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: '2B6CB0' }
-            };
-            cell.font = {
-                name: 'Calibri',
-                size: 12,
-                bold: true,
-                color: { argb: 'FFFFFF' }
-            };
-            cell.alignment = {
-                vertical: 'middle',
-                horizontal: 'center',
-                wrapText: true
-            };
-            cell.border = {
-                top: { style: 'medium', color: { argb: '1A4971' } },
-                bottom: { style: 'medium', color: { argb: '1A4971' } },
-                left: { style: 'medium', color: { argb: '1A4971' } },
-                right: { style: 'medium', color: { argb: '1A4971' } }
-            };
-        });
-
-        householdMembersWorksheet.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return;
-
-            const rowColor = rowNumber % 2 === 0 ? 'EDF2F7' : 'FFFFFF';
-
-            row.eachCell((cell, colNumber) => {
-                cell.font = {
-                    name: 'Calibri',
-                    size: 11,
-                    color: { argb: '1A202C' },
-                    bold: colNumber === 2 || colNumber === 5
-                };
-                cell.fill = {
-                    type: 'pattern',
-                    pattern: 'solid',
-                    fgColor: { argb: rowColor }
-                };
-                cell.border = {
-                    top: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    bottom: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    left: { style: 'thin', color: { argb: 'A0AEC0' } },
-                    right: { style: 'thin', color: { argb: 'A0AEC0' } }
+                    size: 12,
+                    bold: true,
+                    color: { argb: 'FFFFFF' }
                 };
                 cell.alignment = {
                     vertical: 'middle',
                     horizontal: 'center',
                     wrapText: true
                 };
+                cell.border = {
+                    top: { style: 'medium', color: { argb: '1A4971' } },
+                    bottom: { style: 'medium', color: { argb: '1A4971' } },
+                    left: { style: 'medium', color: { argb: '1A4971' } },
+                    right: { style: 'medium', color: { argb: '1A4971' } }
+                };
             });
-            row.height = 28;
-        });
 
-        householdMembersWorksheet.getRow(1).height = 35;
+            worksheet.eachRow((row, rowNumber) => {
+                if (rowNumber === 1) return;
+
+                const rowColor = rowNumber % 2 === 0 ? 'EDF2F7' : 'FFFFFF';
+
+                row.eachCell((cell, colNumber) => {
+                    cell.font = {
+                        name: 'Calibri',
+                        size: 11,
+                        color: { argb: '1A202C' },
+                        bold: colNumber === 2 || colNumber === 5 // Bold first and last name
+                    };
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: rowColor }
+                    };
+                    cell.border = {
+                        top: { style: 'thin', color: { argb: 'A0AEC0' } },
+                        bottom: { style: 'thin', color: { argb: 'A0AEC0' } },
+                        left: { style: 'thin', color: { argb: 'A0AEC0' } },
+                        right: { style: 'thin', color: { argb: 'A0AEC0' } }
+                    };
+                    cell.alignment = {
+                        vertical: 'middle',
+                        horizontal: ['address', 'occupation', 'skills', 'companyAddress'].includes(worksheet.columns[colNumber - 1]?.key) ? 'left' : 'center',
+                        wrapText: true
+                    };
+
+                    // Apply status color for household head status column
+                    if (worksheet === householdHeadWorksheet && colNumber === 30) {
+                        const statusColors = {
+                            'Approved': 'C6F6D5',
+                            'Pending': 'FEFCBF',
+                            'Update Requested': 'BEE3F8',
+                            'Update Approved': 'D6BCFA',
+                            'Update Profiling': 'E6FFFA',
+                            'Not yet submitted': 'E2E8F0'
+                        };
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: statusColors[cell.value] || 'FFFFFF' }
+                        };
+                        cell.font = {
+                            ...cell.font,
+                            color: { argb: '2D3748' }
+                        };
+                    }
+                });
+                row.height = 28;
+            });
+
+            worksheet.getRow(1).height = 35;
+        });
 
         try {
             const buffer = await workbook.xlsx.writeBuffer();
