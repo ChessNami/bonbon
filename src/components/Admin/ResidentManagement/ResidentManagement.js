@@ -1096,6 +1096,16 @@ const ResidentManagement = () => {
                         pwdStatusFilter={pwdStatusFilter}
                         setPwdStatusFilter={setPwdStatusFilter}
                     />
+                    {totalPages > 1 && (
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            indexOfFirstItem={indexOfFirstItem}
+                            indexOfLastItem={indexOfLastItem}
+                            totalItems={filteredResidents.length}
+                            onPaginate={setCurrentPage}
+                        />
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {currentItems.length > 0 ? (
                             currentItems.map((resident) => (
@@ -1124,16 +1134,6 @@ const ResidentManagement = () => {
                             </div>
                         )}
                     </div>
-                    {totalPages > 1 && (
-                        <Pagination
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            indexOfFirstItem={indexOfFirstItem}
-                            indexOfLastItem={indexOfLastItem}
-                            totalItems={filteredResidents.length}
-                            onPaginate={setCurrentPage}
-                        />
-                    )}
                     <ResidentProfileModal
                         isOpen={viewModalOpen}
                         resident={selectedResident}

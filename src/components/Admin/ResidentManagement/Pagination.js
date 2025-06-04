@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 const Pagination = ({ currentPage, totalPages, indexOfFirstItem, indexOfLastItem, totalItems, onPaginate }) => {
     return (
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <div className="text-sm text-gray-600">
                 Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, totalItems)} of {totalItems} residents
             </div>
