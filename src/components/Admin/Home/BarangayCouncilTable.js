@@ -73,7 +73,18 @@ const BarangayCouncilTable = () => {
                     })
                 );
 
-                setCouncilMembers(membersWithSignedUrls);
+                // Sort members to prioritize Punong Barangay or SK Chairman
+                const sortedMembers = membersWithSignedUrls.sort((a, b) => {
+                    const priorityPosition = activeTab === "Barangay Officials" ? "punong barangay" : "sk chairman";
+                    const aIsPriority = a.position.toLowerCase().includes(priorityPosition);
+                    const bIsPriority = b.position.toLowerCase().includes(priorityPosition);
+
+                    if (aIsPriority && !bIsPriority) return -1;
+                    if (!aIsPriority && bIsPriority) return 1;
+                    return 0; // Maintain original order for non-priority items
+                });
+
+                setCouncilMembers(sortedMembers);
             } catch (error) {
                 console.error("Error fetching officials:", error);
                 setCouncilMembers([]);
@@ -266,7 +277,7 @@ const BarangayCouncilTable = () => {
                                     ? "bg-blue-600 text-white"
                                     : page === "..."
                                         ? "text-gray-500 cursor-default"
-                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                 }`}
                             onClick={() => typeof page === "number" && setCurrentPage(page)}
                             disabled={page === "..."}
