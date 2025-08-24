@@ -1990,19 +1990,6 @@ const AdminProMgmt = () => {
                                         <FaTrash />
                                         Delete
                                     </motion.button>
-                                    <motion.button
-                                        onClick={() => {
-                                            setSelectedPolygonId(selectedFullDetailsPolygon.id);
-                                            setCompletionRate(selectedFullDetailsPolygon.completion_rate || 0);
-                                            setIsCompletionModalOpen(true);
-                                        }}
-                                        className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <FaPercent />
-                                        Update Completion
-                                    </motion.button>
                                 </div>
                             )}
                         </motion.div>
