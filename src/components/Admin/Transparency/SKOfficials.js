@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import Swal from "sweetalert2";
 import { FaPlus, FaEdit, FaTrash, FaTimes, FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from '../../../supabaseClient';
@@ -8,6 +7,7 @@ import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 import placeholderImage from '../../../img/Placeholder/placeholder.png';
 import Loader from '../../Loader';
+import Swal from 'sweetalert2';
 
 const SKOfficials = () => {
     const [officials, setOfficials] = useState([]);
@@ -63,11 +63,40 @@ const SKOfficials = () => {
                 })
             );
 
-            // Sort officials with SK Chairperson first
+            // Sort officials by position: SK Chairman first, then Secretary, Treasurer, then Kagawad alphabetically by last name
             const sortedOfficials = officialsWithSignedUrls.sort((a, b) => {
-                if (a.position === "SK Chairperson") return -1;
-                if (b.position === "SK Chairperson") return 1;
-                return a.name.localeCompare(b.name);
+                const getPositionPriority = (position) => {
+                    const pos = position.toLowerCase();
+                    if (
+                        pos.includes("sk chairman") ||
+                        pos.includes("chairman") ||
+                        pos.includes("sk chairperson")
+                    ) {
+                        return 1; // Highest priority for SK Chairman
+                    }
+                    if (pos.includes("secretary")) {
+                        return 2; // Second priority for Secretary
+                    }
+                    if (pos.includes("treasurer")) {
+                        return 3; // Third priority for Treasurer
+                    }
+                    if (pos.includes("kagawad")) {
+                        return 4; // Fourth priority for Kagawad
+                    }
+                    return 5; // Default for any other position
+                };
+
+                const priorityA = getPositionPriority(a.position);
+                const priorityB = getPositionPriority(b.position);
+
+                if (priorityA === priorityB && priorityA === 4) {
+                    // For Kagawad, sort by last name
+                    const lastNameA = a.name.split(" ").slice(-1)[0].toLowerCase();
+                    const lastNameB = b.name.split(" ").slice(-1)[0].toLowerCase();
+                    return lastNameA.localeCompare(lastNameB);
+                }
+
+                return priorityA - priorityB;
             });
 
             setOfficials(sortedOfficials);

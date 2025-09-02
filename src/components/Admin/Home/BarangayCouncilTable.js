@@ -73,15 +73,38 @@ const BarangayCouncilTable = () => {
                     })
                 );
 
-                // Sort members to prioritize Punong Barangay or SK Chairman
+                // Sort members by position: Head (Captain/Chairman) first, then Secretary, Treasurer, then Kagawad
                 const sortedMembers = membersWithSignedUrls.sort((a, b) => {
-                    const priorityPosition = activeTab === "Barangay Officials" ? "punong barangay" : "sk chairman";
-                    const aIsPriority = a.position.toLowerCase().includes(priorityPosition);
-                    const bIsPriority = b.position.toLowerCase().includes(priorityPosition);
+                    const getPositionPriority = (position) => {
+                        const pos = position.toLowerCase();
+                        if (
+                            (activeTab === "Barangay Officials" &&
+                                (pos.includes("punong barangay") ||
+                                    pos.includes("barangay captain") ||
+                                    pos.includes("barangay kapitan"))) ||
+                            (activeTab === "Sangguniang Kabataan" &&
+                                (pos.includes("sk chairman") ||
+                                    pos.includes("chairman") ||
+                                    pos.includes("sk chairperson")))
+                        ) {
+                            return 1; // Highest priority for Captain/Chairman
+                        }
+                        if (pos.includes("secretary")) {
+                            return 2; // Second priority for Secretary
+                        }
+                        if (pos.includes("treasurer")) {
+                            return 3; // Third priority for Treasurer
+                        }
+                        if (pos.includes("kagawad")) {
+                            return 4; // Fourth priority for Kagawad
+                        }
+                        return 5; // Default for any other position
+                    };
 
-                    if (aIsPriority && !bIsPriority) return -1;
-                    if (!aIsPriority && bIsPriority) return 1;
-                    return 0; // Maintain original order for non-priority items
+                    const priorityA = getPositionPriority(a.position);
+                    const priorityB = getPositionPriority(b.position);
+
+                    return priorityA - priorityB;
                 });
 
                 setCouncilMembers(sortedMembers);
