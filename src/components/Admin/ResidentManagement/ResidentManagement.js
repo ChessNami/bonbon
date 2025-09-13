@@ -48,6 +48,7 @@ const ResidentManagement = () => {
     const [isRentingFilter, setIsRentingFilter] = useState('all');
     const [hasZoneCertFilter, setHasZoneCertFilter] = useState('all');
     const [pwdStatusFilter, setPwdStatusFilter] = useState('all');
+    const [zoneFilter, setZoneFilter] = useState('all');
 
     // Initialize address mappings
     useEffect(() => {
@@ -373,6 +374,10 @@ const ResidentManagement = () => {
             });
         }
 
+        if (zoneFilter !== 'all') {
+            filtered = filtered.filter((resident) => resident.purok === zoneFilter);
+        }
+
         filtered.sort((a, b) => {
             if (sortOption === 'default') {
                 const priorityOrder = { 3: 1, 4: 2, 5: 3, 6: 4, 1: 5 };
@@ -391,11 +396,11 @@ const ResidentManagement = () => {
             }
 
             if (sortOption === 'name-asc') {
-                return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+                return a.lastName.localeCompare(b.lastName);
             }
 
             if (sortOption === 'name-desc') {
-                return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`);
+                return b.lastName.localeCompare(a.lastName);
             }
 
             if (sortOption === 'status-asc') {
@@ -403,7 +408,7 @@ const ResidentManagement = () => {
             }
 
             if (sortOption === 'status-desc') {
-                return b.status - b.status;
+                return b.status - a.status; // Fixed typo: corrected `b.status - b.status` to `b.status - a.status`
             }
 
             if (sortOption === 'date-asc') {
@@ -418,7 +423,7 @@ const ResidentManagement = () => {
         });
 
         setFilteredResidents(filtered);
-    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter, hasZoneCertFilter, pwdStatusFilter]);
+    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter, hasZoneCertFilter, pwdStatusFilter, zoneFilter]);
 
     // Disable scroll on body when modals are open
     useEffect(() => {
@@ -452,6 +457,7 @@ const ResidentManagement = () => {
         setIsRentingFilter('all');
         setHasZoneCertFilter('all');
         setPwdStatusFilter('all');
+        setZoneFilter('all');
     };
 
     const handleUpdateStatus = async (resident, reason) => {
@@ -1095,6 +1101,8 @@ const ResidentManagement = () => {
                         setHasZoneCertFilter={setHasZoneCertFilter}
                         pwdStatusFilter={pwdStatusFilter}
                         setPwdStatusFilter={setPwdStatusFilter}
+                        zoneFilter={zoneFilter}
+                        setZoneFilter={setZoneFilter}
                     />
                     {totalPages > 1 && (
                         <Pagination
