@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FaSpinner } from "react-icons/fa"; // Ensure FaSpinner is imported
+import { FaSpinner, FaEye, FaEyeSlash } from "react-icons/fa"; // Added FaEye, FaEyeSlash
 import FooterConfig from "./FooterConfig";
 import ExportData from "./ExportData";
 import { useUser } from "../../contexts/UserContext";
@@ -12,9 +12,13 @@ const Settings = () => {
     const { viewMode, toggleViewMode } = useUser();
     const [userRole, setUserRole] = useState(null);
     const [passphrase, setPassphrase] = useState("");
+    const [confirmPassphrase, setConfirmPassphrase] = useState(""); // Added confirm passphrase state
     const [currentPassphrase, setCurrentPassphrase] = useState("");
     const [hasPassphrase, setHasPassphrase] = useState(false);
     const [isLoadingPassphrase, setIsLoadingPassphrase] = useState(false);
+    const [showCurrentPassphrase, setShowCurrentPassphrase] = useState(false); // Toggle for current passphrase
+    const [showNewPassphrase, setShowNewPassphrase] = useState(false); // Toggle for new passphrase
+    const [showConfirmPassphrase, setShowConfirmPassphrase] = useState(false); // Toggle for confirm passphrase
 
     useEffect(() => {
         const fetchUserRole = async () => {
@@ -60,6 +64,20 @@ const Settings = () => {
                 position: 'top-end',
                 icon: 'warning',
                 title: 'Passphrase is required',
+                showConfirmButton: false,
+                timer: 1500,
+                scrollbarPadding: false,
+                timerProgressBar: true
+            });
+            return;
+        }
+
+        if (passphrase !== confirmPassphrase) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Passphrases do not match',
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
@@ -128,6 +146,7 @@ const Settings = () => {
 
             setHasPassphrase(true);
             setPassphrase("");
+            setConfirmPassphrase("");
             setCurrentPassphrase("");
         } catch (error) {
             Swal.fire({
@@ -212,30 +231,62 @@ const Settings = () => {
                 ) : (
                     <form onSubmit={handlePassphraseSubmit} className="space-y-4">
                         {hasPassphrase && (
-                            <div>
+                            <div className="relative">
                                 <label className="block text-sm font-medium text-gray-700">Current Passphrase</label>
                                 <input
-                                    type="password"
+                                    type={showCurrentPassphrase ? "text" : "password"}
                                     value={currentPassphrase}
                                     onChange={(e) => setCurrentPassphrase(e.target.value)}
-                                    className="mt-1 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="mt-1 w-full p-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="Enter current passphrase"
                                     autoComplete="off"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCurrentPassphrase(!showCurrentPassphrase)}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 text-gray-500 hover:text-gray-700"
+                                >
+                                    {showCurrentPassphrase ? <FaEyeSlash /> : <FaEye />}
+                                </button>
                             </div>
                         )}
-                        <div>
+                        <div className="relative">
                             <label className="block text-sm font-medium text-gray-700">
                                 {hasPassphrase ? "New Passphrase" : "Create Passphrase"}
                             </label>
                             <input
-                                type="password"
+                                type={showNewPassphrase ? "text" : "password"}
                                 value={passphrase}
                                 onChange={(e) => setPassphrase(e.target.value)}
-                                className="mt-1 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="mt-1 w-full p-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder={hasPassphrase ? "Enter new passphrase" : "Enter passphrase"}
                                 autoComplete="off"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowNewPassphrase(!showNewPassphrase)}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 text-gray-500 hover:text-gray-700"
+                            >
+                                {showNewPassphrase ? <FaEyeSlash /> : <FaEye />}
+                            </button>
+                        </div>
+                        <div className="relative">
+                            <label className="block text-sm font-medium text-gray-700">Confirm New Passphrase</label>
+                            <input
+                                type={showConfirmPassphrase ? "text" : "password"}
+                                value={confirmPassphrase}
+                                onChange={(e) => setConfirmPassphrase(e.target.value)}
+                                className="mt-1 w-full p-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Confirm new passphrase"
+                                autoComplete="off"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassphrase(!showConfirmPassphrase)}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 text-gray-500 hover:text-gray-700"
+                            >
+                                {showConfirmPassphrase ? <FaEyeSlash /> : <FaEye />}
+                            </button>
                         </div>
                         <motion.button
                             type="submit"
