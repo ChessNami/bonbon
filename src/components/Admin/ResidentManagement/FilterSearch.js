@@ -43,7 +43,7 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
                     {showFilterDropdown && (
                         <motion.div
                             ref={filterDropdownRef}
-                            className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+                            className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden"
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
