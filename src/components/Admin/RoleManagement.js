@@ -12,7 +12,7 @@ const RoleManagement = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [sortField, setSortField] = useState("display_name");
     const [sortOrder, setSortOrder] = useState("asc");
-    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [itemsPerPage, setItemsPerPage] = useState(10); // Initial default
     const [currentPage, setCurrentPage] = useState(1);
     const [roles, setRoles] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,6 +21,28 @@ const RoleManagement = () => {
     const [tempRoleId, setTempRoleId] = useState(null);
     const [currentUserId, setCurrentUserId] = useState(null);
     const dropdownRef = useRef(null);
+
+    // Function to set itemsPerPage based on window width
+    const updateItemsPerPage = useCallback(() => {
+        const width = window.innerWidth;
+        if (width < 640) {
+            setItemsPerPage(5); // Small screens (mobile)
+        } else if (width < 1024) {
+            setItemsPerPage(10); // Medium screens (tablet)
+        } else if (width < 1280) {
+            setItemsPerPage(12); // Large screens
+        } else {
+            setItemsPerPage(16); // Extra-large screens
+        }
+        setCurrentPage(1); // Reset to first page on resize
+    }, []);
+
+    // Set initial itemsPerPage and listen for window resize
+    useEffect(() => {
+        updateItemsPerPage(); // Set initial value
+        window.addEventListener("resize", updateItemsPerPage);
+        return () => window.removeEventListener("resize", updateItemsPerPage);
+    }, [updateItemsPerPage]);
 
     useEffect(() => {
         const fetchCurrentUser = async () => {
@@ -287,25 +309,6 @@ const RoleManagement = () => {
                                     animate="visible"
                                     exit="hidden"
                                 >
-                                    <h3 className="font-semibold mb-2">Items per page:</h3>
-                                    <div className="space-y-2 mb-4">
-                                        {[5, 10, 20, 50].map((value) => (
-                                            <label key={value} className="flex items-center gap-2">
-                                                <input
-                                                    type="radio"
-                                                    name="itemsPerPage"
-                                                    value={value}
-                                                    checked={itemsPerPage === value}
-                                                    onChange={(e) => {
-                                                        setItemsPerPage(Number(e.target.value));
-                                                        setCurrentPage(1);
-                                                    }}
-                                                    className="form-radio text-[#172554]"
-                                                />
-                                                {value} per page
-                                            </label>
-                                        ))}
-                                    </div>
                                     <h3 className="font-semibold mb-2">Sort By:</h3>
                                     <div className="space-y-2">
                                         <label className="flex items-center gap-2">
@@ -405,8 +408,8 @@ const RoleManagement = () => {
                                     >
                                         <motion.button
                                             className={`absolute top-2 right-2 p-2 rounded-full ${user.user_id === currentUserId
-                                                    ? "bg-gray-400 cursor-not-allowed"
-                                                    : "bg-[#172554] text-white hover:bg-blue-800"
+                                                ? "bg-gray-400 cursor-not-allowed"
+                                                : "bg-[#172554] text-white hover:bg-blue-800"
                                                 }`}
                                             onClick={() => {
                                                 if (user.user_id !== currentUserId) {

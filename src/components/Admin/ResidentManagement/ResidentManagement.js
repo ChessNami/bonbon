@@ -4,6 +4,7 @@ import { getAllRegions, getProvincesByRegion, getMunicipalitiesByProvince, getBa
 import { FaUsers } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import bcrypt from 'bcryptjs';
 import Loader from '../../Loader';
 import HeaderControls from './HeaderControls';
 import FilterSearch from './FilterSearch';
@@ -14,7 +15,7 @@ import PendingModal from './PendingModal';
 import RequestsModal from './RequestsModal';
 import UpdateModal from './UpdateModal';
 import RejectedModal from './RejectedModal';
-import ToUpdateModal from './ToUpdateModal'; // Add this import
+import ToUpdateModal from './ToUpdateModal';
 import { getStatusBadge } from './Utils';
 
 const ResidentManagement = () => {
@@ -516,104 +517,140 @@ const ResidentManagement = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: 'This action will permanently delete the resident profile and associated files (image, valid ID, zone certificate, spouse valid ID).',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it!',
-            cancelButtonText: 'Cancel',
-            scrollbarPadding: false,
-        });
-
-        if (!result.isConfirmed) {
-            return;
-        }
-
+    const handleDelete = async (residentId) => {
         try {
-            // Fetch the resident to get file paths
-            const { data: residentData, error: fetchError } = await supabase
-                .from('residents')
-                .select('image_url, valid_id_url, zone_cert_url, spouse_valid_id_url')
-                .eq('id', id)
+            // Fetch the hashed passphrase from Supabase (assume stored in 'settings' table)
+            const { data: setting, error: fetchError } = await supabase
+                .from('settings')
+                .select('value')
+                .eq('key', 'delete_passphrase_hash')
                 .single();
 
-            if (fetchError) {
-                throw new Error(`Failed to fetch resident data: ${fetchError.message}`);
+            if (fetchError || !setting) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Failed to fetch passphrase',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+                return;
             }
 
-            // Delete files from storage if they exist
-            const filesToDelete = [];
-            if (residentData.image_url) filesToDelete.push({ bucket: 'householdhead', path: residentData.image_url });
-            if (residentData.valid_id_url) filesToDelete.push({ bucket: 'validid', path: residentData.valid_id_url });
-            if (residentData.zone_cert_url) filesToDelete.push({ bucket: 'validid', path: residentData.zone_cert_url });
-            if (residentData.spouse_valid_id_url) filesToDelete.push({ bucket: 'validid', path: residentData.spouse_valid_id_url });
+            const hash = setting.value;
 
-            for (const file of filesToDelete) {
-                const { error: storageError } = await supabase.storage
-                    .from(file.bucket)
-                    .remove([file.path]);
-
-                if (storageError) {
-                    console.error(`Failed to delete ${file.path} from ${file.bucket}: ${storageError.message}`);
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'warning',
-                        title: `Failed to delete ${file.path.split('/').pop()}: ${storageError.message}. Proceeding with resident deletion.`,
-                        showConfirmButton: false,
-                        timer: 3000,
-                        scrollbarPadding: false,
-                        timerProgressBar: true,
-                    });
+            // Prompt for passphrase (2FA)
+            const { value: passphrase } = await Swal.fire({
+                title: 'Confirm Deletion',
+                text: 'Enter the secret passphrase to proceed with deletion.',
+                input: 'password',
+                inputPlaceholder: 'Secret passphrase',
+                inputAttributes: {
+                    autocapitalize: 'off',
+                    autocorrect: 'off'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Submit',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#EF4444',
+                scrollbarPadding: false,
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Passphrase is required!';
+                    }
                 }
+            });
+
+            if (!passphrase) return; // User cancelled
+
+            // Verify passphrase
+            const isValid = bcrypt.compareSync(passphrase, hash);
+            if (!isValid) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Incorrect passphrase',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+                return;
             }
 
-            // Delete resident profile status
-            const { error: statusError } = await supabase
-                .from('resident_profile_status')
-                .delete()
-                .eq('resident_id', id);
+            // Show delay modal with countdown and cancel button
+            const result = await Swal.fire({
+                title: 'Deletion Scheduled',
+                html: 'Deleting in <b id="countdown">10</b> seconds.<br/><br/>This action cannot be undone after the timer expires.',
+                timer: 10000,
+                timerProgressBar: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                showCancelButton: true,
+                scrollbarPadding: false,
+                cancelButtonText: 'Cancel Deletion',
+                cancelButtonColor: '#6B7280',
+                didOpen: () => {
+                    let time = 10;
+                    const countdownElement = document.getElementById('countdown');
+                    const interval = setInterval(() => {
+                        time--;
+                        countdownElement.textContent = time;
+                        if (time <= 0) {
+                            clearInterval(interval);
+                        }
+                    }, 1000);
+                }
+            });
 
-            if (statusError) {
-                throw new Error(`Failed to delete resident status: ${statusError.message}`);
+            if (result.dismiss === 'cancel') {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'info',
+                    title: 'Deletion cancelled',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    scrollbarPadding: false,
+                    timerProgressBar: true
+                });
+                return;
             }
 
-            // Delete resident record
-            const { error: residentError } = await supabase
-                .from('residents')
-                .delete()
-                .eq('id', id);
+            // Proceed with deletion after delay
+            const { error: deleteError } = await supabase.from('residents').delete().eq('id', residentId);
 
-            if (residentError) {
-                throw new Error(`Failed to delete resident: ${residentError.message}`);
-            }
+            if (deleteError) throw deleteError;
 
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Resident and associated files deleted successfully',
+                title: 'Resident deleted successfully',
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true,
+                timerProgressBar: true
             });
-            await fetchResidents();
+
+            fetchResidents(); // Refresh residents list
         } catch (error) {
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
-                title: error.message || 'Failed to delete resident',
+                title: 'Failed to delete resident',
                 showConfirmButton: false,
                 timer: 1500,
                 scrollbarPadding: false,
-                timerProgressBar: true,
+                timerProgressBar: true
             });
+            console.error('Error deleting resident:', error.message);
         }
     };
 

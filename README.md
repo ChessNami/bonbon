@@ -67,6 +67,7 @@ Make sure you have the following installed on your machine:
    npm install exceljs file-saver
    npm install pdfjs-dist
    npm install react-tooltip
+   npm install bcryptjs
    ```
 
 ### Usage
