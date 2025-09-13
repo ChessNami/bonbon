@@ -28,6 +28,11 @@ const PendingModal = ({
 
     if (!isOpen) return null;
 
+    // Sort residents by createdAt in ascending order
+    const sortedResidents = [...residents].sort((a, b) =>
+        new Date(a.createdAt || '1970-01-01') - new Date(b.createdAt || '1970-01-01')
+    );
+
     return (
         <AnimatePresence>
             <>
@@ -65,8 +70,8 @@ const PendingModal = ({
                             </motion.button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6">
-                            {residents.length > 0 ? (
-                                residents.map((resident) => (
+                            {sortedResidents.length > 0 ? (
+                                sortedResidents.map((resident) => (
                                     <div
                                         key={resident.id}
                                         className="bg-gray-50 p-5 rounded-xl mb-4 border border-gray-200 hover:shadow-md transition-shadow duration-200"

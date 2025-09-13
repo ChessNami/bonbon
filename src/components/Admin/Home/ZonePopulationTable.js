@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaQuestionCircle } from "react-icons/fa";
 import { supabase } from "../../../supabaseClient";
 
 const ZonePopulationTable = () => {
@@ -10,10 +10,30 @@ const ZonePopulationTable = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [direction, setDirection] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
+    const [showTooltip, setShowTooltip] = useState(false);
+    const tooltipRef = useRef(null); // Ref for the tooltip div
     const autoSlideRef = useRef(null);
     const cardsPerPage = 3;
 
-    // Initialize all zones (1 to 9) with zero population
+    // Handle clicks outside the tooltip
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (tooltipRef.current && !tooltipRef.current.contains(event.target)) {
+                setShowTooltip(false);
+            }
+        };
+
+        // Add event listener when tooltip is open
+        if (showTooltip) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+
+        // Cleanup event listener
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showTooltip]);
+
     const initializeZones = () => {
         const allZones = Array.from({ length: 9 }, (_, i) => ({
             name: `Zone ${i + 1}`,
@@ -22,28 +42,23 @@ const ZonePopulationTable = () => {
         return allZones;
     };
 
-    // Function to calculate zone populations
     const calculateZonePopulations = useCallback((residents) => {
-        // Start with all zones initialized to zero
         const zoneCounts = initializeZones().reduce((acc, zone) => {
             acc[zone.name] = zone.population;
             return acc;
         }, {});
 
         residents.forEach((resident) => {
-            // Household head
             if (resident.household && resident.household.zone) {
                 const zone = resident.household.zone;
                 zoneCounts[zone] = (zoneCounts[zone] || 0) + 1;
             }
 
-            // Spouse
             if (resident.spouse && Object.keys(resident.spouse).length > 0 && resident.spouse.zone) {
                 const zone = resident.spouse.zone;
                 zoneCounts[zone] = (zoneCounts[zone] || 0) + 1;
             }
 
-            // Household composition
             if (resident.household_composition) {
                 try {
                     let composition = resident.household_composition;
@@ -52,13 +67,10 @@ const ZonePopulationTable = () => {
                     }
 
                     composition.forEach((member) => {
-                        // Children with isLivingWithParents: "Yes"
                         if (member.isLivingWithParents === "Yes" && member.zone) {
                             const zone = member.zone;
                             zoneCounts[zone] = (zoneCounts[zone] || 0) + 1;
-                        }
-                        // Other members (assume same zone as household head)
-                        else if (!member.isLivingWithParents && resident.household.zone) {
+                        } else if (!member.isLivingWithParents && resident.household.zone) {
                             const zone = resident.household.zone;
                             zoneCounts[zone] = (zoneCounts[zone] || 0) + 1;
                         }
@@ -69,21 +81,18 @@ const ZonePopulationTable = () => {
             }
         });
 
-        // Convert zoneCounts to array of { name, population }
         return Object.entries(zoneCounts)
             .map(([name, population]) => ({
                 name,
                 population,
             }))
             .sort((a, b) => {
-                // Sort zones numerically based on the zone number
                 const zoneA = parseInt(a.name.split(" ")[1]);
                 const zoneB = parseInt(b.name.split(" ")[1]);
                 return zoneA - zoneB;
             });
     }, []);
 
-    // Function to fetch residents data
     const fetchResidents = useCallback(async () => {
         try {
             setLoading(true);
@@ -92,12 +101,12 @@ const ZonePopulationTable = () => {
             const { data, error } = await supabase
                 .from("residents")
                 .select(`
-                    household,
-                    spouse,
-                    household_composition,
-                    resident_profile_status!inner(status)
-                `)
-                .eq("resident_profile_status.status", 1); // Only fetch approved residents
+          household,
+          spouse,
+          household_composition,
+          resident_profile_status!inner(status)
+        `)
+                .eq("resident_profile_status.status", 1);
 
             if (error) {
                 throw error;
@@ -107,23 +116,20 @@ const ZonePopulationTable = () => {
                 const zoneData = calculateZonePopulations(data);
                 setZones(zoneData);
             } else {
-                // If no data, show all zones with zero population
                 setZones(initializeZones());
             }
         } catch (err) {
             setError("Failed to fetch resident data");
             console.error(err);
-            setZones(initializeZones()); // Show all zones even on error
+            setZones(initializeZones());
         } finally {
             setLoading(false);
         }
     }, [calculateZonePopulations]);
 
     useEffect(() => {
-        // Initial fetch
         fetchResidents();
 
-        // Set up real-time subscription
         const subscription = supabase
             .channel("residents-channel")
             .on(
@@ -144,7 +150,7 @@ const ZonePopulationTable = () => {
                     event: "*",
                     schema: "public",
                     table: "resident_profile_status",
-                    filter: "status=eq.1", // Subscribe to changes for approved status
+                    filter: "status=eq.1",
                 },
                 (payload) => {
                     console.log("Change detected in resident_profile_status:", payload);
@@ -153,7 +159,6 @@ const ZonePopulationTable = () => {
             )
             .subscribe();
 
-        // Cleanup subscription
         return () => {
             supabase.removeChannel(subscription);
         };
@@ -230,7 +235,30 @@ const ZonePopulationTable = () => {
     return (
         <div className="bg-white p-4 rounded-lg shadow-md w-full overflow-hidden">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Zone Population of Barangay Bonbon</h2>
+                <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold text-gray-800">Zone Population of Barangay Bonbon</h2>
+                    <div className="relative">
+                        <FaQuestionCircle
+                            className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                            size={18}
+                            onClick={() => setShowTooltip(!showTooltip)}
+                        />
+                        <AnimatePresence>
+                            {showTooltip && (
+                                <motion.div
+                                    ref={tooltipRef}
+                                    className="absolute left-6 top-0 w-64 bg-white rounded-lg shadow-xl border border-gray-100 z-50 p-3 text-sm text-gray-700"
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    Population counts only include residents with an <span className="font-bold text-green-500">"APPROVED"</span> profiling status.
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
                 <div className="flex gap-2">
                     <button
                         onClick={() => paginate(-1)}
