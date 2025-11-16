@@ -267,139 +267,174 @@ const HouseholdComposition = ({
 
     const handleChildChange = (index, e) => {
         const { name, value } = e.target;
+
         setChildren((prev) => {
             const updatedChildren = Array.isArray(prev) ? [...prev] : [];
-            // Convert text inputs to uppercase, excluding dropdowns and numeric fields
-            const isDropdown = [
-                'relation',
-                'gender',
-                'customGender',
-                'education',
-                'isLivingWithParents',
-                'region',
-                'province',
-                'city',
-                'barangay',
-                'zone',
-                'pwdStatus',
-                'disabilityType',
-            ].includes(name);
-            const isNumeric = ['zipCode'].includes(name);
-            let updatedValue = isDropdown ? value : isNumeric ? value.replace(/[^0-9]/g, '').slice(0, 4) : value.toUpperCase();
+            const child = { ...updatedChildren[index] };
 
-            updatedChildren[index] = { ...updatedChildren[index], [name]: updatedValue };
+            // === 1. Determine value transformation ===
+            const isDropdown = [
+                'relation', 'gender', 'customGender', 'education',
+                'isLivingWithParents', 'region', 'province', 'city',
+                'barangay', 'zone', 'pwdStatus', 'disabilityType'
+            ].includes(name);
+
+            const isNumeric = ['zipCode'].includes(name);
+
+            let finalValue;
+            if (isDropdown) {
+                finalValue = value;
+            } else if (isNumeric) {
+                finalValue = value.replace(/[^0-9]/g, '').slice(0, 4);
+            } else {
+                finalValue = value.toUpperCase();
+            }
+
+            // === 2. Update field ===
+            child[name] = finalValue;
+
+            // === 3. Auto-fill logic ===
             if (name === 'middleName') {
-                updatedChildren[index].middleInitial = value ? value.charAt(0).toUpperCase() : '';
+                const trimmed = finalValue.trim();
+                child.middleInitial = trimmed ? trimmed.charAt(0) + '.' : '';
             }
+
             if (name === 'relation') {
-                updatedChildren[index].gender = value === 'Son' ? 'Male' : value === 'Daughter' ? 'Female' : updatedChildren[index].gender;
-                updatedChildren[index].customGender = value !== 'Other' ? '' : updatedChildren[index].customGender;
+                if (value === 'Son') child.gender = 'Male';
+                else if (value === 'Daughter') child.gender = 'Female';
+                if (value !== 'Other') child.customGender = '';
             }
+
             if (name === 'dob') {
-                updatedChildren[index].age = calculateAge(value);
+                child.age = calculateAge(value);
             }
+
+            if (name === 'pwdStatus') {
+                child.disabilityType = value === 'No' ? '' : child.disabilityType;
+            }
+
             if (name === 'isLivingWithParents') {
                 if (value === 'Yes') {
-                    updatedChildren[index].address = householdHeadAddress.address?.toUpperCase() || '';
-                    updatedChildren[index].region = householdHeadAddress.region || '';
-                    updatedChildren[index].province = householdHeadAddress.province || '';
-                    updatedChildren[index].city = householdHeadAddress.city || '';
-                    updatedChildren[index].barangay = householdHeadAddress.barangay || '';
-                    updatedChildren[index].zipCode = householdHeadAddress.zipCode || '';
-                    updatedChildren[index].zone = householdHeadAddress.zone || '';
+                    const addr = householdHeadAddress;
+                    child.address = (addr.address || '').toUpperCase();
+                    child.region = addr.region || '';
+                    child.province = addr.province || '';
+                    child.city = addr.city || '';
+                    child.barangay = addr.barangay || '';
+                    child.zipCode = addr.zipCode || '';
+                    child.zone = addr.zone || '';
                 } else {
-                    updatedChildren[index].address = '';
-                    updatedChildren[index].region = '';
-                    updatedChildren[index].province = '';
-                    updatedChildren[index].city = '';
-                    updatedChildren[index].barangay = '';
-                    updatedChildren[index].zipCode = '';
-                    updatedChildren[index].zone = '';
+                    child.address = '';
+                    child.region = '';
+                    child.province = '';
+                    child.city = '';
+                    child.barangay = '';
+                    child.zipCode = '';
+                    child.zone = '';
                 }
             }
+
+            // === 4. Address cascade ===
             if (name === 'region') {
-                setProvinces((prev) => ({ ...prev, [index]: getProvincesByRegion(value) }));
-                updatedChildren[index].province = '';
-                updatedChildren[index].city = '';
-                updatedChildren[index].barangay = '';
-                setCities((prev) => ({ ...prev, [index]: [] }));
-                setBarangays((prev) => ({ ...prev, [index]: [] }));
+                setProvinces(prev => ({ ...prev, [index]: getProvincesByRegion(value) }));
+                child.province = '';
+                child.city = '';
+                child.barangay = '';
+                setCities(prev => ({ ...prev, [index]: [] }));
+                setBarangays(prev => ({ ...prev, [index]: [] }));
             }
+
             if (name === 'province') {
-                setCities((prev) => ({ ...prev, [index]: getMunicipalitiesByProvince(value) }));
-                updatedChildren[index].city = '';
-                updatedChildren[index].barangay = '';
-                setBarangays((prev) => ({ ...prev, [index]: [] }));
+                setCities(prev => ({ ...prev, [index]: getMunicipalitiesByProvince(value) }));
+                child.city = '';
+                child.barangay = '';
+                setBarangays(prev => ({ ...prev, [index]: [] }));
             }
+
             if (name === 'city') {
-                setBarangays((prev) => ({ ...prev, [index]: getBarangaysByMunicipality(value) }));
-                updatedChildren[index].barangay = '';
+                setBarangays(prev => ({ ...prev, [index]: getBarangaysByMunicipality(value) }));
+                child.barangay = '';
             }
-            if (name === 'zipCode') {
-                if (updatedValue && !/^[0-9]{4}$/.test(updatedValue)) {
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'error',
-                        title: 'Zip code must be 4 digits',
-                        timer: 1500,
-                        showConfirmButton: false,
-                    });
-                }
+
+            // === 5. Zip code validation toast ===
+            if (name === 'zipCode' && finalValue && !/^\d{4}$/.test(finalValue)) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Zip code must be 4 digits',
+                    timer: 1500,
+                    showConfirmButton: false,
+                });
             }
-            if (name === 'pwdStatus') {
-                updatedChildren[index].disabilityType = value === 'No' ? '' : updatedChildren[index].disabilityType;
-            }
+
+            updatedChildren[index] = child;
             return updatedChildren;
         });
     };
 
+    // ========================================
+    // HOUSEHOLD MEMBER CHANGE
+    // ========================================
     const handleMemberChange = (index, e) => {
         const { name, value } = e.target;
+
         setHouseholdMembers((prev) => {
             const updatedMembers = Array.isArray(prev) ? [...prev] : [];
-            // Convert text inputs to uppercase, excluding dropdowns
-            const isDropdown = [
-                'relation',
-                'gender',
-                'customGender',
-                'education',
-                'pwdStatus',
-                'disabilityType',
-            ].includes(name);
-            const updatedValue = isDropdown ? value : value.toUpperCase();
+            const member = { ...updatedMembers[index] };
 
-            updatedMembers[index] = { ...updatedMembers[index], [name]: updatedValue };
+            const isDropdown = [
+                'relation', 'gender', 'customGender', 'education',
+                'pwdStatus', 'disabilityType'
+            ].includes(name);
+
+            const finalValue = isDropdown ? value : value.toUpperCase();
+            member[name] = finalValue;
+
             if (name === 'middleName') {
-                updatedMembers[index].middleInitial = value ? value.charAt(0).toUpperCase() : '';
+                const trimmed = finalValue.trim();
+                member.middleInitial = trimmed ? trimmed.charAt(0) + '.' : '';
             }
+
             if (name === 'dob') {
-                updatedMembers[index].age = calculateAge(value);
+                member.age = calculateAge(value);
             }
+
             if (name === 'pwdStatus') {
-                updatedMembers[index].disabilityType = value === 'No' ? '' : updatedMembers[index].disabilityType;
+                member.disabilityType = value === 'No' ? '' : member.disabilityType;
             }
+
+            updatedMembers[index] = member;
             return updatedMembers;
         });
     };
 
+    // ========================================
+    // GENDER CHANGE (OTHER → customGender)
+    // ========================================
     const handleChildGenderChange = (index, e) => {
         const value = e.target.value;
         setChildren((prev) => {
-            const updatedChildren = Array.isArray(prev) ? [...prev] : [];
-            updatedChildren[index] = { ...updatedChildren[index], gender: value };
-            if (value !== 'Other') updatedChildren[index].customGender = '';
-            return updatedChildren;
+            const updated = Array.isArray(prev) ? [...prev] : [];
+            updated[index] = {
+                ...updated[index],
+                gender: value,
+                customGender: value !== 'Other' ? '' : updated[index].customGender
+            };
+            return updated;
         });
     };
 
     const handleMemberGenderChange = (index, e) => {
         const value = e.target.value;
         setHouseholdMembers((prev) => {
-            const updatedMembers = Array.isArray(prev) ? [...prev] : [];
-            updatedMembers[index] = { ...updatedMembers[index], gender: value };
-            if (value !== 'Other') updatedMembers[index].customGender = '';
-            return updatedMembers;
+            const updated = Array.isArray(prev) ? [...prev] : [];
+            updated[index] = {
+                ...updated[index],
+                gender: value,
+                customGender: value !== 'Other' ? '' : updated[index].customGender
+            };
+            return updated;
         });
     };
 

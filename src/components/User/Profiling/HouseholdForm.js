@@ -159,7 +159,8 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        // Convert input value to uppercase for text inputs, excluding dropdowns and specific fields
+
+        // Define fields that should NOT be converted to uppercase (dropdowns, etc.)
         const isDropdown = [
             'region',
             'province',
@@ -173,19 +174,21 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             'idType',
             'employmentType',
             'education',
-            'pwdStatus', // Added
-            'disabilityType', // Added
+            'pwdStatus',
+            'disabilityType',
         ].includes(name);
+
+        // Convert to uppercase only for text inputs (not dropdowns)
         const upperCaseValue = isDropdown ? value : value.toUpperCase();
 
+        // Special handling for phone number
         if (name === 'phoneNumber') {
-            // Allow only digits and limit to 11 characters
             const cleanedValue = value.replace(/[^0-9]/g, '').slice(0, 11);
             setFormData((prev) => ({
                 ...prev,
                 [name]: cleanedValue,
             }));
-            // Validate format
+
             if (cleanedValue && (!cleanedValue.startsWith('09') || cleanedValue.length !== 11)) {
                 setErrors((prev) => ({
                     ...prev,
@@ -197,10 +200,15 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     phoneNumber: '',
                 }));
             }
-        } else if (name === 'dob') {
+            return;
+        }
+
+        // Special handling for date of birth
+        if (name === 'dob') {
             const selectedYear = new Date(value).getFullYear();
             const currentYear = new Date().getFullYear();
             const age = calculateAge(value);
+
             if (selectedYear === currentYear) {
                 Swal.fire({
                     toast: true,
@@ -211,12 +219,10 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     showConfirmButton: false,
                     scrollbarPadding: false,
                 });
-                setErrors((prev) => ({
-                    ...prev,
-                    dob: 'Invalid date of birth',
-                }));
+                setErrors((prev) => ({ ...prev, dob: 'Invalid date of birth' }));
                 return;
             }
+
             if (age !== '' && age < 18) {
                 Swal.fire({
                     toast: true,
@@ -227,10 +233,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     showConfirmButton: false,
                     scrollbarPadding: false,
                 });
-                setErrors((prev) => ({
-                    ...prev,
-                    dob: 'Must be at least 18 years old',
-                }));
+                setErrors((prev) => ({ ...prev, dob: 'Must be at least 18 years old' }));
                 setFormData((prev) => ({
                     ...prev,
                     [name]: '',
@@ -238,46 +241,71 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 }));
                 return;
             }
+
             setFormData((prev) => ({
                 ...prev,
                 [name]: value,
-                age: age,
+                age,
             }));
-            setErrors((prev) => ({
-                ...prev,
-                dob: '',
-            }));
-        } else if (name === 'pwdStatus') {
+            setErrors((prev) => ({ ...prev, dob: '' }));
+        }
+
+        // Special handling for PWD status
+        else if (name === 'pwdStatus') {
             setFormData((prev) => ({
                 ...prev,
                 [name]: value,
-                disabilityType: value === 'No' ? '' : prev.disabilityType, // Reset disabilityType if "No" is selected
+                disabilityType: value === 'No' ? '' : prev.disabilityType,
             }));
             setErrors((prev) => ({
                 ...prev,
                 pwdStatus: '',
-                disabilityType: value === 'No' ? '' : prev.disabilityType, // Clear disabilityType error if "No"
+                disabilityType: value === 'No' ? '' : prev.disabilityType,
             }));
-        } else {
+        }
+
+        // Default handling for all other fields
+        else {
             setFormData((prev) => {
                 const updatedData = { ...prev, [name]: upperCaseValue };
+
+                // Auto-generate middle initial from middle name
                 if (name === 'middleName') {
-                    updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
+                    const trimmed = upperCaseValue.trim();
+                    updatedData.middleInitial = trimmed ? trimmed.charAt(0) + '.' : '';
                 }
+
                 return updatedData;
             });
+
             setErrors((prev) => ({ ...prev, [name]: '' }));
         }
 
+        // Cascade location updates
         if (name === 'region') {
             setProvinces(getProvincesByRegion(value));
             setCities([]);
             setBarangays([]);
+            setFormData((prev) => ({
+                ...prev,
+                province: '',
+                city: '',
+                barangay: '',
+            }));
         } else if (name === 'province') {
             setCities(getMunicipalitiesByProvince(value));
             setBarangays([]);
+            setFormData((prev) => ({
+                ...prev,
+                city: '',
+                barangay: '',
+            }));
         } else if (name === 'city') {
             setBarangays(getBarangaysByMunicipality(value));
+            setFormData((prev) => ({
+                ...prev,
+                barangay: '',
+            }));
         }
     };
 
@@ -767,7 +795,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             <input
                                 type="text"
                                 name="middleInitial"
-                                className="input-style text-sm sm:text-base"
+                                className="input-style text-sm sm:text-base bg-gray-50"
                                 value={formData.middleInitial || ''}
                                 readOnly
                                 style={{ textTransform: 'uppercase' }}
@@ -783,8 +811,8 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 style={{ textTransform: 'uppercase' }}
                             >
                                 <option value="">Select</option>
-                                <option value="Jr.">Jr.</option>
-                                <option value="Sr.">Sr.</option>
+                                <option value="JR.">JR.</option>
+                                <option value="SR.">SR.</option>
                                 <option value="I">I</option>
                                 <option value="II">II</option>
                                 <option value="III">III</option>

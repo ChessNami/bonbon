@@ -113,7 +113,7 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
         const { name, value, files } = e.target;
         setIsDirty(true); // Mark form as dirty on any change
 
-        // Define dropdown and excluded fields
+        // Define dropdown and excluded fields (no uppercase conversion)
         const isDropdown = [
             'region',
             'province',
@@ -127,14 +127,17 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
             'idType',
             'employmentType',
             'education',
-            'pwdStatus', // Added
-            'disabilityType', // Added
+            'pwdStatus',
+            'disabilityType',
         ].includes(name);
+
+        // Convert to uppercase only for text inputs
         const upperCaseValue = isDropdown ? value : value.toUpperCase();
 
+        // === 1. File Upload: valid_id ===
         if (name === 'valid_id') {
             const file = files[0];
-            if (file && (file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'application/pdf')) {
+            if (file && ['image/png', 'image/jpeg', 'application/pdf'].includes(file.type)) {
                 setFormData((prev) => ({
                     ...prev,
                     valid_id: file,
@@ -149,29 +152,31 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     text: 'Only PNG, JPEG/JPG, or PDF files are allowed.',
                 });
             }
-        } else if (name === 'phoneNumber') {
-            // Allow only digits and limit to 11 characters
+            return;
+        }
+
+        // === 2. Phone Number ===
+        if (name === 'phoneNumber') {
             const cleanedValue = value.replace(/[^0-9]/g, '').slice(0, 11);
-            setFormData((prev) => ({
-                ...prev,
-                [name]: cleanedValue,
-            }));
-            // Validate format
+            setFormData((prev) => ({ ...prev, [name]: cleanedValue }));
+
             if (cleanedValue && (!cleanedValue.startsWith('09') || cleanedValue.length !== 11)) {
                 setErrors((prev) => ({
                     ...prev,
                     phoneNumber: 'Phone number must be 11 digits starting with 09 (e.g., 09xxxxxxxxx)',
                 }));
             } else {
-                setErrors((prev) => ({
-                    ...prev,
-                    phoneNumber: '',
-                }));
+                setErrors((prev) => ({ ...prev, phoneNumber: '' }));
             }
-        } else if (name === 'dob') {
+            return;
+        }
+
+        // === 3. Date of Birth ===
+        if (name === 'dob') {
             const selectedYear = new Date(value).getFullYear();
             const currentYear = new Date().getFullYear();
             const age = calculateAge(value);
+
             if (selectedYear === currentYear) {
                 Swal.fire({
                     toast: true,
@@ -182,12 +187,10 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     showConfirmButton: false,
                     scrollbarPadding: false,
                 });
-                setErrors((prev) => ({
-                    ...prev,
-                    dob: 'Invalid date of birth',
-                }));
+                setErrors((prev) => ({ ...prev, dob: 'Invalid date of birth' }));
                 return;
             }
+
             if (age !== '' && age < 18) {
                 Swal.fire({
                     toast: true,
@@ -198,77 +201,82 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                     showConfirmButton: false,
                     scrollbarPadding: false,
                 });
-                setErrors((prev) => ({
-                    ...prev,
-                    dob: 'Must be at least 18 years old',
-                }));
-                setFormData((prev) => ({
-                    ...prev,
-                    [name]: '',
-                    age: '',
-                }));
+                setErrors((prev) => ({ ...prev, dob: 'Must be at least 18 years old' }));
+                setFormData((prev) => ({ ...prev, [name]: '', age: '' }));
                 return;
             }
-            setFormData((prev) => ({
-                ...prev,
-                [name]: value,
-                age: age,
-            }));
-            setErrors((prev) => ({
-                ...prev,
-                dob: '',
-            }));
-        } else if (name === 'zipCode') {
-            // Allow only digits and limit to 4 characters
+
+            setFormData((prev) => ({ ...prev, [name]: value, age }));
+            setErrors((prev) => ({ ...prev, dob: '' }));
+        }
+
+        // === 4. Zip Code ===
+        else if (name === 'zipCode') {
             const cleanedValue = value.replace(/[^0-9]/g, '').slice(0, 4);
-            setFormData((prev) => ({
-                ...prev,
-                [name]: cleanedValue,
-            }));
-            // Validate format
-            if (cleanedValue && !/^[0-9]{4}$/.test(cleanedValue)) {
-                setErrors((prev) => ({
-                    ...prev,
-                    zipCode: 'Zip code must be 4 digits',
-                }));
+            setFormData((prev) => ({ ...prev, [name]: cleanedValue }));
+
+            if (cleanedValue && !/^\d{4}$/.test(cleanedValue)) {
+                setErrors((prev) => ({ ...prev, zipCode: 'Zip code must be 4 digits' }));
             } else {
-                setErrors((prev) => ({
-                    ...prev,
-                    zipCode: '',
-                }));
+                setErrors((prev) => ({ ...prev, zipCode: '' }));
             }
-        } else if (name === 'pwdStatus') {
+        }
+
+        // === 5. PWD Status ===
+        else if (name === 'pwdStatus') {
             setFormData((prev) => ({
                 ...prev,
                 [name]: value,
-                disabilityType: value === 'No' ? '' : prev.disabilityType, // Reset disabilityType if "No" is selected
+                disabilityType: value === 'No' ? '' : prev.disabilityType,
             }));
             setErrors((prev) => ({
                 ...prev,
                 pwdStatus: '',
-                disabilityType: value === 'No' ? '' : prev.disabilityType, // Clear disabilityType error if "No"
+                disabilityType: value === 'No' ? '' : prev.disabilityType,
             }));
-        } else {
+        }
+
+        // === 6. Default: All Other Fields (with uppercase + middleInitial logic) ===
+        else {
             setFormData((prev) => {
                 const updatedData = { ...prev, [name]: upperCaseValue };
+
+                // Auto-generate middle initial from uppercase middleName
                 if (name === 'middleName') {
-                    updatedData.middleInitial = value ? value.charAt(0).toUpperCase() : '';
+                    const trimmed = upperCaseValue.trim();
+                    updatedData.middleInitial = trimmed ? trimmed.charAt(0) + '.' : '';
                 }
+
                 return updatedData;
             });
             setErrors((prev) => ({ ...prev, [name]: '' }));
         }
 
-        // Update address dropdowns
+        // === 7. Address Cascade Updates ===
         if (name === 'region') {
             setProvinces(getProvincesByRegion(value));
             setCities([]);
             setBarangays([]);
+            setFormData((prev) => ({
+                ...prev,
+                province: '',
+                city: '',
+                barangay: '',
+            }));
         } else if (name === 'province') {
             setCities(getMunicipalitiesByProvince(value));
             setBarangays([]);
+            setFormData((prev) => ({
+                ...prev,
+                city: '',
+                barangay: '',
+            }));
         } else if (name === 'city') {
             setBarangays(getBarangaysByMunicipality(value));
+            setFormData((prev) => ({
+                ...prev,
+                barangay: '',
+            }));
         }
     };
 
@@ -533,10 +541,10 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             <input
                                 type="text"
                                 name="middleInitial"
-                                className="input-style text-sm sm:text-base"
                                 value={formData.middleInitial || ''}
-                                style={{ textTransform: 'uppercase' }}
                                 readOnly
+                                className="input-style text-sm sm:text-base bg-gray-50"
+                                style={{ textTransform: 'uppercase' }}
                             />
                         </div>
                         <div>
@@ -549,8 +557,8 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                                 onChange={handleChange}
                             >
                                 <option value="">Select</option>
-                                <option value="Jr.">Jr.</option>
-                                <option value="Sr.">Sr.</option>
+                                <option value="JR.">JR.</option>
+                                <option value="SR.">SR.</option>
                                 <option value="I">I</option>
                                 <option value="II">II</option>
                                 <option value="III">III</option>
