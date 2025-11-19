@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import logo from "../img/Logo/bonbon-logo.png";
-import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { useUser } from "./contexts/UserContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,31 @@ const Auth = ({ onLoginSuccess }) => {
     const [isResetPassword, setIsResetPassword] = useState(false);
     const { setDisplayName } = useUser();
     const navigate = useNavigate();
+
+    // Email validation state
+    const [emailValid, setEmailValid] = useState(null);
+    const [emailTouched, setEmailTouched] = useState(false);
+
+    // Remove useCallback — not needed for static regex
+    const emailRegex = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, []);
+
+    // useEffect — now fully compliant
+    useEffect(() => {
+        if (!isLogin && !isResetPassword && emailTouched) {
+            if (email === "") {
+                setEmailValid(null);
+            } else {
+                setEmailValid(emailRegex.test(email));
+            }
+        } else {
+            setEmailValid(null);
+        }
+    }, [email, isLogin, isResetPassword, emailTouched, emailRegex]);
+
+    const handleEmailChange = (e) => {
+        setEmail(e.target.value);
+        if (!emailTouched) setEmailTouched(true);
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -55,7 +80,7 @@ const Auth = ({ onLoginSuccess }) => {
                 showConfirmButton: true,
                 background: "#ffe4e6",
             });
-            await supabase.auth.signOut(); // Sign out the unverified user
+            await supabase.auth.signOut();
         } else {
             const { data: userRoleData, error: roleError } = await supabase
                 .from("user_roles")
@@ -91,6 +116,22 @@ const Auth = ({ onLoginSuccess }) => {
 
     const handleRegister = async (e) => {
         e.preventDefault();
+
+        // Final email validation
+        if (!emailRegex.test(email)) {
+            setEmailValid(false);
+            setEmailTouched(true);
+            Swal.fire({
+                icon: "error",
+                title: "Invalid Email",
+                text: "Please enter a valid email address.",
+                timer: 2000,
+                showConfirmButton: false,
+                background: "#ffe4e6",
+            });
+            return;
+        }
+
         if (password !== confirmPassword) {
             Swal.fire({
                 icon: "error",
@@ -103,14 +144,14 @@ const Auth = ({ onLoginSuccess }) => {
             });
             return;
         }
+
         Swal.fire({
             title: "Processing...",
             text: "Please wait while we register your account.",
             allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            },
+            didOpen: () => Swal.showLoading(),
         });
+
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -120,43 +161,82 @@ const Auth = ({ onLoginSuccess }) => {
                 },
             },
         });
+
         Swal.close();
+
         if (error) {
+            let errorMessage = error.message;
+            if (
+                error.message.toLowerCase().includes("already") ||
+                error.message.toLowerCase().includes("user already registered") ||
+                error.status === 400
+            ) {
+                errorMessage = "This email is already registered. Please use a different email or login.";
+            }
+
+            Swal.fire({
+                icon: "error",
+                title: "Registration Failed",
+                text: errorMessage,
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: true,
+                background: "#ffe4e6",
+            }).then(() => switchToLogin());
+            return;
+        }
+
+        // ← REMOVED redundant nested block here
+        if (!data.user) {
             Swal.fire({
                 icon: "error",
                 title: "Oops...",
-                text: error.message,
+                text: "Registration failed. Please try again later.",
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: "#ffe4e6",
+            });
+            return;
+        }
+
+        if (data.user.identities?.length === 0) {
+            Swal.fire({
+                icon: "error",
+                title: "Email Already in Use",
+                text: "This email is already registered. Please use a different email or login.",
+                timer: 3500,
+                timerProgressBar: true,
+                showConfirmButton: true,
+                background: "#ffe4e6",
+            }).then(() => switchToLogin());
+            return;
+        }
+
+        const { error: roleError } = await supabase
+            .from("user_roles")
+            .insert([{ user_id: data.user.id, role_id: 2 }]);
+
+        if (roleError) {
+            Swal.fire({
+                icon: "error",
+                title: "Oops...",
+                text: roleError.message,
                 timer: 1500,
                 timerProgressBar: true,
                 showConfirmButton: false,
                 background: "#ffe4e6",
             });
-        } else if (data.user) {
-            const { error: roleError } = await supabase
-                .from("user_roles")
-                .insert([{ user_id: data.user.id, role_id: 2 }]);
-            if (roleError) {
-                Swal.fire({
-                    icon: "error",
-                    title: "Oops...",
-                    text: roleError.message,
-                    timer: 1500,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                    background: "#ffe4e6",
-                });
-            } else {
-                Swal.fire({
-                    icon: "success",
-                    title: "Success",
-                    text: "Registration successful. Please check your email to verify your account.",
-                    timer: 1500,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                    background: "#f0f9ff",
-                });
-                switchToLogin();
-            }
+        } else {
+            Swal.fire({
+                icon: "success",
+                title: "Success!",
+                text: "Registration successful. Please check your email to verify your account.",
+                timer: 2500,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: "#f0f9ff",
+            }).then(() => switchToLogin());
         }
     };
 
@@ -171,7 +251,6 @@ const Auth = ({ onLoginSuccess }) => {
             },
         });
         const redirectTo = `${window.location.origin}/reset-password`;
-        console.log("RedirectTo URL:", redirectTo);
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: redirectTo,
         });
@@ -208,6 +287,8 @@ const Auth = ({ onLoginSuccess }) => {
         setLastName("");
         setShowPassword(false);
         setShowConfirmPassword(false);
+        setEmailValid(null);
+        setEmailTouched(false);
     };
 
     const switchToLogin = () => {
@@ -230,14 +311,12 @@ const Auth = ({ onLoginSuccess }) => {
         navigate("/auth");
     };
 
-    // Animation variants for form
     const formVariants = {
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
         exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: "easeIn" } },
     };
 
-    // Animation variants for input fields
     const inputVariants = {
         hidden: { opacity: 0, x: -10 },
         visible: (i) => ({
@@ -250,7 +329,6 @@ const Auth = ({ onLoginSuccess }) => {
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 sm:p-6 overscroll-y-none touch-auto">
             <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg flex flex-col md:flex-row overflow-hidden">
-                {/* Logo and Welcome Section */}
                 <motion.div
                     className="w-full md:w-1/2 p-6 flex flex-col items-center justify-center bg-gray-50"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -262,7 +340,7 @@ const Auth = ({ onLoginSuccess }) => {
                         Welcome To Barangay Bonbon
                     </h2>
                 </motion.div>
-                {/* Form Section */}
+
                 <div className="w-full md:w-1/2 p-6 flex flex-col items-center justify-center">
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -283,35 +361,23 @@ const Auth = ({ onLoginSuccess }) => {
                                 {!isLogin && !isResetPassword && (
                                     <>
                                         <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
-                                            <motion.div
-                                                className="relative w-full sm:w-1/2"
-                                                variants={inputVariants}
-                                                custom={0}
-                                                initial="hidden"
-                                                animate="visible"
-                                            >
+                                            <motion.div className="relative w-full sm:w-1/2" variants={inputVariants} custom={0} initial="hidden" animate="visible">
                                                 <FaUser className="absolute left-3 top-3.5 text-gray-400" />
                                                 <input
                                                     type="text"
                                                     placeholder="First Name"
-                                                    className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
+                                                    className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
                                                     value={firstName}
                                                     onChange={(e) => setFirstName(e.target.value)}
                                                     required
                                                 />
                                             </motion.div>
-                                            <motion.div
-                                                className="relative w-full sm:w-1/2"
-                                                variants={inputVariants}
-                                                custom={1}
-                                                initial="hidden"
-                                                animate="visible"
-                                            >
+                                            <motion.div className="relative w-full sm:w-1/2" variants={inputVariants} custom={1} initial="hidden" animate="visible">
                                                 <FaUser className="absolute left-3 top-3.5 text-gray-400" />
                                                 <input
                                                     type="text"
                                                     placeholder="Last Name"
-                                                    className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
+                                                    className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
                                                     value={lastName}
                                                     onChange={(e) => setLastName(e.target.value)}
                                                     required
@@ -320,6 +386,8 @@ const Auth = ({ onLoginSuccess }) => {
                                         </div>
                                     </>
                                 )}
+
+                                {/* Email Field with Validation */}
                                 <motion.div
                                     className="relative"
                                     variants={inputVariants}
@@ -327,30 +395,54 @@ const Auth = ({ onLoginSuccess }) => {
                                     initial="hidden"
                                     animate="visible"
                                 >
-                                    <FaEnvelope className="absolute left-3 top-3.5 text-gray-400" />
+                                    <FaEnvelope className="absolute left-3 top-3.5 text-gray-400 z-10" />
                                     <input
                                         type="email"
                                         placeholder="Email"
-                                        className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
+                                        className={`w-full p-2 pl-10 pr-12 border-2 rounded-lg focus:ring-2 focus:ring-blue-200 outline-none shadow-sm transition-all ${!isLogin && !isResetPassword && emailTouched
+                                            ? emailValid === true
+                                                ? "border-green-500 focus:border-green-600"
+                                                : emailValid === false
+                                                    ? "border-red-500 focus:border-red-600"
+                                                    : "border-gray-300 focus:border-blue-400"
+                                            : "border-gray-300 focus:border-blue-400"
+                                            }`}
                                         value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        onChange={handleEmailChange}
                                         required
                                     />
+                                    {/* Validation Icon */}
+                                    {!isLogin && !isResetPassword && emailTouched && (
+                                        <div className="absolute right-3 top-3.5">
+                                            {emailValid === true ? (
+                                                <FaCheckCircle className="text-green-500 text-xl" />
+                                            ) : emailValid === false ? (
+                                                <FaTimesCircle className="text-red-500 text-xl" />
+                                            ) : null}
+                                        </div>
+                                    )}
                                 </motion.div>
+
+                                {/* Validation Message */}
+                                {!isLogin && !isResetPassword && emailTouched && email !== "" && (
+                                    <motion.p
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className={`text-sm -mt-2 pl-1 ${emailValid === true ? "text-green-600" : "text-red-600"
+                                            }`}
+                                    >
+                                        {emailValid === true ? "Valid email" : "Invalid email format"}
+                                    </motion.p>
+                                )}
+
                                 {!isResetPassword && (
                                     <>
-                                        <motion.div
-                                            className="relative"
-                                            variants={inputVariants}
-                                            custom={isLogin ? 1 : 4}
-                                            initial="hidden"
-                                            animate="visible"
-                                        >
+                                        <motion.div className="relative" variants={inputVariants} custom={isLogin ? 1 : 4} initial="hidden" animate="visible">
                                             <FaLock className="absolute left-3 top-3.5 text-gray-400" />
                                             <input
                                                 type={showPassword ? "text" : "password"}
                                                 placeholder="Password"
-                                                className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
+                                                className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
                                                 required
@@ -365,18 +457,12 @@ const Auth = ({ onLoginSuccess }) => {
                                             </button>
                                         </motion.div>
                                         {!isLogin && (
-                                            <motion.div
-                                                className="relative"
-                                                variants={inputVariants}
-                                                custom={5}
-                                                initial="hidden"
-                                                animate="visible"
-                                            >
+                                            <motion.div className="relative" variants={inputVariants} custom={5} initial="hidden" animate="visible">
                                                 <FaLock className="absolute left-3 top-3.5 text-gray-400" />
                                                 <input
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     placeholder="Confirm Password"
-                                                    className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm appearance-none"
+                                                    className="w-full p-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200 outline-none shadow-sm"
                                                     value={confirmPassword}
                                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                                     required
@@ -393,6 +479,7 @@ const Auth = ({ onLoginSuccess }) => {
                                         )}
                                     </>
                                 )}
+
                                 <motion.button
                                     type="submit"
                                     className={`w-full py-2 text-white font-bold rounded-lg uppercase transition duration-200 shadow-md touch-auto ${isLogin ? "bg-blue-500 hover:bg-blue-600" : "bg-green-500 hover:bg-green-600"
@@ -403,15 +490,12 @@ const Auth = ({ onLoginSuccess }) => {
                                     {isResetPassword ? "Send Reset Link" : isLogin ? "Login" : "Register"}
                                 </motion.button>
                             </form>
+
                             <div className="mt-4 text-center text-sm text-gray-600 space-y-2">
                                 {isResetPassword ? (
                                     <p>
                                         Remembered your password?{" "}
-                                        <motion.button
-                                            onClick={switchToLogin}
-                                            className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto"
-                                            whileHover={{ scale: 1.05 }}
-                                        >
+                                        <motion.button onClick={switchToLogin} className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto" whileHover={{ scale: 1.05 }}>
                                             Login
                                         </motion.button>
                                     </p>
@@ -419,21 +503,13 @@ const Auth = ({ onLoginSuccess }) => {
                                     <>
                                         <p>
                                             Don't have an account?{" "}
-                                            <motion.button
-                                                onClick={switchToRegister}
-                                                className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto"
-                                                whileHover={{ scale: 1.05 }}
-                                            >
+                                            <motion.button onClick={switchToRegister} className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto" whileHover={{ scale: 1.05 }}>
                                                 Register
                                             </motion.button>
                                         </p>
                                         <p>
                                             Forgot your password?{" "}
-                                            <motion.button
-                                                onClick={switchToResetPassword}
-                                                className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto"
-                                                whileHover={{ scale: 1.05 }}
-                                            >
+                                            <motion.button onClick={switchToResetPassword} className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto" whileHover={{ scale: 1.05 }}>
                                                 Reset Password
                                             </motion.button>
                                         </p>
@@ -441,11 +517,7 @@ const Auth = ({ onLoginSuccess }) => {
                                 ) : (
                                     <p>
                                         Already have an account?{" "}
-                                        <motion.button
-                                            onClick={switchToLogin}
-                                            className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto"
-                                            whileHover={{ scale: 1.05 }}
-                                        >
+                                        <motion.button onClick={switchToLogin} className="text-blue-500 font-semibold hover:text-blue-600 transition duration-200 touch-auto" whileHover={{ scale: 1.05 }}>
                                             Login
                                         </motion.button>
                                     </p>
