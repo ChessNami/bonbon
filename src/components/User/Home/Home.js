@@ -277,7 +277,7 @@ const Home = () => {
                                                     <img
                                                         src={
                                                             item.image ||
-                                                            "https://via.placeholder.com/300x200"
+                                                            "https://www.rootinc.com/wp-content/uploads/2022/11/placeholder-1.png"
                                                         }
                                                         alt={item.title}
                                                         className="w-full h-full object-cover"
@@ -401,7 +401,7 @@ const Home = () => {
                                         <img
                                             src={
                                                 item.image ||
-                                                "https://via.placeholder.com/300x200"
+                                                "https://www.rootinc.com/wp-content/uploads/2022/11/placeholder-1.png"
                                             }
                                             alt={item.title}
                                             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"

@@ -28,7 +28,8 @@ const BarangayCouncilTable = () => {
 
                 const { data: officials, error } = await supabase
                     .from(tableName)
-                    .select("id, name, position, official_type, image_url");
+                    .select("id, name, position, official_type, image_url, is_current, start_year, end_year")
+                    .eq("is_current", true);
 
                 if (error) throw error;
 
@@ -47,64 +48,52 @@ const BarangayCouncilTable = () => {
                                 .from(bucketName)
                                 .createSignedUrl(filePath, 7200);
 
-                            if (signedUrlError) {
-                                console.error(`Error generating signed URL for ${official.name} (ID: ${official.id}):`, signedUrlError);
-                            } else {
+                            if (!signedUrlError && signedUrlData) {
                                 signedImageUrl = signedUrlData.signedUrl;
                             }
                         }
 
+                        const lastName = official.name.trim().split(" ").slice(-1)[0].toLowerCase();
+
                         return {
                             id: official.id,
-                            position: official.position,
                             name: official.name,
+                            position: official.position,
                             official_type: official.official_type || "N/A",
                             signedImageUrl,
-                            isHeader:
-                                (activeTab === "Barangay Officials" &&
-                                    (official.position.toLowerCase().includes("punong barangay") ||
-                                        official.position.toLowerCase().includes("barangay captain") ||
-                                        official.position.toLowerCase().includes("barangay kapitan"))) ||
-                                (activeTab === "Sangguniang Kabataan" &&
-                                    (official.position.toLowerCase().includes("sk chairman") ||
-                                        official.position.toLowerCase().includes("chairman") ||
-                                        official.position.toLowerCase().includes("sk chairperson"))),
+                            lastName,
+                            term: `${official.start_year || "—"} – Present`,
+                            // Priority flags
+                            isCaptain: activeTab === "Barangay Officials"
+                                ? /punong barangay|barangay captain|kapitan/i.test(official.position)
+                                : /sk chairman|chairman|sk chairperson/i.test(official.position),
+                            isSecretary: /secretary/i.test(official.position),
+                            isTreasurer: /treasurer/i.test(official.position),
+                            isKagawad: /kagawad/i.test(official.position),
                         };
                     })
                 );
 
-                // Sort members by position: Head (Captain/Chairman) first, then Secretary, Treasurer, then Kagawad
+                // Final sorting logic
                 const sortedMembers = membersWithSignedUrls.sort((a, b) => {
-                    const getPositionPriority = (position) => {
-                        const pos = position.toLowerCase();
-                        if (
-                            (activeTab === "Barangay Officials" &&
-                                (pos.includes("punong barangay") ||
-                                    pos.includes("barangay captain") ||
-                                    pos.includes("barangay kapitan"))) ||
-                            (activeTab === "Sangguniang Kabataan" &&
-                                (pos.includes("sk chairman") ||
-                                    pos.includes("chairman") ||
-                                    pos.includes("sk chairperson")))
-                        ) {
-                            return 1; // Highest priority for Captain/Chairman
-                        }
-                        if (pos.includes("secretary")) {
-                            return 2; // Second priority for Secretary
-                        }
-                        if (pos.includes("treasurer")) {
-                            return 3; // Third priority for Treasurer
-                        }
-                        if (pos.includes("kagawad")) {
-                            return 4; // Fourth priority for Kagawad
-                        }
-                        return 5; // Default for any other position
-                    };
+                    // 1. Captain/Chairman always first
+                    if (a.isCaptain && !b.isCaptain) return -1;
+                    if (!a.isCaptain && b.isCaptain) return 1;
 
-                    const priorityA = getPositionPriority(a.position);
-                    const priorityB = getPositionPriority(b.position);
+                    // 2. For Barangay: Secretary → Treasurer → Kagawad (by last name)
+                    if (activeTab === "Barangay Officials") {
+                        if (a.isSecretary && !b.isSecretary) return -1;
+                        if (!a.isSecretary && b.isSecretary) return 1;
+                        if (a.isTreasurer && !b.isTreasurer) return -1;
+                        if (!a.isTreasurer && b.isTreasurer) return 1;
+                    }
 
-                    return priorityA - priorityB;
+                    // 3. Kagawad or SK non-chairman: sort by last name
+                    if ((a.isKagawad || !a.isCaptain) && (b.isKagawad || !b.isCaptain)) {
+                        return a.lastName.localeCompare(b.lastName);
+                    }
+
+                    return 0;
                 });
 
                 setCouncilMembers(sortedMembers);
@@ -120,31 +109,16 @@ const BarangayCouncilTable = () => {
         fetchOfficials();
     }, [activeTab]);
 
-    // Handle outside click to close modal
+    // Close modal on outside click
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (modalRef.current && !modalRef.current.contains(event.target)) {
                 setSelectedOfficial(null);
             }
         };
-
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
-    useEffect(() => {
-        if (selectedOfficial) {
-            document.body.classList.add('modal-open');
-        } else {
-            document.body.classList.remove('modal-open');
-        }
-
-        return () => {
-            document.body.classList.remove('modal-open');
-        };
-    }, [selectedOfficial]);
 
     const setDisplayItems = (count) => {
         const validCount = Math.max(1, Math.min(count, 12));
@@ -162,218 +136,203 @@ const BarangayCouncilTable = () => {
         const maxPagesToShow = 5;
         let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
         let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-
         if (endPage - startPage + 1 < maxPagesToShow) {
             startPage = Math.max(1, endPage - maxPagesToShow + 1);
         }
-
-        for (let i = startPage; i <= endPage; i++) {
-            pageNumbers.push(i);
-        }
-
-        if (startPage > 1) {
-            pageNumbers.unshift("...");
-            pageNumbers.unshift(1);
-        }
-        if (endPage < totalPages) {
-            pageNumbers.push("...");
-            pageNumbers.push(totalPages);
-        }
-
+        for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+        if (startPage > 1) { pageNumbers.unshift("..."); pageNumbers.unshift(1); }
+        if (endPage < totalPages) { pageNumbers.push("..."); pageNumbers.push(totalPages); }
         return pageNumbers;
     };
 
     return (
         <div className="bg-white p-6 rounded-md shadow-md flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">Barangay Council</h2>
-                <select
-                    className="p-2 border rounded-md"
-                    value={itemsPerPage}
-                    onChange={(e) => setDisplayItems(Number(e.target.value))}
-                >
-                    {[3, 6, 9, 12].map((count) => (
-                        <option key={count} value={count}>
-                            Show {count} items
-                        </option>
-                    ))}
-                </select>
-            </div>
-
-            <div className="flex justify-center border-b border-gray-200 mb-6">
-                {["Barangay Officials", "Sangguniang Kabataan"].map((tab) => (
-                    <button
-                        key={tab}
-                        className={`px-6 py-3 text-sm font-medium transition-colors duration-300 relative ${activeTab === tab
-                                ? "text-blue-600 border-b-2 border-blue-600"
-                                : "text-gray-500 hover:text-blue-600"
-                            }`}
-                        onClick={() => setActiveTab(tab)}
+                <div className="flex items-center gap-4">
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button
+                            onClick={() => setActiveTab("Barangay Officials")}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === "Barangay Officials"
+                                ? "bg-white shadow-sm text-blue-600"
+                                : "text-gray-600 hover:text-gray-800"
+                                }`}
+                        >
+                            Barangay Officials
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("Sangguniang Kabataan")}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === "Sangguniang Kabataan"
+                                ? "bg-white shadow-sm text-blue-600"
+                                : "text-gray-600 hover:text-gray-800"
+                                }`}
+                        >
+                            SK Officials
+                        </button>
+                    </div>
+                    <select
+                        className="p-2 border rounded-md text-sm"
+                        value={itemsPerPage}
+                        onChange={(e) => setDisplayItems(Number(e.target.value))}
                     >
-                        {tab}
-                    </button>
-                ))}
+                        {[3, 6, 9, 12].map((count) => (
+                            <option key={count} value={count}>Show {count}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex-1"
-                >
-                    {loading ? (
-                        <div className="flex justify-center items-center h-64">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
-                        </div>
-                    ) : currentRows.length === 0 ? (
-                        <p className="text-center text-gray-500 text-lg">No officials available.</p>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {currentRows.map((member, index) => (
-                                <motion.div
-                                    key={member.id}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.2, delay: index * 0.1 }}
-                                    className={`bg-gray-50 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 cursor-pointer ${member.isHeader
-                                            ? "border-4 border-blue-400 bg-blue-50"
-                                            : ""
+            {/* Loading State */}
+            {loading ? (
+                <div className="flex justify-center items-center py-20">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
+                </div>
+            ) : councilMembers.length === 0 ? (
+                <div className="text-center py-20 text-gray-500">
+                    <p className="text-lg">No current officials found.</p>
+                </div>
+            ) : (
+                <>
+                    {/* Grid of Officials */}
+                    <motion.div
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 flex-1"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                    >
+                        {currentRows.map((member, index) => (
+                            <motion.div
+                                key={member.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className={`bg-gray-50 rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer border-2 ${member.isCaptain ? "border-blue-500" : "border-transparent"
+                                    }`}
+                                onClick={() => setSelectedOfficial(member)}
+                            >
+                                <div className="relative aspect-square bg-gray-100">
+                                    <img
+                                        src={member.signedImageUrl}
+                                        alt={member.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => { e.target.src = placeholderImage; }}
+                                    />
+                                    {member.isCaptain && (
+                                        <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                                            HEAD
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-5 text-center">
+                                    <h3 className={`font-bold text-lg ${member.isCaptain ? "text-blue-700" : "text-gray-800"}`}>
+                                        {member.name}
+                                    </h3>
+                                    <p className="text-sm text-gray-600 mt-1">{member.position}</p>
+                                    <p className="text-xs text-gray-500 mt-2">{member.term}</p>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </motion.div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center mt-8 space-x-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                                <FaChevronLeft className="text-gray-700" />
+                            </button>
+                            {getPageNumbers().map((page, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => typeof page === "number" && setCurrentPage(page)}
+                                    disabled={page === "..."}
+                                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${page === currentPage
+                                        ? "bg-blue-600 text-white"
+                                        : page === "..."
+                                            ? "text-gray-500 cursor-default"
+                                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                         }`}
-                                    onClick={() => setSelectedOfficial(member)}
                                 >
-                                    <div className="w-full aspect-square bg-gray-100 relative">
-                                        <img
-                                            src={member.signedImageUrl}
-                                            alt={member.name}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                console.error(
-                                                    `Failed to load image for ${member.name}:`,
-                                                    member.signedImageUrl
-                                                );
-                                                e.target.src = placeholderImage;
-                                            }}
-                                        />
-                                        {member.isHeader && (
-                                            <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-                                                Head Official
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="p-4 text-center">
-                                        <h3
-                                            className={`text-lg font-semibold ${member.isHeader
-                                                    ? "text-blue-700"
-                                                    : "text-gray-800"
-                                                } uppercase truncate`}
-                                        >
-                                            {member.name}
-                                        </h3>
-                                        <p className="text-sm text-gray-600 truncate">
-                                            {member.position}
-                                        </p>
-                                    </div>
-                                </motion.div>
+                                    {page}
+                                </button>
                             ))}
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                                <FaChevronRight className="text-gray-700" />
+                            </button>
                         </div>
                     )}
-                </motion.div>
-            </AnimatePresence>
-
-            {totalPages > 1 && (
-                <div className="flex justify-center items-center mt-6 space-x-2">
-                    <button
-                        className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50 transition disabled:cursor-not-allowed"
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                    >
-                        <FaChevronLeft className="text-gray-600" />
-                    </button>
-                    {getPageNumbers().map((page, index) => (
-                        <button
-                            key={index}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${page === currentPage
-                                    ? "bg-blue-600 text-white"
-                                    : page === "..."
-                                        ? "text-gray-500 cursor-default"
-                                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
-                            onClick={() => typeof page === "number" && setCurrentPage(page)}
-                            disabled={page === "..."}
-                        >
-                            {page}
-                        </button>
-                    ))}
-                    <button
-                        className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50 transition disabled:cursor-not-allowed"
-                        onClick={() =>
-                            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                        }
-                        disabled={currentPage === totalPages}
-                    >
-                        <FaChevronRight className="text-gray-600" />
-                    </button>
-                </div>
+                </>
             )}
 
+            {/* Perfectly Responsive View Modal — Works Everywhere */}
             <AnimatePresence>
                 {selectedOfficial && (
                     <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                        className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        onClick={() => setSelectedOfficial(null)}
                     >
                         <motion.div
                             ref={modalRef}
-                            className="bg-white p-0 rounded-lg shadow-lg w-full max-w-md"
-                            initial={{ scale: 0.8, opacity: 0 }}
+                            className="bg-white rounded-2xl shadow-2xl w-full max-w-[90vw]   overflow-hidden
+                   sm:max-w-md 
+                   md:max-w-lg 
+                   lg:max-w-xl"
+                            initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="flex justify-between items-center p-4 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-lg">
-                                <h2 className="text-xl font-bold text-gray-800">Official Details</h2>
+                            {/* Image - Responsive Height */}
+                            <div className="relative w-full h-56 sm:h-64 md:h-80 lg:h-96">
+                                <img
+                                    src={selectedOfficial.signedImageUrl}
+                                    alt={selectedOfficial.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => (e.target.src = placeholderImage)}
+                                />
+
+                                {/* Close Button */}
                                 <button
                                     onClick={() => setSelectedOfficial(null)}
-                                    className="text-gray-500 hover:text-gray-700 transition"
+                                    className="absolute top-3 right-3 p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition"
                                 >
-                                    <FaTimes size={20} />
+                                    <FaTimes className="w-5 h-5 text-gray-700" />
                                 </button>
+
+                                {/* Head Badge */}
+                                {selectedOfficial.isCaptain && (
+                                    <div className="absolute top-3 left-3 bg-blue-600 text-white font-bold text-xs sm:text-sm px-3 py-1.5 rounded-full shadow-lg">
+                                        HEAD OFFICIAL
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="p-6 overflow-y-auto max-h-[80vh]">
-                                <div className="flex flex-col items-center">
-                                    <div className="w-full h-auto mb-4">
-                                        <img
-                                            src={selectedOfficial.signedImageUrl}
-                                            alt={selectedOfficial.name}
-                                            className="w-full h-full object-cover rounded-lg"
-                                            onError={(e) => {
-                                                console.error(
-                                                    `Failed to load image for ${selectedOfficial.name}:`,
-                                                    selectedOfficial.signedImageUrl
-                                                );
-                                                e.target.src = placeholderImage;
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="text-center">
-                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                                            {selectedOfficial.name}
-                                        </h3>
-                                        <p className="text-sm text-gray-600 mb-1">
-                                            {selectedOfficial.position}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            {selectedOfficial.official_type}
-                                        </p>
-                                    </div>
-                                </div>
+                            {/* Content */}
+                            <div className="p-6 sm:p-8 text-center">
+                                <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 leading-tight">
+                                    {selectedOfficial.name}
+                                </h3>
+                                <p className="text-lg sm:text-xl text-blue-600 font-medium mt-2">
+                                    {selectedOfficial.position}
+                                </p>
+                                <p className="text-base text-gray-700 mt-2">
+                                    {selectedOfficial.official_type}
+                                </p>
+                                <p className="text-sm text-gray-500 mt-5 font-medium">
+                                    Term: <span className="text-blue-600 font-bold">{selectedOfficial.term}</span>
+                                </p>
                             </div>
                         </motion.div>
                     </motion.div>

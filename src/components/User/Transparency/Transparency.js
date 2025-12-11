@@ -18,8 +18,11 @@ import Loader from "../../Loader";
 
 const Transparency = () => {
     const [selectedCard, setSelectedCard] = useState(null);
-    const [hoveredIndex, setHoveredIndex] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    // This controls the former modal from parent
+    const [showFormer, setShowFormer] = useState(false);
+    const [formerType, setFormerType] = useState(""); // "barangay" or "sk"
 
     const cards = [
         { title: "Barangay Council", image: barangaybonbon, icon: <FaUsers size={20} /> },
@@ -30,20 +33,20 @@ const Transparency = () => {
         { title: "Feedback", image: feedbackImg, icon: <FaComment size={20} /> },
     ];
 
-    const handleCardClick = (card) => {
-        setSelectedCard(card.title);
-    };
+    const handleCardClick = (card) => setSelectedCard(card.title);
+    const handleBackClick = () => setSelectedCard(null);
 
-    const handleBackClick = () => {
-        setSelectedCard(null);
+    const openFormerModal = (type) => {
+        setFormerType(type);
+        setShowFormer(true);
     };
 
     const renderContent = () => {
         switch (selectedCard) {
             case "Barangay Council":
-                return <BarangayCouncil />;
+                return <BarangayCouncil showFormer={showFormer && formerType === "barangay"} onCloseFormer={() => setShowFormer(false)} />;
             case "Sanguniang Kabataan (SK)":
-                return <SK />;
+                return <SK showFormer={showFormer && formerType === "sk"} onCloseFormer={() => setShowFormer(false)} />;
             case "Bids and Projects":
                 return <UserBidsProjects />;
             case "Budget & Financial Reports":
@@ -57,111 +60,96 @@ const Transparency = () => {
         }
     };
 
-    const centerVariants = {
-        initial: { opacity: 0, scale: 0.8 },
-        animate: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
-        exit: { opacity: 0, scale: 0.8, transition: { duration: 0.3, ease: "easeIn" } },
-    };
-
+    // Image preloading...
     useEffect(() => {
         const images = [barangaybonbon, sklogo, bids, budget, implementation, feedbackImg];
-        let loadedImages = 0;
-
-        const checkAllLoaded = () => {
-            loadedImages++;
-            if (loadedImages === images.length) {
-                setTimeout(() => {
-                    setIsLoading(false);
-                }, 2000);
+        let loaded = 0;
+        const onLoad = () => {
+            loaded++;
+            if (loaded === images.length) {
+                setTimeout(() => setIsLoading(false), 1500);
             }
         };
-
-        images.forEach((image) => {
+        images.forEach(src => {
             const img = new Image();
-            img.src = image;
-            img.onload = checkAllLoaded;
-            img.onerror = checkAllLoaded;
+            img.src = src;
+            img.onload = img.onerror = onLoad;
         });
-
-        return () => {
-            images.forEach((image) => {
-                const img = new Image();
-                img.src = image;
-                img.onload = null;
-                img.onerror = null;
-            });
-        };
     }, []);
 
     return (
-        <div className="p-4 min-h-screen select-none">
+        <div className="min-h-screen bg-gray-50">
             <AnimatePresence mode="wait">
                 {selectedCard ? (
                     <motion.div
                         key="content"
-                        className="bg-white p-4 rounded-lg shadow-lg max-w-5xl mx-auto w-full relative"
-                        variants={centerVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="p-4 sm:p-6 lg:p-8"
                     >
-                        {isLoading && (
-                            <div className="absolute inset-0 z-10">
-                                <Loader />
-                            </div>
-                        )}
-                        <div className={`flex items-center mb-4 space-x-2 ${isLoading ? "opacity-0" : "opacity-100"}`}>
-                            <div className="flex items-center gap-2">
+                        {/* Header with Back + Title + Former Button */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <div className="flex items-center gap-4">
                                 <button
                                     onClick={handleBackClick}
-                                    className="flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                                    className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
                                 >
-                                    <FaArrowLeft />
-                                    Back
+                                    <FaArrowLeft /> Back
                                 </button>
+                                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{selectedCard}</h1>
                             </div>
-                            <h1 className="text-2xl font-bold text-gray-700">{selectedCard}</h1>
+
+                            {/* Former Buttons – Right Side */}
+                            <div className="flex justify-end">
+                                {selectedCard === "Barangay Council" && (
+                                    <button
+                                        onClick={() => openFormerModal("barangay")}
+                                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition shadow-lg"
+                                    >
+                                        Former Punong Barangay
+                                    </button>
+                                )}
+                                {selectedCard === "Sanguniang Kabataan (SK)" && (
+                                    <button
+                                        onClick={() => openFormerModal("sk")}
+                                        className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-xl hover:from-green-700 hover:to-green-800 transition shadow-lg"
+                                    >
+                                        Former SK Chairman
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        <hr className={`border-t border-gray-300 my-2 ${isLoading ? "opacity-0" : "opacity-100"}`} />
-                        <div className={isLoading ? "opacity-0" : "opacity-100"}>{renderContent()}</div>
+
+                        <hr className="border-gray-300 my-4" />
+                        <div>{renderContent()}</div>
                     </motion.div>
                 ) : (
+                    // Cards Grid (unchanged)
                     <motion.div
                         key="cards"
-                        variants={centerVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        className="max-w-6xl mx-auto w-full relative"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="max-w-6xl mx-auto p-6 relative"
                     >
                         {isLoading && (
-                            <div className="absolute inset-0 z-10">
+                            <div className="absolute inset-0 z-10 flex justify-center items-center bg-white/80">
                                 <Loader />
                             </div>
                         )}
-                        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${isLoading ? "opacity-0" : "opacity-100"}`}>
-                            {cards.map((card, index) => (
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 ${isLoading ? "opacity-30" : "opacity-100"} transition-opacity`}>
+                            {cards.map((card, i) => (
                                 <motion.div
-                                    key={index}
-                                    className="relative aspect-square rounded-lg overflow-hidden shadow-md cursor-pointer"
-                                    onMouseEnter={() => setHoveredIndex(index)}
-                                    onMouseLeave={() => setHoveredIndex(null)}
-                                    onClick={() => handleCardClick(card)}
+                                    key={i}
+                                    className="relative aspect-square rounded-2xl overflow-hidden shadow-lg cursor-pointer group"
                                     whileHover={{ scale: 1.05 }}
-                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                    onClick={() => handleCardClick(card)}
                                 >
-                                    <div
-                                        className={`absolute inset-0 bg-cover bg-center transition-all duration-200 ${hoveredIndex !== index ? "opacity-70" : "opacity-100"
-                                            }`}
-                                        style={{ backgroundImage: `url(${card.image})` }}
-                                    ></div>
-                                    <div
-                                        className={`absolute inset-0 bg-black transition-all duration-200 ${hoveredIndex === index ? "bg-opacity-50" : "bg-opacity-40"
-                                            }`}
-                                    ></div>
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
-                                        <div className="mb-2">{card.icon}</div>
-                                        <h2 className="text-lg font-bold">{card.title}</h2>
+                                    <img src={card.image} alt={card.title} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition" />
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6">
+                                        {card.icon}
+                                        <h3 className="mt-4 text-xl font-bold">{card.title}</h3>
                                     </div>
                                 </motion.div>
                             ))}
