@@ -2,7 +2,29 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaSearch, FaFilter } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter, sortOption, setSortOption, itemsPerPage, setItemsPerPage, onClearFilters, isRentingFilter, setIsRentingFilter, hasZoneCertFilter, setHasZoneCertFilter, pwdStatusFilter, setPwdStatusFilter, zoneFilter, setZoneFilter }) => {
+const FilterSearch = ({
+    searchTerm,
+    setSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    sortOption,
+    setSortOption,
+    itemsPerPage,
+    setItemsPerPage,
+    onClearFilters,
+    isRentingFilter,
+    setIsRentingFilter,
+    hasZoneCertFilter,
+    setHasZoneCertFilter,
+    pwdStatusFilter,
+    setPwdStatusFilter,
+    zoneFilter,
+    setZoneFilter,
+    showSeniorOnly,
+    setShowSeniorOnly,
+    genderFilter,
+    setGenderFilter
+}) => {
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const filterDropdownRef = useRef(null);
 
@@ -19,6 +41,7 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
 
     return (
         <div className="mb-6 flex flex-row gap-4 relative">
+            {/* Search Input */}
             <div className="relative flex-1">
                 <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
                 <input
@@ -29,6 +52,8 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
                     className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm placeholder-gray-400 transition-all duration-200"
                 />
             </div>
+
+            {/* Filter Button & Dropdown */}
             <div className="relative">
                 <motion.button
                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
@@ -39,6 +64,7 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
                     <FaFilter className="text-emerald-600" size={16} />
                     Filter & Sort
                 </motion.button>
+
                 <AnimatePresence>
                     {showFilterDropdown && (
                         <motion.div
@@ -50,13 +76,11 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
                             transition={{ duration: 0.2 }}
                         >
                             <div className="grid grid-cols-2 gap-4 p-4">
+
+                                {/* Status */}
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-800 mb-3">Status</h3>
-                                    <select
-                                        value={statusFilter}
-                                        onChange={(e) => setStatusFilter(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                                    >
+                                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                         <option value="all">All Statuses</option>
                                         <option value="1">Approved</option>
                                         <option value="3">Pending</option>
@@ -65,67 +89,55 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
                                         <option value="6">Update Profiling</option>
                                     </select>
                                 </div>
+
+                                {/* Renting Status */}
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-800 mb-3">Renting Status</h3>
-                                    <select
-                                        value={isRentingFilter}
-                                        onChange={(e) => setIsRentingFilter(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                                    >
+                                    <select value={isRentingFilter} onChange={(e) => setIsRentingFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                         <option value="all">All Renting Statuses</option>
                                         <option value="Yes">Renting</option>
                                         <option value="No">Not Renting</option>
                                     </select>
                                 </div>
+
+                                {/* Zone Certificate */}
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-800 mb-3">Zone Certificate</h3>
-                                    <select
-                                        value={hasZoneCertFilter}
-                                        onChange={(e) => setHasZoneCertFilter(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                                    >
+                                    <select value={hasZoneCertFilter} onChange={(e) => setHasZoneCertFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                         <option value="all">All Zone Certificate Statuses</option>
                                         <option value="Yes">Has Zone Certificate</option>
                                         <option value="No">No Zone Certificate</option>
                                     </select>
                                 </div>
+
+                                {/* Zone */}
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-800 mb-3">Zone</h3>
-                                    <select
-                                        value={zoneFilter}
-                                        onChange={(e) => setZoneFilter(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                                    >
+                                    <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                         {[{ value: "all", label: "All Zones" }, ...Array.from({ length: 9 }, (_, i) => ({
                                             value: `Zone ${i + 1}`,
                                             label: `Zone ${i + 1}`,
                                         }))].map((zone) => (
-                                            <option key={zone.value} value={zone.value}>
-                                                {zone.label}
-                                            </option>
+                                            <option key={zone.value} value={zone.value}>{zone.label}</option>
                                         ))}
                                     </select>
                                 </div>
+
+                                {/* PWD Status */}
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-800 mb-3">PWD Status</h3>
-                                    <select
-                                        value={pwdStatusFilter}
-                                        onChange={(e) => setPwdStatusFilter(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                                    >
+                                    <select value={pwdStatusFilter} onChange={(e) => setPwdStatusFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                         <option value="all">All PWD Statuses</option>
                                         <option value="Yes">Has PWD</option>
                                         <option value="No">No PWD</option>
                                     </select>
                                 </div>
+
+                                {/* Sort By */}
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-800 mb-3">Sort By</h3>
-                                    <select
-                                        value={sortOption}
-                                        onChange={(e) => setSortOption(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                                    >
-                                        <option value="default">Default (Pending First, Approved by Name)</option>
+                                    <select value={sortOption} onChange={(e) => setSortOption(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                        <option value="default">Default (Pending First)</option>
                                         <option value="name-asc">Name (A-Z)</option>
                                         <option value="name-desc">Name (Z-A)</option>
                                         <option value="status-asc">Status (Ascending)</option>
@@ -134,19 +146,50 @@ const FilterSearch = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter
                                         <option value="date-desc">Date Added (Newest)</option>
                                     </select>
                                 </div>
+
+                                {/* Gender Filter */}
+                                <div className="col-span-2">
+                                    <h3 className="text-sm font-semibold text-gray-800 mb-3">Gender (Household Head)</h3>
+                                    <select
+                                        value={genderFilter}
+                                        onChange={(e) => setGenderFilter(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    >
+                                        <option value="all">All Genders</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                {/* Senior Citizen Checkbox */}
+                                <div className="col-span-2">
+                                    <div className="flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                                        <label htmlFor="seniorOnly" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                                            Is Senior Citizen? (Includes other members above 60)
+                                        </label>
+                                        <input
+                                            type="checkbox"
+                                            id="seniorOnly"
+                                            checked={showSeniorOnly}
+                                            onChange={(e) => setShowSeniorOnly(e.target.checked)}
+                                            className="w-5 h-5 text-emerald-600 bg-white border-gray-300 rounded focus:ring-emerald-500 focus:ring-2 cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Items Per Page */}
                                 <div className="col-span-2">
                                     <h3 className="text-sm font-semibold text-gray-800 mb-3">Items Per Page</h3>
-                                    <select
-                                        value={itemsPerPage}
-                                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                                    >
+                                    <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                         <option value="5">5 per page</option>
                                         <option value="10">10 per page</option>
                                         <option value="20">20 per page</option>
                                         <option value="50">50 per page</option>
                                     </select>
                                 </div>
+
+                                {/* Clear Filters */}
                                 <div className="col-span-2">
                                     <motion.button
                                         onClick={onClearFilters}

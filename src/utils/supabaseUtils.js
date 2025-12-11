@@ -1,5 +1,5 @@
 import { supabase } from "../supabaseClient";
-import Swal from "sweetalert2";
+// import Swal from "sweetalert2";
 
 // Cache for signed URLs to avoid repeated requests
 const signedUrlCache = new Map();
@@ -82,20 +82,20 @@ export const subscribeToUserPhotos = (userId, callback) => {
                 callback(newPhotos);
             }
         )
-        .subscribe((status, error) => {
-            if (error) {
-                console.error("Photo subscription error:", error);
-                Swal.fire({
-                    toast: true,
-                    position: "top-end",
-                    icon: "error",
-                    title: "Failed to subscribe to photo updates",
-                    timer: 1500,
-                    showConfirmButton: false,
-                    scrollbarPadding: false,
-                });
-            }
-        });
+        // .subscribe((status, error) => {
+        //     if (error) {
+        //         console.error("Photo subscription error:", error);
+        //         Swal.fire({
+        //             toast: true,
+        //             position: "top-end",
+        //             icon: "error",
+        //             title: "Failed to subscribe to photo updates",
+        //             timer: 1500,
+        //             showConfirmButton: false,
+        //             scrollbarPadding: false,
+        //         });
+        //     }
+        // });
 
     return () => supabase.removeChannel(channel);
 };

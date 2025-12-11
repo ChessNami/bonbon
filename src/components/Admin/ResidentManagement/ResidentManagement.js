@@ -21,6 +21,8 @@ import { getStatusBadge } from './Utils';
 const ResidentManagement = () => {
     const [residents, setResidents] = useState([]);
     const [filteredResidents, setFilteredResidents] = useState([]);
+    const [showSeniorOnly, setShowSeniorOnly] = useState(false);
+    const [genderFilter, setGenderFilter] = useState('all');
     const [pendingCount, setPendingCount] = useState(0);
     const [rejectedCount, setRejectedCount] = useState(0);
     const [requestsCount, setRequestsCount] = useState(0);
@@ -423,8 +425,28 @@ const ResidentManagement = () => {
             return 0;
         });
 
+        if (showSeniorOnly) {
+            filtered = filtered.filter((resident) => {
+                // dob format expected: "YYYY-MM-DD"
+                if (!resident.dob) return false;
+                const birthDate = new Date(resident.dob);
+                const ageDiffMs = Date.now() - birthDate.getTime();
+                const ageDate = new Date(ageDiffMs);
+                const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+                return age >= 60;
+            });
+        }
+
+        // Gender filter (Household Head only)
+        if (genderFilter !== 'all') {
+            filtered = filtered.filter((resident) => {
+                const headGender = resident.gender?.trim();
+                return headGender === genderFilter;
+            });
+        }
+
         setFilteredResidents(filtered);
-    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter, hasZoneCertFilter, pwdStatusFilter, zoneFilter]);
+    }, [residents, searchTerm, statusFilter, sortOption, isRentingFilter, hasZoneCertFilter, pwdStatusFilter, zoneFilter, showSeniorOnly, genderFilter]);
 
     // Disable scroll on body when modals are open
     useEffect(() => {
@@ -459,6 +481,8 @@ const ResidentManagement = () => {
         setHasZoneCertFilter('all');
         setPwdStatusFilter('all');
         setZoneFilter('all');
+        setShowSeniorOnly(false);
+        setGenderFilter('all');
     };
 
     const handleUpdateStatus = async (resident, reason) => {
@@ -1140,6 +1164,10 @@ const ResidentManagement = () => {
                         setPwdStatusFilter={setPwdStatusFilter}
                         zoneFilter={zoneFilter}
                         setZoneFilter={setZoneFilter}
+                        showSeniorOnly={showSeniorOnly}
+                        setShowSeniorOnly={setShowSeniorOnly}
+                        genderFilter={genderFilter}
+                        setGenderFilter={setGenderFilter}
                     />
                     {totalPages > 1 && (
                         <Pagination

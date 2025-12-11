@@ -1053,9 +1053,14 @@ const SpouseForm = ({ data, onNext, onBack, userId }) => {
                             required
                         >
                             <option value="">Select</option>
-                            <option value="Elementary">Elementary</option>
-                            <option value="High School">High School</option>
+                            <option value="Elementary Level">Elementary Level</option>
+                            <option value="Elementary Graduate">Elementary Graduate</option>
+                            <option value="High School Level">High School Level</option>
+                            <option value="High School Graduate">High School Graduate</option>
                             <option value="College">College</option>
+                            <option value="College Graduate">College Graduate</option>
+                            <option value="Masteral">Master's Degree</option>
+                            <option value="Double Masteral">Double Master's Degree</option>
                             <option value="Vocational">Vocational</option>
                         </select>
                     </div>

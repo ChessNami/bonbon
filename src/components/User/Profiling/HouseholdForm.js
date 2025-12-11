@@ -34,6 +34,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         image_preview: '',
         croppedImage: null,
         valid_id: null,
+        customIdType: data?.customIdType || '',
         valid_id_preview: '',
         zone_cert: null,
         zone_cert_preview: '',
@@ -83,13 +84,19 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 const age = residentData.household.dob
                     ? calculateAge(residentData.household.dob)
                     : residentData.household.age || '';
-                const householdData = {
+                const standardIdTypes = [
+                    "Barangay ID", "Drivers License", "Passport", "PhilHealth",
+                    "PhilSys ID (National ID)", "Postal ID", "PRC ID", "Senior Citizen ID",
+                    "SSS", "TIN", "UMID", "Voters ID"
+                ];
+                let householdData = {
                     ...residentData.household,
                     age,
                     image: null,
                     image_preview: '',
                     croppedImage: null,
                     valid_id: null,
+                    customIdType: '',
                     valid_id_preview: '',
                     zone_cert: null,
                     zone_cert_preview: '',
@@ -97,6 +104,11 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     pwdStatus: residentData?.household?.pwdStatus || '', // Added
                     disabilityType: residentData?.household?.disabilityType || '', // Added
                 };
+                // If ID type is not in standard list → treat as "Other"
+                if (householdData.idType && !standardIdTypes.includes(householdData.idType)) {
+                    householdData.customIdType = householdData.idType;
+                    householdData.idType = 'Other';
+                }
                 setFormData(householdData);
                 setGender(residentData.household.gender || '');
                 setCustomGender(residentData.household.customGender || '');
@@ -200,6 +212,17 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     phoneNumber: '',
                 }));
             }
+            return;
+        }
+
+        // Special handling for ID Type
+        if (name === 'idType') {
+            setFormData((prev) => ({
+                ...prev,
+                idType: value,
+                customIdType: value !== 'Other' ? '' : prev.customIdType, // clear if not Other
+            }));
+            setErrors((prev) => ({ ...prev, idType: '', customIdType: '' }));
             return;
         }
 
@@ -484,6 +507,20 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             return;
         }
 
+        // Validate "Other" ID type
+        if (formData.idType === 'Other' && !formData.customIdType?.trim()) {
+            setErrors(prev => ({ ...prev, customIdType: 'Please specify the other ID type' }));
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Please specify the other ID type',
+                timer: 1500,
+                showConfirmButton: false,
+            });
+            return;
+        }
+
         try {
             Swal.fire({
                 title: 'Processing...',
@@ -491,9 +528,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 scrollbarPadding: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                },
+                didOpen: () => Swal.showLoading(),
             });
 
             let imageUrl = formData.image_url || null;
@@ -501,7 +536,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             let zoneCertUrl = formData.zone_cert_url || null;
 
             // Handle profile image upload
-            if (formData.image && cropperRef.current && cropperRef.current.cropper) {
+            if (formData.image && cropperRef.current?.cropper) {
                 const croppedCanvas = cropperRef.current.cropper.getCroppedCanvas({
                     width: 600,
                     height: 600,
@@ -511,64 +546,46 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                 whiteBgCanvas.width = 600;
                 whiteBgCanvas.height = 600;
                 const ctx = whiteBgCanvas.getContext('2d');
-
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, whiteBgCanvas.width, whiteBgCanvas.height);
                 ctx.drawImage(croppedCanvas, 0, 0);
 
                 const compressedImage = await new Promise((resolve, reject) => {
                     whiteBgCanvas.toBlob((blob) => {
-                        if (blob) {
-                            new Compressor(blob, {
-                                quality: 0.8,
-                                maxWidth: 800,
-                                maxHeight: 800,
-                                success: (compressedResult) => resolve(compressedResult),
-                                error: (err) => reject(new Error(`Image compression failed: ${err.message}`)),
-                            });
-                        } else {
-                            reject(new Error('Cropping failed: No blob generated.'));
-                        }
+                        if (!blob) return reject(new Error('Cropping failed'));
+                        new Compressor(blob, {
+                            quality: 0.8,
+                            maxWidth: 800,
+                            maxHeight: 800,
+                            success: resolve,
+                            error: reject,
+                        });
                     }, 'image/jpeg');
                 });
 
                 const fileName = `householdhead/${userId}/profile.jpg`;
                 const { error: uploadError } = await supabase.storage
                     .from('householdhead')
-                    .upload(fileName, compressedImage, {
-                        cacheControl: '3600',
-                        upsert: true,
-                    });
+                    .upload(fileName, compressedImage, { upsert: true });
 
-                if (uploadError) throw new Error(`Error uploading image: ${uploadError.message}`);
-
+                if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
                 imageUrl = fileName;
             }
 
             // Handle valid ID upload
             if (formData.valid_id) {
                 const fileExt = formData.valid_id.name.split('.').pop();
-                const fileName = `identification/${userId}/valid_id_${formData.idType.replace(/\s/g, '_')}.${fileExt}`;
+                const fileName = `identification/${userId}/valid_id_${Date.now()}.${fileExt}`;
 
-                // Remove existing valid ID if it exists
                 if (formData.valid_id_url) {
-                    const { error: deleteError } = await supabase.storage
-                        .from('validid')
-                        .remove([formData.valid_id_url]);
-                    if (deleteError) {
-                        console.error('Error deleting existing valid ID:', deleteError.message);
-                    }
+                    await supabase.storage.from('validid').remove([formData.valid_id_url]).catch(console.error);
                 }
 
                 const { error: uploadError } = await supabase.storage
                     .from('validid')
-                    .upload(fileName, formData.valid_id, {
-                        cacheControl: '3600',
-                        upsert: true,
-                    });
+                    .upload(fileName, formData.valid_id, { upsert: true });
 
-                if (uploadError) throw new Error(`Error uploading valid ID: ${uploadError.message}`);
-
+                if (uploadError) throw new Error(`Valid ID upload failed: ${uploadError.message}`);
                 validIdUrl = fileName;
             }
 
@@ -576,107 +593,77 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
             if (formData.hasZoneCertificate && formData.zone_cert) {
                 const fileExt = formData.zone_cert.name.split('.').pop();
                 const fileName = `zone_certification/${userId}/zone_cert.${fileExt}`;
+
                 const { error: uploadError } = await supabase.storage
                     .from('validid')
-                    .upload(fileName, formData.zone_cert, {
-                        cacheControl: '3600',
-                        upsert: true,
-                    });
+                    .upload(fileName, formData.zone_cert, { upsert: true });
 
-                if (uploadError) throw new Error(`Error uploading zone certificate: ${uploadError.message}`);
-
+                if (uploadError) throw new Error(`Zone certificate upload failed: ${uploadError.message}`);
                 zoneCertUrl = fileName;
             } else if (!formData.hasZoneCertificate && formData.zone_cert_url) {
-                // Delete existing zone certificate file if hasZoneCertificate is false
-                const { error: deleteError } = await supabase.storage
-                    .from('validid')
-                    .remove([formData.zone_cert_url]);
-
-                if (deleteError) {
-                    console.error('Error deleting zone certificate:', deleteError.message);
-                    showAlert(`Failed to delete existing zone certificate: ${deleteError.message}`);
-                    return;
-                }
+                await supabase.storage.from('validid').remove([formData.zone_cert_url]).catch(console.error);
                 zoneCertUrl = null;
             }
 
-            // Convert text fields to uppercase for saving, excluding URLs and dropdowns
-            const updatedData = Object.keys(formData).reduce((acc, key) => {
-                const isUrlField = ['image_url', 'valid_id_url', 'zone_cert_url'].includes(key);
-                const isDropdownField = [
-                    'region',
-                    'province',
-                    'city',
-                    'barangay',
-                    'zone',
-                    'extension',
-                    'gender',
-                    'customGender',
-                    'civilStatus',
-                    'idType',
-                    'employmentType',
-                    'education',
-                ].includes(key);
-                const isNonTextField = [
-                    'image',
-                    'valid_id',
-                    'zone_cert',
-                    'image_preview',
-                    'valid_id_preview',
-                    'zone_cert_preview',
-                    'hasZoneCertificate',
-                    'age',
-                ].includes(key);
-                acc[key] = isUrlField || isDropdownField || isNonTextField ? formData[key] : formData[key]?.toString().toUpperCase() || formData[key];
-                return acc;
-            }, {});
+            // Prepare final household data (uppercase text fields)
+            const updatedData = { ...formData };
 
+            const textFieldsToUppercase = [
+                'firstName', 'middleName', 'lastName', 'extension',
+                'address', 'phoneNumber', 'idNo'
+            ];
+
+            textFieldsToUppercase.forEach(field => {
+                if (typeof updatedData[field] === 'string') {
+                    updatedData[field] = updatedData[field].trim().toUpperCase();
+                }
+            });
+
+            // Fix ID Type: Use custom name if "Other" was selected
+            if (formData.idType === 'Other') {
+                updatedData.idType = formData.customIdType.trim().toUpperCase();
+            }
+            // Remove helper field
+            delete updatedData.customIdType;
+
+            // Preserve dropdown values and special fields
             updatedData.gender = gender;
-            updatedData.customGender = gender === 'Other' ? customGender : '';
+            updatedData.customGender = gender === 'Other' ? customGender.toUpperCase() : '';
             updatedData.employmentType = employmentType;
             updatedData.image_url = imageUrl;
             updatedData.valid_id_url = validIdUrl;
             updatedData.zone_cert_url = zoneCertUrl;
             updatedData.hasZoneCertificate = formData.hasZoneCertificate;
 
+            // Save to Supabase
             const { error: householdError } = await supabase
                 .from('residents')
-                .upsert(
-                    {
-                        user_id: userId,
-                        household: updatedData,
-                        image_url: updatedData.image_url,
-                        valid_id_url: updatedData.valid_id_url,
-                        zone_cert_url: updatedData.zone_cert_url,
-                        zone_cert_availability: formData.hasZoneCertificate,
-                    },
-                    { onConflict: 'user_id' }
-                );
+                .upsert({
+                    user_id: userId,
+                    household: updatedData,
+                    image_url: imageUrl,
+                    valid_id_url: validIdUrl,
+                    zone_cert_url: zoneCertUrl,
+                    zone_cert_availability: formData.hasZoneCertificate,
+                }, { onConflict: 'user_id' });
 
-            if (householdError) {
-                showAlert(`An error occurred while saving household data: ${householdError.message}`);
-                return;
-            }
+            if (householdError) throw householdError;
 
+            // Clear spouse if not married
             if (formData.civilStatus !== 'Married') {
-                const { error: spouseError } = await supabase
-                    .from('residents')
-                    .update({ spouse: null })
-                    .eq('user_id', userId);
-
-                if (spouseError) {
-                    showAlert(`An error occurred while clearing spouse data: ${spouseError.message}`);
-                    return;
-                }
+                await supabase.from('residents').update({ spouse: null }).eq('user_id', userId);
             }
 
             Swal.close();
+
+            // Go to next tab
             const nextTab = formData.civilStatus === 'Married' ? 'spouseForm' : 'householdComposition';
             onNext(updatedData, nextTab);
+
         } catch (error) {
             Swal.close();
-            console.error('Unexpected error:', error);
-            showAlert(`An unexpected error occurred: ${error.message || 'Unknown error'}`);
+            console.error('Submit error:', error);
+            showAlert(`Save failed: ${error.message || 'Please try again'}`);
         }
     };
 
@@ -1143,19 +1130,18 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                         <div>
                             <label className="block text-xs sm:text-sm font-medium">
-                                Type of ID <span className="text-red-500">*</span>
+                                ID Type <span className="text-red-500">*</span>
                             </label>
                             <select
                                 name="idType"
-                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idType ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.idType || ''}
                                 onChange={handleChange}
-                                style={{ textTransform: 'uppercase' }}
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.idType ? 'border-red-500' : 'border-gray-300'} uppercase`}
                                 required
                             >
-                                <option value="">Select</option>
+                                <option value="">Select ID Type</option>
                                 <option value="Barangay ID">Barangay ID</option>
-                                <option value="Drivers License">Driver’s License</option>
+                                <option value="Drivers License">Driver's License</option>
                                 <option value="Passport">Passport</option>
                                 <option value="PhilHealth">PhilHealth</option>
                                 <option value="PhilSys ID (National ID)">PhilSys ID (National ID)</option>
@@ -1166,9 +1152,29 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 <option value="TIN">TIN</option>
                                 <option value="UMID">UMID</option>
                                 <option value="Voters ID">Voter's ID</option>
+                                <option value="Other">Other</option>
                             </select>
                             {errors.idType && <p className="text-red-500 text-xs mt-1">{errors.idType}</p>}
                         </div>
+
+                        {/* NEW: Custom ID Type Input - Only show when "Other" is selected */}
+                        {formData.idType === 'Other' && (
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium">
+                                    Specify Other ID Type <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="customIdType"
+                                    value={formData.customIdType || ''}
+                                    onChange={handleChange}
+                                    placeholder="e.g., Company ID, Student ID, etc."
+                                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.customIdType ? 'border-red-500' : 'border-gray-300'} uppercase`}
+                                    required
+                                />
+                                {errors.customIdType && <p className="text-red-500 text-xs mt-1">{errors.customIdType}</p>}
+                            </div>
+                        )}
                         <div>
                             <label className="block text-xs sm:text-sm font-medium">
                                 ID No. <span className="text-red-500">*</span>
@@ -1319,9 +1325,14 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                             required
                         >
                             <option value="">Select</option>
-                            <option value="Elementary">Elementary</option>
-                            <option value="High School">High School</option>
+                            <option value="Elementary Level">Elementary Level</option>
+                            <option value="Elementary Graduate">Elementary Graduate</option>
+                            <option value="High School Level">High School Level</option>
+                            <option value="High School Graduate">High School Graduate</option>
                             <option value="College">College</option>
+                            <option value="College Graduate">College Graduate</option>
+                            <option value="Masteral">Master's Degree</option>
+                            <option value="Double Masteral">Double Master's Degree</option>
                             <option value="Vocational">Vocational</option>
                         </select>
                         {errors.education && <p className="text-red-500 text-xs mt-1">{errors.education}</p>}
