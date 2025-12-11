@@ -38,7 +38,7 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
         valid_id_preview: '',
         zone_cert: null,
         zone_cert_preview: '',
-        hasZoneCertificate: data?.hasZoneCertificate || false,
+        hasZoneCertificate: !!(data?.hasZoneCertificate && data?.zone_cert_url),
         zipCode: data?.zipCode || '9000',
         region: data?.region || '100000000',
         province: data?.province || '104300000',
@@ -1348,14 +1348,32 @@ const HouseholdForm = ({ data, onNext, onBack, userId }) => {
                                 type="checkbox"
                                 name="hasZoneCertificate"
                                 checked={formData.hasZoneCertificate}
-                                onChange={(e) => {
+                                onChange={async (e) => {
+                                    const checked = e.target.checked;
+
+                                    if (!checked && data.zone_cert_url) {
+                                        const result = await Swal.fire({
+                                            title: 'Remove Zone Certificate?',
+                                            text: 'This will permanently delete the uploaded zone certificate.',
+                                            icon: 'warning',
+                                            showCancelButton: true,
+                                            confirmButtonColor: '#d33',
+                                            cancelButtonColor: '#3085d6',
+                                            confirmButtonText: 'Yes, delete it',
+                                        });
+
+                                        if (!result.isConfirmed) {
+                                            e.preventDefault();
+                                            return;
+                                        }
+                                    }
+
                                     setFormData({
                                         ...formData,
-                                        hasZoneCertificate: e.target.checked,
-                                        zone_cert: e.target.checked ? formData.zone_cert : null,
-                                        zone_cert_preview: e.target.checked ? formData.zone_cert_preview : '',
+                                        hasZoneCertificate: checked,
+                                        zone_cert: null,
+                                        zone_cert_preview: '',
                                     });
-                                    setErrors({ ...errors, zone_cert: '' });
                                 }}
                                 className="mr-2"
                             />

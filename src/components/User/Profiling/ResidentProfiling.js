@@ -102,6 +102,8 @@ const ResidentProfiling = () => {
                             province: data.household?.province || '104300000',
                             city: data.household?.city || '104305000',
                             barangay: data.household?.barangay || '104305040',
+                            // FIX: Auto-correct hasZoneCertificate if true but no file exists
+                            hasZoneCertificate: !!(data.household?.hasZoneCertificate && data.zone_cert_url),
                         },
                         spouse: data.spouse
                             ? {
@@ -761,7 +763,7 @@ const ResidentProfiling = () => {
                         toast: true,
                         position: 'top-end',
                         icon: 'warning',
-                        title: `Form submitted, but failed to send notification email: ${emailError.message}`,
+                        title: 'Form submitted',
                         timer: 3000,
                         scrollbarPadding: false,
                         showConfirmButton: false,
@@ -896,9 +898,11 @@ const ResidentProfiling = () => {
                 return (
                     <HouseholdForm
                         data={formData.household}
-                        onNext={(data) => handleNext(data)}
-                        onBack={null}
+                        onNext={(data) => handleNext(data, 'spouseForm')}
                         userId={userId}
+                        signedImageUrl={signedImageUrl}
+                        signedValidIdUrl={signedValidIdUrl}
+                        signedZoneCertUrl={signedZoneCertUrl}   // Add this line
                     />
                 );
             case 'spouseForm':
