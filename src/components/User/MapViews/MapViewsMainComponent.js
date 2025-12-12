@@ -28,7 +28,7 @@ const MapViewsMainComponent = () => {
                             Work in Progress
                         </h2>
                         <p className="text-gray-600 max-w-md">
-                            The Zone Map feature is currently under development and will be available soon.
+                            The Zone Map feature is currently under development and will be available in a few days.
                         </p>
                     </motion.div>
                 );
