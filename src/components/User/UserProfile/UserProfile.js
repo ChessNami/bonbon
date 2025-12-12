@@ -273,20 +273,20 @@ const UserProfile = ({ activeTab, setActiveTab, onLoadingComplete }) => {
                     },
                     () => fetchUserAndData() // Refetch resident data on change
                 )
-                .subscribe((status, error) => {
-                    if (error) {
-                        console.error("Status subscription error:", error);
-                        Swal.fire({
-                            toast: true,
-                            position: "top-end",
-                            icon: "error",
-                            title: "Failed to subscribe to status updates",
-                            timer: 1500,
-                            showConfirmButton: false,
-                            scrollbarPadding: false,
-                        });
-                    }
-                });
+                // .subscribe((status, error) => {
+                //     if (error) {
+                //         console.error("Status subscription error:", error);
+                //         Swal.fire({
+                //             toast: true,
+                //             position: "top-end",
+                //             icon: "error",
+                //             title: "Failed to subscribe to status updates",
+                //             timer: 1500,
+                //             showConfirmButton: false,
+                //             scrollbarPadding: false,
+                //         });
+                //     }
+                // });
             return channel;
         };
 

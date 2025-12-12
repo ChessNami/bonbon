@@ -7,6 +7,17 @@ import Compressor from "compressorjs";
 import { supabase } from "../../../supabaseClient";
 import Swal from "sweetalert2";
 import { ClipLoader } from "react-spinners";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix Leaflet default icon issue in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://unpkg.com/leaflet@2x.png",
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYear, events: initialEvents, selectedDates, setSelectedDates }) => {
     const [holidays, setHolidays] = useState([]);
@@ -26,6 +37,88 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
     const firstDayOfMonth = new Date(selectedYear, selectedMonth - 1, 1).getDay();
     const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    // Custom component to handle map clicks + REAL address
+    function LocationMarker() {
+        const [position, setPosition] = useState(null);
+
+        const map = useMapEvents({
+            click: async (e) => {
+                const { lat, lng } = e.latlng;
+                setPosition([lat, lng]);
+
+                // Reverse geocoding (same logic as AdminProMgmt.js)
+                try {
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                        {
+                            headers: {
+                                "User-Agent": "BarangayCalendar/1.0 (contact: your-email@example.com)",
+                            },
+                        }
+                    );
+
+                    if (!response.ok) throw new Error("Network error");
+
+                    const data = await response.json();
+
+                    let address = "Unknown location";
+                    if (data?.display_name) {
+                        const parts = data.display_name.split(", ");
+                        address = parts.length > 4 ? parts.slice(0, 4).join(", ") : data.display_name;
+                    } else if (data?.address) {
+                        const a = data.address;
+                        address = [
+                            a.road || a.path || a.pedestrian,
+                            a.hamlet || a.village || a.suburb || a.neighbourhood,
+                            a.city || a.town || "Cagayan de Oro",
+                            a.state || "Misamis Oriental"
+                        ]
+                            .filter(Boolean)
+                            .join(", ");
+                    }
+
+                    setEventDetails(prev => ({
+                        ...prev,
+                        location_lat: Number(lat.toFixed(6)),
+                        location_lng: Number(lng.toFixed(6)),
+                        location: address || "Barangay Bonbon, Cagayan de Oro City"
+                    }));
+                } catch (err) {
+                    console.warn("Reverse geocoding failed:", err);
+                    setEventDetails(prev => ({
+                        ...prev,
+                        location_lat: Number(lat.toFixed(6)),
+                        location_lng: Number(lng.toFixed(6)),
+                        location: `Barangay Bonbon (near ${lat.toFixed(4)}, ${lng.toFixed(4)})`
+                    }));
+                }
+            },
+        });
+
+        // Sync marker + center map when editing (runs whenever parent re-renders with new coords)
+        useEffect(() => {
+            if (eventDetails.location_lat && eventDetails.location_lng) {
+                const newPos = [eventDetails.location_lat, eventDetails.location_lng];
+                setPosition(newPos);
+                map.setView(newPos, 17, { animate: true });
+            } else {
+                setPosition(null);
+            }
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, []); // Empty array: only run when map or eventDetails change via parent re-render
+
+        return position ? (
+            <Marker position={position}>
+                <Popup>
+                    <div className="text-sm">
+                        <strong>Location Set</strong><br />
+                        {eventDetails.location || "Barangay Bonbon"}
+                    </div>
+                </Popup>
+            </Marker>
+        ) : null;
+    }
 
     const fetchHolidays = useCallback(async () => {
         try {
@@ -188,14 +281,16 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
         endHour: "1",
         endMinute: "00",
         endPeriod: "AM",
-        location: "",
+        location: "",              // Human-readable address
+        location_lat: null,        // New
+        location_lng: null,        // New
         description: "",
         facebook_link: "",
         image: null,
         image_preview: "",
         croppedImage: null,
         wholeDay: false,
-        create_type: "event", // Added create_type
+        create_type: "event",
     });
 
     const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
@@ -442,12 +537,14 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 .insert([{
                     title: eventDetails.title,
                     dates: selectedDates,
-                    start_time: startTime,
-                    end_time: endTime,
-                    location: eventDetails.create_type === "event" ? eventDetails.location : null,
+                    start_time: eventDetails.create_type === "event" && !eventDetails.wholeDay ? startTime : null,
+                    end_time: eventDetails.create_type === "event" && !eventDetails.wholeDay ? endTime : null,
+                    location: eventDetails.location?.trim() || null,
+                    location_lat: eventDetails.location_lat,
+                    location_lng: eventDetails.location_lng,
                     description: eventDetails.description,
-                    facebook_link: eventDetails.facebook_link,
-                    image_url: imageUrl, // Include image_url in the initial insert
+                    facebook_link: eventDetails.facebook_link || null,
+                    image_url: imageUrl,
                     whole_day: eventDetails.create_type === "event" ? eventDetails.wholeDay : false,
                     create_type: eventDetails.create_type,
                 }])
@@ -538,22 +635,24 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
     const handleEditEvent = (event) => {
         setCurrentEvent(event);
         setEventDetails({
-            title: event.title,
-            date: event.dates[0],
-            startHour: event.create_type === "event" && event.start_time ? event.start_time.split(":")[0] : "1",
-            startMinute: event.create_type === "event" && event.start_time ? event.start_time.split(":")[1].split(" ")[0] : "00",
-            startPeriod: event.create_type === "event" && event.start_time ? event.start_time.split(" ")[1] : "AM",
-            endHour: event.create_type === "event" && event.end_time ? event.end_time.split(":")[0] : "1",
-            endMinute: event.create_type === "event" && event.end_time ? event.end_time.split(":")[1].split(" ")[0] : "00",
-            endPeriod: event.create_type === "event" && event.end_time ? event.end_time.split(" ")[1] : "AM",
-            location: event.create_type === "event" ? event.location || "" : "",
+            title: event.title || "",
+            date: event.dates[0] || "",
+            startHour: event.start_time ? event.start_time.split(":")[0] : "1",
+            startMinute: event.start_time ? event.start_time.split(":")[1]?.split(" ")[0] : "00",
+            startPeriod: event.start_time ? event.start_time.split(" ")[1] : "AM",
+            endHour: event.end_time ? event.end_time.split(":")[0] : "1",
+            endMinute: event.end_time ? event.end_time.split(":")[1]?.split(" ")[0] : "00",
+            endPeriod: event.end_time ? event.end_time.split(" ")[1] : "AM",
+            location: event.location || "",
+            location_lat: event.location_lat || null,
+            location_lng: event.location_lng || null,
             description: event.description || "",
             facebook_link: event.facebook_link || "",
-            wholeDay: event.create_type === "event" ? event.whole_day : false,
-            image: null,
-            image_preview: "",
-            croppedImage: null,
+            wholeDay: event.whole_day || false,
             create_type: event.create_type || "event",
+            image: null,
+            image_preview: event.signedImageUrl || "",
+            croppedImage: null,
         });
         setSelectedDates(event.dates);
         setIsEditModalOpen(true);
@@ -699,12 +798,14 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                 .update({
                     title: eventDetails.title,
                     dates: selectedDates,
-                    start_time: startTime,
-                    end_time: endTime,
-                    location: eventDetails.create_type === "event" ? eventDetails.location : null,
+                    start_time: eventDetails.create_type === "event" && !eventDetails.wholeDay ? startTime : null,
+                    end_time: eventDetails.create_type === "event" && !eventDetails.wholeDay ? endTime : null,
+                    location: eventDetails.location?.trim() || null,
+                    location_lat: eventDetails.location_lat,
+                    location_lng: eventDetails.location_lng,
                     description: eventDetails.description,
-                    facebook_link: eventDetails.facebook_link,
-                    image_url: imageUrl, // Update with the new or existing image_url
+                    facebook_link: eventDetails.facebook_link || null,
+                    image_url: imageUrl,
                     whole_day: eventDetails.create_type === "event" ? eventDetails.wholeDay : false,
                     create_type: eventDetails.create_type,
                 })
@@ -1386,16 +1487,63 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                                     </div>
                                                 </>
                                             )}
-                                            <div>
-                                                <label className="block text-sm font-medium mb-1">Location</label>
-                                                <input
-                                                    type="text"
-                                                    name="location"
-                                                    value={eventDetails.location}
-                                                    onChange={handleEventInputChange}
-                                                    className="w-full p-2 border rounded"
-                                                    required
-                                                />
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Location Address{" "}
+                                                        {eventDetails.create_type === "event" && <span className="text-red-500">*</span>}
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="location"
+                                                        value={eventDetails.location}
+                                                        onChange={handleEventInputChange}
+                                                        className="w-full p-3 border rounded-lg bg-gray-50"
+                                                        placeholder="Click map to auto-fill address..."
+                                                        required={eventDetails.create_type === "event"}
+                                                    />
+                                                    <p className="text-xs text-gray-500 mt-600 mt-1">
+                                                        Enter venue name or address. Click on map below to pinpoint exact location.
+                                                    </p>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-2">
+                                                        Pin Location on Map{" "}
+                                                        <span className="text-xs text-gray-500">(Click anywhere to place marker)</span>
+                                                    </label>
+                                                    <div className="h-64 rounded-lg overflow-hidden border border-gray-300 shadow-md">
+                                                        <MapContainer
+                                                            center={
+                                                                eventDetails.location_lat && eventDetails.location_lng
+                                                                    ? [eventDetails.location_lat, eventDetails.location_lng]
+                                                                    : [8.508931, 124.649087] // Barangay Bonbon, Cagayan de Oro
+                                                            }
+                                                            zoom={eventDetails.location_lat ? 20 : 17}
+                                                            style={{ height: "100%", width: "100%" }}
+                                                            scrollWheelZoom={true}
+                                                        >
+                                                            <TileLayer
+                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                            />
+                                                            <LocationMarker />
+                                                        </MapContainer>
+                                                    </div>
+
+                                                    {/* Beautiful address display below map */}
+                                                    {eventDetails.location_lat && eventDetails.location_lng && (
+                                                        <div className="mt-3 p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg">
+                                                            <p className="text-xs font-semibold text-blue-800 uppercase tracking-wider">Selected Location</p>
+                                                            <p className="mt-1 text-sm font-medium text-gray-800">
+                                                                {eventDetails.location || "Barangay Bonbon, Cagayan de Oro City"}
+                                                            </p>
+                                                            <p className="text-xs text-gray-600 mt-1">
+                                                                GPS: {eventDetails.location_lat?.toFixed(6)}, {eventDetails.location_lng?.toFixed(6)}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </>
                                     )}
@@ -1639,16 +1787,63 @@ const Calendar = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYe
                                                     </div>
                                                 </>
                                             )}
-                                            <div>
-                                                <label className="block text-sm font-medium mb-1">Location</label>
-                                                <input
-                                                    type="text"
-                                                    name="location"
-                                                    value={eventDetails.location}
-                                                    onChange={handleEventInputChange}
-                                                    className="w-full p-2 border rounded"
-                                                    required
-                                                />
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Location Address{" "}
+                                                        {eventDetails.create_type === "event" && <span className="text-red-500">*</span>}
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="location"
+                                                        value={eventDetails.location}
+                                                        onChange={handleEventInputChange}
+                                                        className="w-full p-3 border rounded-lg bg-gray-50"
+                                                        placeholder="Click map to auto-fill address..."
+                                                        required={eventDetails.create_type === "event"}
+                                                    />
+                                                    <p className="text-xs text-gray-500 mt-600 mt-1">
+                                                        Enter venue name or address. Click on map below to pinpoint exact location.
+                                                    </p>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-2">
+                                                        Pin Location on Map{" "}
+                                                        <span className="text-xs text-gray-500">(Click anywhere to place marker)</span>
+                                                    </label>
+                                                    <div className="h-64 rounded-lg overflow-hidden border border-gray-300 shadow-md">
+                                                        <MapContainer
+                                                            center={
+                                                                eventDetails.location_lat && eventDetails.location_lng
+                                                                    ? [eventDetails.location_lat, eventDetails.location_lng]
+                                                                    : [8.508931, 124.649087] // Barangay Bonbon, Cagayan de Oro
+                                                            }
+                                                            zoom={eventDetails.location_lat ? 20 : 17}
+                                                            style={{ height: "100%", width: "100%" }}
+                                                            scrollWheelZoom={true}
+                                                        >
+                                                            <TileLayer
+                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                            />
+                                                            <LocationMarker />
+                                                        </MapContainer>
+                                                    </div>
+
+                                                    {/* Beautiful address display below map */}
+                                                    {eventDetails.location_lat && eventDetails.location_lng && (
+                                                        <div className="mt-3 p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg">
+                                                            <p className="text-xs font-semibold text-blue-800 uppercase tracking-wider">Selected Location</p>
+                                                            <p className="mt-1 text-sm font-medium text-gray-800">
+                                                                {eventDetails.location || "Barangay Bonbon, Cagayan de Oro City"}
+                                                            </p>
+                                                            <p className="text-xs text-gray-600 mt-1">
+                                                                GPS: {eventDetails.location_lat?.toFixed(6)}, {eventDetails.location_lng?.toFixed(6)}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </>
                                     )}

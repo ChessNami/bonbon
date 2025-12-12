@@ -3,6 +3,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
 import { supabase } from "../../../supabaseClient";
 import Swal from "sweetalert2";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix Leaflet default icon issue
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 const MiniCalendar = ({ setIsModalOpen }) => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -391,42 +402,80 @@ const MiniCalendar = ({ setIsModalOpen }) => {
                                     modalData.userEvents.map((event, idx) => (
                                         <motion.div
                                             key={idx}
-                                            className="bg-blue-100 p-4 rounded-lg mb-4 shadow-md"
+                                            className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl mb-6 shadow-lg border border-blue-200"
                                             variants={itemVariants}
                                             initial="hidden"
                                             animate="visible"
                                         >
-                                            <h3 className="text-2xl font-bold text-gray-800 mb-2 capitalize">
+                                            <h3 className="text-2xl font-bold text-gray-800 mb-3 capitalize">
                                                 {event.title}
                                             </h3>
-                                            <p className="text-lg text-gray-600">
-                                                <span className="font-bold">Time: </span>
-                                                {event.whole_day
-                                                    ? "Whole Day"
-                                                    : `${event.start_time} - ${event.end_time}`}
+
+                                            {/* Time */}
+                                            <p className="text-lg text-gray-700 mb-2">
+                                                <span className="font-semibold">Time:</span>{" "}
+                                                {event.whole_day ? "Whole Day" : `${event.start_time || "N/A"} - ${event.end_time || "N/A"}`}
                                             </p>
-                                            <p className="text-lg text-gray-600 mb-4 capitalize">
-                                                <span className="font-bold">Where: </span>
-                                                {event.location || "N/A"}
+
+                                            {/* Location Text */}
+                                            <p className="text-lg text-gray-700 mb-4 capitalize">
+                                                <span className="font-semibold">Where:</span>{" "}
+                                                {event.location || "Location not specified"}
                                             </p>
-                                            <p className="text-lg text-gray-600">
-                                                {event.description || "N/A"}
-                                            </p>
+
+                                            {/* Map Display - Only if coordinates exist */}
+                                            {event.location_lat && event.location_lng && (
+                                                <div class crea ssName="mt-4">
+                                                    <p className="text-sm font-semibold text-blue-700 mb-2">Location on Map:</p>
+                                                    <div className="h-64 rounded-lg overflow-hidden border-2 border-blue-300 shadow-md">
+                                                        <MapContainer
+                                                            center={[event.location_lat, event.location_lng]}
+                                                            zoom={17}
+                                                            style={{ height: "100%", width: "100%" }}
+                                                            scrollWheelZoom={false}
+                                                        >
+                                                            <TileLayer
+                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                            />
+                                                            <Marker position={[event.location_lat, event.location_lng]}>
+                                                                <Popup>
+                                                                    <div className="text-center">
+                                                                        <strong>{event.title}</strong><br />
+                                                                        {event.location || "Event Location"}
+                                                                    </div>
+                                                                </Popup>
+                                                            </Marker>
+                                                        </MapContainer>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-2 text-center">
+                                                        {event.location || "Pinned Location"}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Description */}
+                                            {event.description && (
+                                                <p className="text-lg text-gray-700 mt-4 italic">
+                                                    {event.description}
+                                                </p>
+                                            )}
+
+                                            {/* Image */}
                                             {event.signedImageUrl && (
                                                 <img
                                                     src={event.signedImageUrl}
                                                     alt={event.title}
-                                                    className="mt-6 w-full h-auto max-h-96 object-cover rounded-lg"
+                                                    className="mt-6 w-full h-auto max-h-96 object-cover rounded-lg shadow"
                                                     onError={(e) =>
-                                                    (e.target.src =
-                                                        "https://via.placeholder.com/600x400")
+                                                        (e.target.src = "https://via.placeholder.com/600x400?text=Image+Not+Available")
                                                     }
                                                 />
                                             )}
                                         </motion.div>
                                     ))
                                 ) : (
-                                    <div className="text-lg text-gray-600">
+                                    <div className="text-lg text-gray-600 text-center py-8">
                                         No events scheduled.
                                     </div>
                                 )}

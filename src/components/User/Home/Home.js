@@ -5,6 +5,17 @@ import Swal from "sweetalert2";
 import Loader from "../../Loader";
 import MiniCalendar from "./MiniCalendar";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix Leaflet default icon issue
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 const Home = () => {
     const [allEvents, setAllEvents] = useState([]);
@@ -395,30 +406,52 @@ const Home = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => handleEventClick(e, item.facebook_link)}
-                                    className="bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition-all duration-200"
+                                    className="bg-white border border-gray-200 rounded-xl shadow hover:shadow-lg transition-all duration-300 overflow-hidden"
                                 >
-                                    <div className="overflow-hidden rounded-t-lg aspect-video w-full">
+                                    <div className="overflow-hidden aspect-video w-full">
                                         <img
-                                            src={
-                                                item.image ||
-                                                "https://www.rootinc.com/wp-content/uploads/2022/11/placeholder-1.png"
-                                            }
+                                            src={item.image || "https://www.rootinc.com/wp-content/uploads/2022/11/placeholder-1.png"}
                                             alt={item.title}
                                             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                         />
                                     </div>
-                                    <div className="p-2 text-center">
-                                        <div className="flex items-center justify-center gap-1">
-                                            <h3 className="text-xs sm:text-sm font-bold text-gray-700 line-clamp-2 capitalize">
+                                    <div className="p-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-sm font-bold text-gray-800 line-clamp-2 capitalize">
                                                 {item.title}
                                             </h3>
-                                            <span className={`text-[10px] font-semibold px-1 py-0.5 rounded ${item.create_type === "event" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${item.create_type === "event" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
                                                 {item.create_type === "event" ? "Event" : "Announcement"}
                                             </span>
                                         </div>
-                                        <p className="text-[10px] sm:text-xs text-gray-500">
-                                            {item.displayDate.toLocaleDateString()}
+                                        <p className="text-xs text-gray-500 mb-2">
+                                            {item.displayDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                                         </p>
+
+                                        {/* Show location map if available */}
+                                        {item.location_lat && item.location_lng && (
+                                            <div className="mt-3">
+                                                <p className="text-xs font-medium text-blue-700 mb-1">Location:</p>
+                                                <div className="h-40 rounded-lg overflow-hidden border border-gray-300">
+                                                    <MapContainer
+                                                        center={[item.location_lat, item.location_lng]}
+                                                        zoom={16}
+                                                        style={{ height: "100%", width: "100%" }}
+                                                        scrollWheelZoom={false}
+                                                        zoomControl={false}
+                                                    >
+                                                        <TileLayer
+                                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                            attribution='&copy; OpenStreetMap'
+                                                        />
+                                                        <Marker position={[item.location_lat, item.location_lng]} />
+                                                    </MapContainer>
+                                                </div>
+                                                <p className="text-xs text-gray-600 mt-1 truncate">
+                                                    {item.location || "Pinned location"}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </a>
                             ))}

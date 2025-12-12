@@ -4,6 +4,7 @@ import HouseholdForm from './HouseholdForm';
 import SpouseForm from './SpouseForm';
 import HouseholdComposition from './HouseholdComposition';
 import CensusQuestions from './CensusQuestions';
+import LocationPinpoint from './LocationPinpoint';
 import Loader from '../../Loader';
 import { supabase } from '../../../supabaseClient';
 import axios from 'axios';
@@ -15,6 +16,17 @@ import {
     getBarangaysByMunicipality,
 } from '@aivangogh/ph-address';
 import placeholderImage from '../../../img/Placeholder/placeholder.png';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix default marker icon issue in React-Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
 
 const ResidentProfiling = () => {
     const [activeTab, setActiveTab] = useState('householdForm');
@@ -30,6 +42,7 @@ const ResidentProfiling = () => {
         spouse: null,
         householdComposition: [],
         census: {},
+        location: {}, // ← Add this
         childrenCount: 0,
         numberOfhouseholdMembers: 0,
     });
@@ -49,11 +62,16 @@ const ResidentProfiling = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [signedImageUrl, setSignedImageUrl] = useState(placeholderImage);
 
+    const [satelliteView, setSatelliteView] = useState(true);
+    const [reverseAddress, setReverseAddress] = useState('');
+    const [loadingAddress, setLoadingAddress] = useState(false);
+
     const tabs = [
         { key: 'householdForm', label: 'Household Head Form' },
         { key: 'spouseForm', label: 'Spouse Information' },
         { key: 'householdComposition', label: 'Household Composition' },
         { key: 'censusQuestions', label: 'Census Questions' },
+        { key: 'locationPinpoint', label: 'Location Pinpoint' },  // ← New tab
         { key: 'confirmation', label: 'Confirmation' },
     ];
 
@@ -62,7 +80,36 @@ const ResidentProfiling = () => {
         { key: 'spouse', label: 'Spouse' },
         { key: 'householdComposition', label: 'Household Composition' },
         { key: 'census', label: 'Census Questions' },
+        { key: 'location', label: 'Residence Location' }
     ];
+
+    // Reverse geocoding for confirmation preview
+    useEffect(() => {
+        if (!formData.location?.location_lat || !formData.location?.location_lng) {
+            setReverseAddress('');
+            return;
+        }
+
+        const fetchAddress = async () => {
+            setLoadingAddress(true);
+            try {
+                const lat = formData.location.location_lat;
+                const lng = formData.location.location_lng;
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+                );
+                const data = await response.json();
+                setReverseAddress(data?.display_name || 'Address could not be resolved');
+            } catch (err) {
+                console.error('Reverse geocoding failed:', err);
+                setReverseAddress('Unable to retrieve address');
+            } finally {
+                setLoadingAddress(false);
+            }
+        };
+
+        fetchAddress();
+    }, [formData.location?.location_lat, formData.location?.location_lng]);
 
     useEffect(() => {
         const fetchUserAndData = async (isInitial = false) => {
@@ -119,6 +166,9 @@ const ResidentProfiling = () => {
                             ? data.household_composition
                             : [],
                         census: data.census || {},
+                        location: data.location_lat && data.location_lng
+                            ? { location_lat: data.location_lat.toString(), location_lng: data.location_lng.toString() }
+                            : {},
                         childrenCount: data.children_count || 0,
                         numberOfhouseholdMembers: data.number_of_household_members || 0,
                     });
@@ -274,7 +324,11 @@ const ResidentProfiling = () => {
                 };
             } else if (nextTab === 'confirmation') {
                 return { ...prev, census: data };
-            } else {
+            }
+            else if (nextTab === 'locationPinpoint') {
+                return { ...prev, location: data }; // Store location
+            }
+            else {
                 return prev;
             }
         });
@@ -321,6 +375,12 @@ const ResidentProfiling = () => {
             setActiveTab(tabs[Math.min(currentIndex + 1, tabs.length - 1)].key);
         }
         setActiveConfirmationTab('householdHead');
+
+        if (activeTab === 'censusQuestions') {
+            setActiveTab('locationPinpoint');
+        } else if (activeTab === 'locationPinpoint') {
+            setActiveTab('confirmation');
+        }
     };
 
     const handleBack = () => {
@@ -700,14 +760,15 @@ const ResidentProfiling = () => {
                     spouse: convertedSpouse,
                     household_composition: convertedHouseholdComposition,
                     census: convertedCensus,
+                    location_lat: formData.location?.location_lat || null,
+                    location_lng: formData.location?.location_lng || null,
                     children_count: parseInt(formData.childrenCount, 10) || 0,
                     number_of_household_members: parseInt(formData.numberOfhouseholdMembers, 10) || 0,
                     image_url: formData.household.image_url,
                     valid_id_url: formData.household.valid_id_url,
                     zone_cert_url: formData.household.zone_cert_url,
                     spouse_valid_id_url: formData.spouse?.valid_id_url || null,
-                },
-                    { onConflict: 'user_id' })
+                }, { onConflict: 'user_id' })
                 .select()
                 .single();
 
@@ -936,6 +997,17 @@ const ResidentProfiling = () => {
                         userId={userId}
                     />
                 );
+
+            case 'locationPinpoint':
+                return (
+                    <LocationPinpoint
+                        data={formData.location}
+                        onNext={handleNext}
+                        onBack={handleBack}
+                        userId={userId}   // ← Add this line
+                    />
+                );
+
             case 'confirmation':
                 return (
                     <div className="w-full">
@@ -1306,6 +1378,104 @@ const ResidentProfiling = () => {
                                     </div>
                                 </fieldset>
                             )}
+
+                            {activeConfirmationTab === 'location' && (
+                                <fieldset className="border p-3 sm:p-4 rounded-lg">
+                                    <legend className="font-semibold text-sm sm:text-base">Residence Location</legend>
+
+                                    {formData.location?.location_lat && formData.location?.location_lng ? (
+                                        <>
+                                            {/* Toggle Button */}
+                                            <div className="mb-4 flex justify-end">
+                                                <label className="flex items-center cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={satelliteView}
+                                                        onChange={(e) => setSatelliteView(e.target.checked)}
+                                                        className="mr-2"
+                                                    />
+                                                    <span className="text-sm font-medium">Satellite View</span>
+                                                </label>
+                                            </div>
+
+                                            {/* Map - Fixed Layer Logic */}
+                                            <div className="h-80 rounded-lg overflow-hidden border border-gray-300 shadow-md mb-4">
+                                                <MapContainer
+                                                    key={`${formData.location.location_lat}-${formData.location.location_lng}-${satelliteView}`}
+                                                    center={[parseFloat(formData.location.location_lat), parseFloat(formData.location.location_lng)]}
+                                                    zoom={18}
+                                                    style={{ height: '100%', width: '100%' }}
+                                                    scrollWheelZoom={false}
+                                                    dragging={false}
+                                                    zoomControl={false}
+                                                    doubleClickZoom={false}
+                                                    touchZoom={false}
+                                                    keyboard={false}
+                                                >
+                                                    {satelliteView ? (
+                                                        <>
+                                                            {/* Pure Satellite (no road overlay) */}
+                                                            <TileLayer
+                                                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                                attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP'
+                                                            />
+                                                            {/* Optional: Very light road labels only (uncomment if you want subtle labels) */}
+                                                            {/* <TileLayer
+                                    url="https://stamen-tiles.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png"
+                                    attribution='&copy; Stamen Design &mdash; &copy; OpenStreetMap contributors'
+                                    opacity={0.4}
+                                /> */}
+                                                        </>
+                                                    ) : (
+                                                        /* Street View */
+                                                        <TileLayer
+                                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                            attribution='&copy; OpenStreetMap contributors'
+                                                        />
+                                                    )}
+
+                                                    <Marker
+                                                        position={[parseFloat(formData.location.location_lat), parseFloat(formData.location.location_lng)]}
+                                                    />
+                                                </MapContainer>
+                                            </div>
+
+                                            {/* Coordinates */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
+                                                <div>
+                                                    <label className="font-medium">Latitude:</label>
+                                                    <p className="p-2 border rounded bg-gray-50 break-all">
+                                                        {parseFloat(formData.location.location_lat).toFixed(6)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <label className="font-medium">Longitude:</label>
+                                                    <p className="p-2 border rounded bg-gray-50 break-all">
+                                                        {parseFloat(formData.location.location_lng).toFixed(6)}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Resolved Address */}
+                                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                                {loadingAddress ? (
+                                                    <p className="text-sm text-blue-700 italic">Resolving address...</p>
+                                                ) : (
+                                                    <p className="text-sm text-blue-800 break-words">
+                                                        <strong>Address:</strong> {reverseAddress || 'Address could not be resolved'}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <p className="text-xs text-gray-600 mt-3 italic">
+                                                This is the exact location you pinned. It helps verify your residence in Barangay Bonbon.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-gray-600">No location pinned yet.</p>
+                                    )}
+                                </fieldset>
+                            )}
                         </div>
 
                         <div className="flex flex-col sm:flex-row justify-between mt-4 space-y-3 sm:space-y-0 sm:space-x-3">
@@ -1352,6 +1522,9 @@ const ResidentProfiling = () => {
                                         ? Array.isArray(formData.householdComposition) && formData.householdComposition.length > 0
                                         : true)
                                 );
+                            }
+                            if (tab.key === 'locationPinpoint') {
+                                return formData.census && Object.keys(formData.census).length > 0;
                             }
                             if (tab.key === 'confirmation') {
                                 return (
