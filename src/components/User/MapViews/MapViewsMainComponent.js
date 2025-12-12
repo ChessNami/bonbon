@@ -62,7 +62,7 @@ const MapViewsMainComponent = () => {
                 >
                     Strategic Road Map
                 </motion.button>
-                <motion.button
+                {/* <motion.button
                     className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-all duration-200 ${activeTab === "Geotagging"
                             ? "bg-blue-600 text-white"
                             : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
@@ -74,7 +74,7 @@ const MapViewsMainComponent = () => {
                     whileTap={{ scale: 0.95 }}
                 >
                     Geotagging
-                </motion.button>
+                </motion.button> */}
             </div>
             <AnimatePresence mode="wait">
                 <motion.div

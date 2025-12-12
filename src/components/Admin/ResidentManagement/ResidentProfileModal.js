@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { capitalizeWords } from './Utils';
 import { FaTimes, FaDownload } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { capitalizeWords } from './Utils';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix default marker icon
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
 
 const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zIndex, validIdUrl, validIdPath, zoneCertUrl, zoneCertPath, spouseValidIdUrl, spouseValidIdPath }) => {
     const [activeProfileTab, setActiveProfileTab] = useState(0);
+    const [satelliteView, setSatelliteView] = useState(true);
+    const [reverseAddress, setReverseAddress] = useState('');
+    const [loadingAddress, setLoadingAddress] = useState(false);
 
     const modalVariants = {
         hidden: { opacity: 0, y: -50 },
@@ -19,6 +33,34 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
     };
 
     // Helper to render file display and download link
+
+    // Reverse geocoding effect
+    useEffect(() => {
+        if (!resident?.locationLat || !resident?.locationLng) {
+            setReverseAddress('');
+            return;
+        }
+
+        const fetchAddress = async () => {
+            setLoadingAddress(true);
+            try {
+                const lat = resident.locationLat;
+                const lng = resident.locationLng;
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+                );
+                const data = await response.json();
+                setReverseAddress(data?.display_name || 'Address could not be resolved');
+            } catch (err) {
+                setReverseAddress('Unable to retrieve address');
+            } finally {
+                setLoadingAddress(false);
+            }
+        };
+
+        fetchAddress();
+    }, [resident?.locationLat, resident?.locationLng]);
+
     const renderFileDisplay = (label, url, filePath) => {
         if (!url || !filePath) {
             return (
@@ -109,7 +151,7 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                         </div>
                         <div className="bg-gray-100 border-b border-gray-200">
                             <div className="flex flex-wrap gap-3 p-6">
-                                {['Household Head', 'Spouse', 'Household Composition', 'Census Questions'].map((tab, index) => (
+                                {['Household Head', 'Spouse', 'Household Composition', 'Census Questions', 'Residence Location'].map((tab, index) => (
                                     <button
                                         key={index}
                                         className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${activeProfileTab === index
@@ -449,6 +491,76 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                         </div>
                                     ) : (
                                         <p className="text-sm text-gray-500 italic">NO CENSUS DATA AVAILABLE.</p>
+                                    )}
+                                </fieldset>
+                            )}
+
+                            {/* Residence Location Tab */}
+                            {activeProfileTab === 4 && (
+                                <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                    <legend className="text-lg font-semibold text-gray-800 px-2">Residence Location</legend>
+                                    {resident?.locationLat && resident?.locationLng ? (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3">
+                                                <label className="flex items-center text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={satelliteView}
+                                                        onChange={(e) => setSatelliteView(e.target.checked)}
+                                                        className="mr-2 accent-emerald-600"
+                                                    />
+                                                    Satellite View
+                                                </label>
+                                            </div>
+                                            <div className="h-64 rounded-lg overflow-hidden border border-gray-200">
+                                                <MapContainer
+                                                    center={[parseFloat(resident.locationLat), parseFloat(resident.locationLng)]}
+                                                    zoom={18}
+                                                    style={{ height: '100%', width: '100%' }}
+                                                    scrollWheelZoom={false}
+                                                    dragging={false}
+                                                    zoomControl={false}
+                                                    doubleClickZoom={false}
+                                                    touchZoom={false}
+                                                >
+                                                    <TileLayer
+                                                        url={
+                                                            satelliteView
+                                                                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                                                                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                                                        }
+                                                        attribution={
+                                                            satelliteView
+                                                                ? '© Esri'
+                                                                : '© OpenStreetMap contributors'
+                                                        }
+                                                    />
+                                                    <Marker position={[parseFloat(resident.locationLat), parseFloat(resident.locationLng)]} />
+                                                </MapContainer>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <label className="text-gray-700 font-medium">Latitude</label>
+                                                    <p className="bg-gray-50 p-2 rounded border text-gray-800">
+                                                        {parseFloat(resident.locationLat).toFixed(6)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <label className="text-gray-700 font-medium">Longitude</label>
+                                                    <p className="bg-gray-50 p-2 rounded border text-gray-800">
+                                                        {parseFloat(resident.locationLng).toFixed(6)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="bg-blue-50 p-3 rounded border border-blue-100">
+                                                <label className="text-gray-700 font-medium text-sm block mb-1">Resolved Address</label>
+                                                <p className="text-blue-800 text-sm italic">
+                                                    {loadingAddress ? 'Loading address...' : reverseAddress || 'No address available'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 italic">NO LOCATION DATA AVAILABLE.</p>
                                     )}
                                 </fieldset>
                             )}

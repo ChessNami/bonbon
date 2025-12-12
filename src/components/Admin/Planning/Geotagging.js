@@ -1,407 +1,388 @@
+// src/components/admin/Geotagging.js
 import React, { useState, useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, LayersControl } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, LayersControl } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import L from "leaflet";
-import {
-    FaMapMarkerAlt, FaSave, FaBan, FaBuilding, FaStore, FaSchool, FaHospital, FaHotel, FaHeading, FaTrash,
-    FaChurch, FaShoppingBasket, FaClinicMedical
-} from "react-icons/fa";
-import { MdAccountBalance, MdSportsBasketball, MdDirectionsBus } from "react-icons/md";
-import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
-import ReactDOMServer from "react-dom/server";
 import { supabase } from "../../../supabaseClient";
 
-// Custom DivIcon for Markers with Name Label
-const getCustomIcon = (icon, name) => {
-    return L.divIcon({
-        className: "custom-marker",
-        html: `
-            <div class="marker-container">
-                <div class="marker-icon" style="font-size: 24px; color: #e53e3e;">${icon}</div>
-                <div class="marker-label">${name}</div>
-            </div>
-        `,
-        iconSize: [100, 50],
-        iconAnchor: [50, 50],
-        popupAnchor: [0, -40],
-    });
-};
-
-const establishmentTypes = [
-    { type: "Office", icon: '<FaBuilding />', color: "#3182ce", description: "Business or corporate office" },
-    { type: "Shop", icon: '<FaStore />', color: "#38a169", description: "Retail or small business shop" },
-    { type: "School", icon: '<FaSchool />', color: "#d69e2e", description: "Educational institution" },
-    { type: "Hospital", icon: '<FaHospital />', color: "#e53e3e", description: "Medical facility" },
-    { type: "Hotel", icon: '<FaHotel />', color: "#805ad5", description: "Lodging or accommodation" },
-    { type: "Barangay Hall", icon: '<MdAccountBalance />', color: "#2c5282", description: "Local barangay government office" },
-    { type: "Church", icon: '<FaChurch />', color: "#9f7aea", description: "Place of worship" },
-    { type: "Public Market", icon: '<FaShoppingBasket />', color: "#ed8936", description: "Community trading hub" },
-    { type: "Public Transport Hub", icon: '<MdDirectionsBus />', color: "#4a5568", description: "Terminal for jeepneys, buses, tricycles" },
-    { type: "Municipal Hall", icon: '<MdAccountBalance />', color: "#2d3748", description: "Town or city government center" },
-    { type: "Basketball Court", icon: '<MdSportsBasketball />', color: "#f56565", description: "Community sports facility" },
-    { type: "Health Center", icon: '<FaClinicMedical />', color: "#48bb78", description: "Barangay-level clinic" },
-];
+// Fix default Leaflet marker icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
 
 const Geotagging = () => {
-    const centerCoords = useMemo(() => [8.509057124770594, 124.6491339822436], []);
-    const [markers, setMarkers] = useState([]);
-    const [isAdding, setIsAdding] = useState(false);
-    const [newMarkerCoord, setNewMarkerCoord] = useState(null);
-    const [newName, setNewName] = useState("");
-    const [newType, setNewType] = useState("Office");
+    const centerCoords = useMemo(() => [8.509057, 124.649134], []);
+    const [residents, setResidents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [satelliteView, setSatelliteView] = useState(true);
 
-    // Fetch markers from Supabase
+    // Function to get status badge
+    const getStatusBadge = (status) => {
+        const badges = {
+            1: { text: 'Approved', class: 'bg-green-100 text-green-800' },
+            2: { text: 'Rejected', class: 'bg-red-100 text-red-800' },
+            3: { text: 'Pending', class: 'bg-yellow-100 text-yellow-800' },
+            4: { text: 'Update Requested', class: 'bg-blue-100 text-blue-800' },
+            5: { text: 'Update Approved', class: 'bg-purple-100 text-purple-800' },
+            6: { text: 'To Update', class: 'bg-orange-100 text-orange-800' },
+        };
+        const { text, class: badgeClass } = badges[status] || { text: 'Unknown', class: 'bg-gray-100 text-gray-800' };
+        return <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClass}`}>{text}</span>;
+    };
+
+    // Status colors for borders and dots
+    const statusColors = {
+        1: { bg: 'bg-emerald-500', border: 'border-emerald-500' },
+        2: { bg: 'bg-red-500', border: 'border-red-500' },
+        3: { bg: 'bg-yellow-500', border: 'border-yellow-500' },
+        4: { bg: 'bg-blue-500', border: 'border-blue-500' },
+        5: { bg: 'bg-purple-500', border: 'border-purple-500' },
+        6: { bg: 'bg-orange-500', border: 'border-orange-500' },
+    };
+
+    // Function to create dynamic marker with resident's profile picture
+    const createResidentIcon = (profilePicUrl, displayName, status) => {
+        const initials = displayName
+            ? displayName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .substring(0, 2)
+                .toUpperCase()
+            : "👤";
+
+        const statusColor = statusColors[status] || { bg: 'bg-emerald-500', border: 'border-white' };
+
+        if (profilePicUrl) {
+            return L.divIcon({
+                html: `
+                    <div class="relative">
+                        <img 
+                            src="${profilePicUrl}" 
+                            alt="Resident Profile"
+                            class="w-12 h-12 rounded-full object-cover border-4 ${statusColor.border} shadow-xl"
+                            onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIGZpbGw9IiM2MzhlZTYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIyMCIgZmlsbD0iI2ZmZiIgZHk9Ii4zZW0iIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5Zb3U8L3RleHQ+PC9zdmc+';"
+                        />
+                        <div class="absolute -bottom-1 -right-1 ${statusColor.bg} border-2 border-white rounded-full w-5 h-5"></div>
+                    </div>
+                `,
+                className: "custom-profile-marker",
+                iconSize: [48, 48],
+                iconAnchor: [24, 48],
+                popupAnchor: [0, -48],
+            });
+        }
+
+        // Fallback: Initials with gradient background
+        return L.divIcon({
+            html: `
+                <div class="relative">
+                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-xl border-4 ${statusColor.border} font-bold text-lg">
+                        ${initials}
+                    </div>
+                    <div class="absolute -bottom-1 -right-1 ${statusColor.bg} border-2 border-white rounded-full w-5 h-5"></div>
+                </div>
+            `,
+            className: "custom-profile-marker-fallback",
+            iconSize: [48, 48],
+            iconAnchor: [24, 48],
+            popupAnchor: [0, -48],
+        });
+    };
+
     useEffect(() => {
-        const fetchMarkers = async () => {
-            const { data, error } = await supabase
-                .from("markers")
-                .select("*");
-            if (error) {
-                console.error("Error fetching markers:", error);
-            } else {
-                setMarkers(data);
+        const fetchResidentsWithFullData = async () => {
+            try {
+                setLoading(true);
+
+                const { data: residentsData, error: resError } = await supabase
+                    .from("residents")
+                    .select(`
+                        id,
+                        user_id,
+                        location_lat,
+                        location_lng,
+                        household,
+                        spouse,
+                        household_composition,
+                        census,
+                        image_url,
+                        valid_id_url,
+                        zone_cert_url,
+                        resident_profile_status ( status )
+                    `)
+                    .not("location_lat", "is", null)
+                    .not("location_lng", "is", null);
+
+                if (resError) throw resError;
+                if (!residentsData || residentsData.length === 0) {
+                    setResidents([]);
+                    return;
+                }
+
+                const enhancedResidents = await Promise.all(
+                    residentsData.map(async (resident) => {
+                        let household = typeof resident.household === 'string'
+                            ? JSON.parse(resident.household)
+                            : resident.household || {};
+
+                        let spouse = resident.spouse
+                            ? (typeof resident.spouse === 'string' ? JSON.parse(resident.spouse) : resident.spouse)
+                            : null;
+
+                        let householdComposition = resident.household_composition
+                            ? (typeof resident.household_composition === 'string'
+                                ? JSON.parse(resident.household_composition)
+                                : resident.household_composition)
+                            : [];
+
+                        let census = resident.census
+                            ? (typeof resident.census === 'string' ? JSON.parse(resident.census) : resident.census)
+                            : {};
+
+                        let signedProfilePic = null;
+                        if (resident.image_url) {
+                            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                                .from("householdhead")
+                                .createSignedUrl(resident.image_url, 3600);
+                            if (!signedUrlError && signedUrlData) {
+                                signedProfilePic = signedUrlData.signedUrl;
+                            }
+                        }
+
+                        const fullName = `${household.firstName || 'Unknown'} ${household.lastName || 'Unknown'}`.trim();
+                        const fullAddress = household.address || 'No address provided';
+
+                        return {
+                            ...resident,
+                            position: [parseFloat(resident.location_lat), parseFloat(resident.location_lng)],
+                            fullName,
+                            displayName: fullName,
+                            profilePic: signedProfilePic,
+                            fullAddress,
+                            civilStatus: household.civilStatus || 'N/A',
+                            birthdate: household.dob || 'N/A',
+                            contact: household.phoneNumber || 'None',
+                            spouse,
+                            household_composition: householdComposition,
+                            census,
+                            status: resident.resident_profile_status?.status ?? 3,
+                        };
+                    })
+                );
+
+                setResidents(enhancedResidents);
+            } catch (err) {
+                console.error("Error loading residents:", err);
+                Swal.fire({
+                    icon: "error",
+                    title: "Failed to load map data",
+                    text: err.message || "Please refresh the page.",
+                });
+            } finally {
+                setLoading(false);
             }
         };
-        fetchMarkers();
+
+        fetchResidentsWithFullData();
+
+        const channel = supabase
+            .channel("residents-geotag")
+            .on("postgres_changes", { event: "*", schema: "public", table: "residents" }, () => {
+                fetchResidentsWithFullData();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
-    const fetchAddress = async (lat, lng) => {
-        try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-                {
-                    headers: {
-                        "User-Agent": "GeotaggingApp/1.0 (contact: your-email@example.com)",
-                    },
-                }
-            );
-            const data = await response.json();
-            return data.display_name || "Address not found";
-        } catch (error) {
-            console.error("Error fetching address:", error);
-            return "Failed to fetch address";
-        }
-    };
+    const createCustomClusterIcon = (cluster) => {
+        const count = cluster.getChildCount();
+        const size = count < 10 ? 40 : count < 50 ? 50 : 60;
 
-    const MapClickHandler = () => {
-        const map = useMapEvents({
-            click(e) {
-                if (isAdding) {
-                    const clickedCoord = [e.latlng.lat, e.latlng.lng];
-                    setNewMarkerCoord(clickedCoord);
-                    map.panTo(clickedCoord, { animate: true, duration: 0.5 });
-                }
-            },
+        return L.divIcon({
+            html: `<div class="cluster-icon bg-blue-700 text-white rounded-full flex items-center justify-center font-bold shadow-2xl border-4 border-white">
+                ${count}
+            </div>`,
+            className: "custom-cluster",
+            iconSize: L.point(size, size),
         });
-        return null;
-    };
-
-    const handleAddMarker = async () => {
-        if (!newMarkerCoord) {
-            Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "error",
-                title: "Please select a location on the map!",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-            return;
-        }
-        if (!newName) {
-            Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "error",
-                title: "Please provide the establishment name!",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-            return;
-        }
-        const address = await fetchAddress(newMarkerCoord[0], newMarkerCoord[1]);
-        const newMarker = {
-            coord: newMarkerCoord,
-            name: newName,
-            type: newType,
-            address,
-        };
-        const { data, error } = await supabase
-            .from("markers")
-            .insert([newMarker])
-            .select();
-        if (error) {
-            console.error("Error adding marker:", error);
-            Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "error",
-                title: "Failed to add marker!",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-        } else {
-            setMarkers([...markers, data[0]]);
-            Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "success",
-                title: "Marker added successfully!",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-            resetForm();
-        }
-    };
-
-    const handleDeleteMarker = async (id) => {
-        const { error } = await supabase
-            .from("markers")
-            .delete()
-            .eq("id", id);
-        if (error) {
-            console.error("Error deleting marker:", error);
-            Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "error",
-                title: "Failed to delete marker!",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-        } else {
-            setMarkers(markers.filter((marker) => marker.id !== id));
-            Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "success",
-                title: "Marker deleted successfully!",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-        }
-    };
-
-    const resetForm = () => {
-        setNewMarkerCoord(null);
-        setNewName("");
-        setNewType("Office");
-        setIsAdding(false);
     };
 
     return (
-        <div className="p-4 mx-auto">
-            <div className="flex flex-wrap gap-3 mb-6">
-                <motion.button
-                    onClick={() => !isAdding && setIsAdding(true)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 ${isAdding ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-                    disabled={isAdding}
-                    whileHover={{ scale: isAdding ? 1 : 1.05 }}
-                    whileTap={{ scale: isAdding ? 1 : 0.95 }}
-                >
-                    <FaMapMarkerAlt />
-                    Add Establishment Marker
-                </motion.button>
-            </div>
-            <div className="flex flex-col lg:flex-row gap-6">
-                <motion.div
-                    className={`flex flex-col gap-6 ${isAdding ? "w-full lg:w-2/3" : "w-full"}`}
-                    initial={{ width: "100%", opacity: 0.8, scale: 0.95 }}
-                    animate={{ width: isAdding ? "66.67%" : "100%", opacity: 1, scale: 1 }}
-                    exit={{ width: "100%", opacity: 0.8, scale: 0.95 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                >
-                    <motion.div
-                        className="w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg shadow-lg overflow-hidden"
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ duration: 0.3, delay: 0.1 }}
-                    >
-                        <MapContainer center={centerCoords} zoom={15} style={{ height: "100%", width: "100%" }}>
+        <div className="p-6 max-w-full mx-auto bg-gray-50 min-h-screen">
+            <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+                <div className="p-4 bg-gradient-to-r from-indigo-600 to-blue-700 text-white flex justify-between items-center">
+                    <div>
+                        <h2 className="text-xl font-bold">Total Residents Mapped</h2>
+                        <p className="text-sm opacity-90">
+                            {loading ? "Loading..." : `${residents.length} residents with verified locations`}
+                        </p>
+                    </div>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={satelliteView}
+                            onChange={(e) => setSatelliteView(e.target.checked)}
+                            className="w-6 h-6"
+                        />
+                        <span className="font-semibold text-lg">Satellite View</span>
+                    </label>
+                </div>
+
+                <div className="h-screen" style={{ minHeight: "600px" }}>
+                    {loading ? (
+                        <div className="flex items-center justify-center h-full bg-gray-100">
+                            <div className="text-center">
+                                <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-indigo-600 mx-auto"></div>
+                                <p className="mt-6 text-xl text-gray-700">Loading resident locations...</p>
+                            </div>
+                        </div>
+                    ) : residents.length === 0 ? (
+                        <div className="flex items-center justify-center h-full bg-gray-50">
+                            <p className="text-2xl text-gray-500">No residents have pinned their location yet.</p>
+                        </div>
+                    ) : (
+                        <MapContainer
+                            center={centerCoords}
+                            zoom={15}
+                            style={{ height: "100%", width: "100%" }}
+                            scrollWheelZoom={true}
+                        >
                             <LayersControl position="topright">
-                                <LayersControl.BaseLayer checked name="Street Map">
+                                <LayersControl.BaseLayer checked={!satelliteView} name="Street Map">
                                     <TileLayer
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                        attribution='© OpenStreetMap contributors'
                                     />
                                 </LayersControl.BaseLayer>
-                                <LayersControl.BaseLayer name="Satellite">
+                                <LayersControl.BaseLayer checked={satelliteView} name="Satellite">
                                     <TileLayer
                                         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                                        attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                        attribution='Esri, Maxar, Earthstar Geographics'
                                     />
                                 </LayersControl.BaseLayer>
                             </LayersControl>
-                            {markers.map((marker) => (
-                                <Marker
-                                    key={marker.id}
-                                    position={marker.coord}
-                                    icon={getCustomIcon(ReactDOMServer.renderToString(getIconByType(marker.type)), marker.name)}
-                                >
-                                    <Popup>
-                                        <MarkerPopup marker={marker} handleDeleteMarker={handleDeleteMarker} />
-                                    </Popup>
-                                </Marker>
-                            ))}
-                            {newMarkerCoord && isAdding && (
-                                <Marker
-                                    position={newMarkerCoord}
-                                    icon={getCustomIcon(ReactDOMServer.renderToString(getIconByType(newType)), newName || "New Marker")}
-                                />
-                            )}
-                            <MapClickHandler />
+
+                            <MarkerClusterGroup
+                                chunkedLoading
+                                iconCreateFunction={createCustomClusterIcon}
+                                maxClusterRadius={50}
+                                spiderfyOnMaxZoom={true}
+                                showCoverageOnHover={true}
+                            >
+                                {residents.map((resident) => (
+                                    <Marker
+                                        key={resident.id}
+                                        position={resident.position}
+                                        icon={createResidentIcon(resident.profilePic, resident.displayName, resident.status)}
+                                    >
+                                        <Popup
+                                            maxWidth={500}
+                                            minWidth={350}
+                                            className="custom-resident-popup"
+                                        >
+                                            <div className="p-4 font-sans text-sm">
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    {resident.profilePic ? (
+                                                        <img
+                                                            src={resident.profilePic}
+                                                            alt="Profile"
+                                                            className="w-20 h-20 rounded-full object-cover border-4 border-blue-300 shadow-lg flex-shrink-0"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg flex-shrink-0">
+                                                            {resident.displayName[0]?.toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <h3 className="text-xl font-bold text-gray-800">{resident.displayName}</h3>
+                                                        <p className="text-sm text-gray-600">Household Head</p>
+                                                        <div className="mt-1">{getStatusBadge(resident.status)}</div>
+                                                    </div>
+                                                </div>
+
+                                                <hr className="my-4 border-gray-300" />
+
+                                                <div className="mb-4">
+                                                    <p className="font-semibold text-gray-700 mb-1">Residence</p>
+                                                    <p className="bg-gray-100 p-3 rounded-lg text-sm leading-relaxed">
+                                                        {resident.fullAddress}
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                                    <div>
+                                                        <span className="font-medium text-gray-700">Born:</span>
+                                                        <span className="ml-2">
+                                                            {resident.birthdate ? new Date(resident.birthdate).toLocaleDateString() : "N/A"}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium text-gray-700">Contact:</span>
+                                                        <span className="ml-2">{resident.contact || "None"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium text-gray-700">Civil Status:</span>
+                                                        <span className="ml-2">{resident.civilStatus || "N/A"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium text-gray-700">Voter:</span>
+                                                        <span className="ml-2">{resident.census?.isRegisteredVoter ? "Yes" : "No"}</span>
+                                                    </div>
+                                                </div>
+
+                                                {resident.spouse && (
+                                                    <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                                        <p className="font-semibold text-purple-800">Spouse</p>
+                                                        <p className="text-sm mt-1">
+                                                            {resident.spouse.firstName} {resident.spouse.lastName}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {resident.household_composition?.length > 0 && (
+                                                    <div className="mb-4">
+                                                        <p className="font-semibold text-sm mb-2">
+                                                            Household Members ({resident.household_composition.length})
+                                                        </p>
+                                                        <div className="max-h-32 overflow-y-auto space-y-1">
+                                                            {resident.household_composition.map((m, i) => (
+                                                                <div key={i} className="bg-gray-100 px-3 py-2 rounded text-sm">
+                                                                    {m.firstName} {m.lastName} <span className="text-gray-600">({m.relation})</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
+                                                    Resident ID: {resident.id}
+                                                </div>
+                                            </div>
+                                        </Popup>
+                                    </Marker>
+                                ))}
+                            </MarkerClusterGroup>
                         </MapContainer>
-                    </motion.div>
-                    <div className="bg-white p-4 rounded-lg shadow-lg">
-                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                            <FaMapMarkerAlt className="text-blue-600" />
-                            Map Legend
-                        </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                            {establishmentTypes.map((est) => (
-                                <div key={est.type} className="flex items-center gap-2">
-                                    <div className="text-2xl">{React.createElement(getIconByType(est.type).type, { style: { color: est.color } })}</div>
-                                    <div>
-                                        <p className="font-medium">{est.type}</p>
-                                        <p className="text-sm text-gray-600">{est.description}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </motion.div>
-                <AnimatePresence>
-                    {isAdding && (
-                        <motion.div
-                            className="w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-lg"
-                            initial={{ x: 100, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            exit={{ x: 100, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                <FaMapMarkerAlt className="text-blue-600" />
-                                New Establishment Marker
-                            </h2>
-                            <form onSubmit={(e) => { e.preventDefault(); handleAddMarker(); }} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                        <FaHeading className="text-gray-500" />
-                                        Establishment Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter establishment name"
-                                        value={newName}
-                                        onChange={(e) => setNewName(e.target.value)}
-                                        className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                        <FaBuilding className="text-gray-500" />
-                                        Establishment Type
-                                    </label>
-                                    <select
-                                        value={newType}
-                                        onChange={(e) => setNewType(e.target.value)}
-                                        className="mt-1 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        {establishmentTypes.map((est) => (
-                                            <option key={est.type} value={est.type}>
-                                                {est.type}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex flex-wrap gap-3">
-                                    <motion.button
-                                        type="submit"
-                                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <FaSave />
-                                        Save Marker
-                                    </motion.button>
-                                    <motion.button
-                                        type="button"
-                                        onClick={resetForm}
-                                        className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <FaBan />
-                                        Cancel
-                                    </motion.button>
-                                </div>
-                            </form>
-                        </motion.div>
                     )}
-                </AnimatePresence>
+                </div>
+            </div>
+
+            <div className="mt-6 text-center text-sm text-gray-500">
+                <p>Only residents who have completed location pinpointing are shown on the map.</p>
             </div>
         </div>
     );
-};
-
-// Popup component to display pre-fetched address
-const MarkerPopup = ({ marker, handleDeleteMarker }) => {
-    return (
-        <div className="p-2">
-            <h3 className="font-semibold flex items-center gap-2">
-                {React.createElement(getIconByType(marker.type).type, { style: { color: establishmentTypes.find(est => est.type === marker.type).color } })}
-                {marker.name}
-            </h3>
-            <p className="mt-2">
-                <strong>Type:</strong> {marker.type}
-            </p>
-            <p className="mt-2">
-                <strong>Address:</strong> {marker.address}
-            </p>
-            <motion.button
-                onClick={() => handleDeleteMarker(marker.id)}
-                className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 mt-3"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-            >
-                <FaTrash />
-                Delete
-            </motion.button>
-        </div>
-    );
-};
-
-const getIconByType = (type) => {
-    const establishment = establishmentTypes.find((est) => est.type === type);
-    switch (type) {
-        case "Office":
-            return <FaBuilding style={{ color: establishment.color }} />;
-        case "Shop":
-            return <FaStore style={{ color: establishment.color }} />;
-        case "School":
-            return <FaSchool style={{ color: establishment.color }} />;
-        case "Hospital":
-            return <FaHospital style={{ color: establishment.color }} />;
-        case "Hotel":
-            return <FaHotel style={{ color: establishment.color }} />;
-        case "Barangay Hall":
-            return <MdAccountBalance style={{ color: establishment.color }} />;
-        case "Church":
-            return <FaChurch style={{ color: establishment.color }} />;
-        case "Public Market":
-            return <FaShoppingBasket style={{ color: establishment.color }} />;
-        case "Public Transport Hub":
-            return <MdDirectionsBus style={{ color: establishment.color }} />;
-        case "Municipal Hall":
-            return <MdAccountBalance style={{ color: establishment.color }} />;
-        case "Basketball Court":
-            return <MdSportsBasketball style={{ color: establishment.color }} />;
-        case "Health Center":
-            return <FaClinicMedical style={{ color: establishment.color }} />;
-        default:
-            return <FaBuilding style={{ color: establishment.color }} />;
-    }
 };
 
 export default Geotagging;

@@ -123,6 +123,8 @@ const ResidentManagement = () => {
                 zone_cert_url,
                 spouse_valid_id_url,
                 zone_cert_availability,
+                location_lat,
+                location_lng,
                 resident_profile_status (
                     id,
                     status,
@@ -275,6 +277,8 @@ const ResidentManagement = () => {
                         zoneCertPath: resident.zone_cert_url || null,
                         spouseValidIdUrl: spouseValidIdUrl,
                         spouseValidIdPath: resident.spouse_valid_id_url || null,
+                        locationLat: resident.location_lat || null,
+                        locationLng: resident.location_lng || null,
                     };
                 })
             );
