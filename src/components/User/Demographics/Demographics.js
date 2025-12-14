@@ -38,6 +38,9 @@ const COLORS = {
     male: "#4f46e5",  // indigo-600
     female: "#10b981",
     other: "#f59e0b",
+    children: "#f59e0b",
+    adults: "#3b82f6",
+    seniors: "#8b5cf6",
 };
 
 const Demographics = () => {
@@ -46,7 +49,8 @@ const Demographics = () => {
     const [maleCount, setMaleCount] = useState(0);
     const [femaleCount, setFemaleCount] = useState(0);
     const [seniorCitizens, setSeniorCitizens] = useState(0);
-    const [populationGrowthData, setPopulationGrowthData] = useState([]);
+    const [ageData, setAgeData] = useState([]);
+    const [ageAdditionsByYear, setAgeAdditionsByYear] = useState([]);
     const [genderData, setGenderData] = useState([]);
     const [zoneSeniorData, setZoneSeniorData] = useState({});
     const [zonePopulationData, setZonePopulationData] = useState({});
@@ -70,7 +74,7 @@ const Demographics = () => {
     const [selectedPopulationZone, setSelectedPopulationZone] = useState(null);
     const [selectedGenderZone, setSelectedGenderZone] = useState(null);
 
-    const calculateAge = useCallback((dob, providedAge) => {
+    const calculateAge = useCallback((dob, providedAge, referenceDate = new Date()) => {
         if (providedAge !== null && providedAge !== undefined) {
             if (typeof providedAge === "number") return providedAge;
             if (typeof providedAge === "string") {
@@ -80,7 +84,7 @@ const Demographics = () => {
         }
         if (dob) {
             const birthDate = new Date(dob);
-            const today = new Date();
+            const today = referenceDate;
             let age = today.getFullYear() - birthDate.getFullYear();
             const monthDiff = today.getMonth() - birthDate.getMonth();
             if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -131,7 +135,8 @@ const Demographics = () => {
             if (!data || data.length === 0) {
                 setTotalResidents(0);
                 setTotalHouseholds(0);
-                setPopulationGrowthData([]);
+                setAgeData([]);
+                setAgeAdditionsByYear([]);
                 setGenderData([]);
                 setMaleCount(0);
                 setFemaleCount(0);
@@ -151,7 +156,7 @@ const Demographics = () => {
             }
 
             let male = 0, female = 0, other = 0;
-            let seniors = 0;
+            let children = 0, adults = 0, seniors = 0;
 
             const zoneSeniorDataTemp = {};
             const zonePopulationDataTemp = {};
@@ -165,7 +170,7 @@ const Demographics = () => {
                 isRegisteredVoter: { Yes: 0, No: 0 },
             };
 
-            const yearCounts = {};
+            const ageAdditionsByYearTemp = {};
 
             for (let i = 1; i <= 9; i++) {
                 zoneSeniorDataTemp[i] = { count: 0 };
@@ -174,33 +179,20 @@ const Demographics = () => {
             }
 
             data.forEach((resident) => {
+                const createdAt = new Date(resident.created_at);
+                const createdYear = createdAt.getFullYear();
+                if (!ageAdditionsByYearTemp[createdYear]) {
+                    ageAdditionsByYearTemp[createdYear] = { children: 0, adults: 0, seniors: 0 };
+                }
+
                 const household = resident.household;
-                const headAge = calculateAge(household.dob, household.age);
+                const headCurrentAge = calculateAge(household.dob, household.age);
+                const headHistAge = calculateAge(household.dob, household.age, createdAt);
                 const headGender = household.customGender || household.gender;
                 const zoneStr = household.zone || null;
                 const zone = zoneStr ? parseInt(zoneStr.replace(/[^0-9]/g, '')) : null;
 
-                // Calculate household size for growth
-                let householdSize = 1; // head
-                if (resident.spouse && Object.keys(resident.spouse).length > 0) householdSize += 1;
-                if (resident.household_composition) {
-                    try {
-                        let composition = resident.household_composition;
-                        if (typeof composition === "string") composition = JSON.parse(composition);
-                        householdSize += composition.filter((member) => member.isLivingWithParents === "Yes" || !member.isLivingWithParents).length;
-                    } catch (e) {
-                        console.error("Error parsing household_composition:", e);
-                    }
-                }
-
-                // Population growth by year
-                if (resident.created_at) {
-                    const year = new Date(resident.created_at).getFullYear();
-                    if (!yearCounts[year]) yearCounts[year] = 0;
-                    yearCounts[year] += householdSize;
-                }
-
-                // Population & Gender per zone
+                // Population & Gender per zone (current)
                 if (zone && zone in zonePopulationDataTemp) {
                     zonePopulationDataTemp[zone].count += 1;
                     if (headGender === "Male") zoneGenderDataTemp[zone].male += 1;
@@ -211,15 +203,24 @@ const Demographics = () => {
                 else if (headGender === "Female") female += 1;
                 else other += 1;
 
-                if (headAge >= 60) {
-                    seniors += 1;
+                // Current age groups
+                if (headCurrentAge < 18) children += 1;
+                else if (headCurrentAge < 60) adults += 1;
+                else seniors += 1;
+                if (headCurrentAge >= 60) {
                     if (zone) zoneSeniorDataTemp[zone].count += 1;
                 }
+
+                // Historical age groups for additions by year
+                if (headHistAge < 18) ageAdditionsByYearTemp[createdYear].children += 1;
+                else if (headHistAge < 60) ageAdditionsByYearTemp[createdYear].adults += 1;
+                else ageAdditionsByYearTemp[createdYear].seniors += 1;
 
                 // Spouse
                 if (resident.spouse && Object.keys(resident.spouse).length > 0) {
                     const spouse = resident.spouse;
-                    const spouseAge = calculateAge(spouse.dob, spouse.age);
+                    const spouseCurrentAge = calculateAge(spouse.dob, spouse.age);
+                    const spouseHistAge = calculateAge(spouse.dob, spouse.age, createdAt);
                     const spouseGender = spouse.customGender || spouse.gender;
 
                     if (zone && zone in zonePopulationDataTemp) {
@@ -231,10 +232,18 @@ const Demographics = () => {
                     if (spouseGender === "Male") male += 1;
                     else if (spouseGender === "Female") female += 1;
 
-                    if (spouseAge >= 60) {
-                        seniors += 1;
+                    // Current
+                    if (spouseCurrentAge < 18) children += 1;
+                    else if (spouseCurrentAge < 60) adults += 1;
+                    else seniors += 1;
+                    if (spouseCurrentAge >= 60) {
                         if (zone) zoneSeniorDataTemp[zone].count += 1;
                     }
+
+                    // Historical
+                    if (spouseHistAge < 18) ageAdditionsByYearTemp[createdYear].children += 1;
+                    else if (spouseHistAge < 60) ageAdditionsByYearTemp[createdYear].adults += 1;
+                    else ageAdditionsByYearTemp[createdYear].seniors += 1;
                 }
 
                 // Household composition
@@ -244,7 +253,8 @@ const Demographics = () => {
                         if (typeof composition === "string") composition = JSON.parse(composition);
                         composition.forEach((member) => {
                             if (member.isLivingWithParents === "Yes" || !member.isLivingWithParents) {
-                                const memberAge = calculateAge(member.dob, member.age);
+                                const memberCurrentAge = calculateAge(member.dob, member.age);
+                                const memberHistAge = calculateAge(member.dob, member.age, createdAt);
                                 const memberGender = member.customGender || member.gender;
 
                                 if (zone && zone in zonePopulationDataTemp) {
@@ -256,10 +266,18 @@ const Demographics = () => {
                                 if (memberGender === "Male") male += 1;
                                 else if (memberGender === "Female") female += 1;
 
-                                if (memberAge >= 60) {
-                                    seniors += 1;
+                                // Current
+                                if (memberCurrentAge < 18) children += 1;
+                                else if (memberCurrentAge < 60) adults += 1;
+                                else seniors += 1;
+                                if (memberCurrentAge >= 60) {
                                     if (zone) zoneSeniorDataTemp[zone].count += 1;
                                 }
+
+                                // Historical
+                                if (memberHistAge < 18) ageAdditionsByYearTemp[createdYear].children += 1;
+                                else if (memberHistAge < 60) ageAdditionsByYearTemp[createdYear].adults += 1;
+                                else ageAdditionsByYearTemp[createdYear].seniors += 1;
                             }
                         });
                     } catch (e) {
@@ -302,11 +320,16 @@ const Demographics = () => {
             setZoneGenderData(zoneGenderDataTemp);
             setCensusData(tempCensus);
 
-            setPopulationGrowthData(
-                Object.entries(yearCounts)
-                    .map(([year, count]) => ({ year: parseInt(year), count }))
-                    .sort((a, b) => a.year - b.year)
-            );
+            setAgeData([
+                { ageGroup: "Children (0-17)", count: children },
+                { ageGroup: "Adults (18-59)", count: adults },
+                { ageGroup: "Seniors (60+)", count: seniors },
+            ]);
+
+            const sortedAgeAdditions = Object.entries(ageAdditionsByYearTemp)
+                .map(([year, d]) => ({ year: parseInt(year), children: d.children, adults: d.adults, seniors: d.seniors }))
+                .sort((a, b) => a.year - b.year);
+            setAgeAdditionsByYear(sortedAgeAdditions);
 
             setGenderData([
                 { category: "Residents", male, female, other },
@@ -384,14 +407,14 @@ const Demographics = () => {
                         ))}
                     </div>
 
-                    {/* Main Charts - Population Growth & Gender */}
+                    {/* Main Charts - Age & Gender */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                         <motion.div variants={chartVariants} initial="hidden" animate="visible" className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                            <h3 className="text-2xl font-bold text-gray-800 mb-6">Population Growth by Year</h3>
+                            <h3 className="text-2xl font-bold text-gray-800 mb-6">Current Population by Age Group</h3>
                             <ResponsiveContainer width="100%" height={400}>
-                                <BarChart data={populationGrowthData}>
+                                <BarChart data={ageData}>
                                     <CartesianGrid strokeDasharray="4 4" stroke="#f0f0f0" />
-                                    <XAxis dataKey="year" tick={{ fill: "#555" }} />
+                                    <XAxis dataKey="ageGroup" tick={{ fill: "#555" }} />
                                     <YAxis tick={{ fill: "#555" }} />
                                     <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }} />
                                     <Bar dataKey="count" fill="#f59e0b" radius={[12, 12, 0, 0]} />
@@ -415,6 +438,46 @@ const Demographics = () => {
                             </ResponsiveContainer>
                         </motion.div>
                     </div>
+
+                    {/* New Chart - Additions by Year and Age Group */}
+                    {/* New Chart - Residents Added by Age Group per Year */}
+                    <motion.div
+                        variants={chartVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 mb-12"
+                    >
+                        <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                            Residents by Age Group per Year
+                        </h3>
+
+                        {/* Info Note Bubble */}
+                        <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                            <FaInfoCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={20} />
+                            <div className="text-sm text-amber-900">
+                                <p className="font-medium">Based on the year the resident profile was approved</p>
+                                <p className="mt-1">
+                                    Each resident (head, spouse, and household members) is counted in the year their profile was marked as <strong>approved</strong>.
+                                    Their age group is calculated <em>as of the approval date</em>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <ResponsiveContainer width="100%" height={400}>
+                            <BarChart data={ageAdditionsByYear}>
+                                <CartesianGrid strokeDasharray="4 4" stroke="#f0f0f0" />
+                                <XAxis dataKey="year" tick={{ fill: "#555" }} />
+                                <YAxis tick={{ fill: "#555" }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}
+                                />
+                                <Legend />
+                                <Bar dataKey="children" stackId="a" fill={COLORS.children} name="Children (0-17)" />
+                                <Bar dataKey="adults" stackId="a" fill={COLORS.adults} name="Adults (18-59)" />
+                                <Bar dataKey="seniors" stackId="a" fill={COLORS.seniors} radius={[12, 12, 0, 0]} name="Seniors (60+)" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </motion.div>
 
                     {/* Census Pie Charts */}
                     <div className="mb-12">
