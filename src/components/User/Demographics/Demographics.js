@@ -46,7 +46,7 @@ const Demographics = () => {
     const [maleCount, setMaleCount] = useState(0);
     const [femaleCount, setFemaleCount] = useState(0);
     const [seniorCitizens, setSeniorCitizens] = useState(0);
-    const [ageData, setAgeData] = useState([]);
+    const [populationGrowthData, setPopulationGrowthData] = useState([]);
     const [genderData, setGenderData] = useState([]);
     const [zoneSeniorData, setZoneSeniorData] = useState({});
     const [zonePopulationData, setZonePopulationData] = useState({});
@@ -117,6 +117,7 @@ const Demographics = () => {
             const { data, error } = await supabase
                 .from("residents")
                 .select(`
+                    created_at,
                     household,
                     spouse,
                     household_composition,
@@ -130,7 +131,7 @@ const Demographics = () => {
             if (!data || data.length === 0) {
                 setTotalResidents(0);
                 setTotalHouseholds(0);
-                setAgeData([]);
+                setPopulationGrowthData([]);
                 setGenderData([]);
                 setMaleCount(0);
                 setFemaleCount(0);
@@ -150,7 +151,7 @@ const Demographics = () => {
             }
 
             let male = 0, female = 0, other = 0;
-            let age18Below = 0, age18Above = 0, seniors = 0;
+            let seniors = 0;
 
             const zoneSeniorDataTemp = {};
             const zonePopulationDataTemp = {};
@@ -163,6 +164,8 @@ const Demographics = () => {
                 hasOwnWaterSupply: { Yes: 0, No: 0 },
                 isRegisteredVoter: { Yes: 0, No: 0 },
             };
+
+            const yearCounts = {};
 
             for (let i = 1; i <= 9; i++) {
                 zoneSeniorDataTemp[i] = { count: 0 };
@@ -177,6 +180,26 @@ const Demographics = () => {
                 const zoneStr = household.zone || null;
                 const zone = zoneStr ? parseInt(zoneStr.replace(/[^0-9]/g, '')) : null;
 
+                // Calculate household size for growth
+                let householdSize = 1; // head
+                if (resident.spouse && Object.keys(resident.spouse).length > 0) householdSize += 1;
+                if (resident.household_composition) {
+                    try {
+                        let composition = resident.household_composition;
+                        if (typeof composition === "string") composition = JSON.parse(composition);
+                        householdSize += composition.filter((member) => member.isLivingWithParents === "Yes" || !member.isLivingWithParents).length;
+                    } catch (e) {
+                        console.error("Error parsing household_composition:", e);
+                    }
+                }
+
+                // Population growth by year
+                if (resident.created_at) {
+                    const year = new Date(resident.created_at).getFullYear();
+                    if (!yearCounts[year]) yearCounts[year] = 0;
+                    yearCounts[year] += householdSize;
+                }
+
                 // Population & Gender per zone
                 if (zone && zone in zonePopulationDataTemp) {
                     zonePopulationDataTemp[zone].count += 1;
@@ -188,8 +211,6 @@ const Demographics = () => {
                 else if (headGender === "Female") female += 1;
                 else other += 1;
 
-                if (headAge <= 18) age18Below += 1;
-                else age18Above += 1;
                 if (headAge >= 60) {
                     seniors += 1;
                     if (zone) zoneSeniorDataTemp[zone].count += 1;
@@ -210,8 +231,6 @@ const Demographics = () => {
                     if (spouseGender === "Male") male += 1;
                     else if (spouseGender === "Female") female += 1;
 
-                    if (spouseAge <= 18) age18Below += 1;
-                    else age18Above += 1;
                     if (spouseAge >= 60) {
                         seniors += 1;
                         if (zone) zoneSeniorDataTemp[zone].count += 1;
@@ -237,8 +256,6 @@ const Demographics = () => {
                                 if (memberGender === "Male") male += 1;
                                 else if (memberGender === "Female") female += 1;
 
-                                if (memberAge <= 18) age18Below += 1;
-                                else age18Above += 1;
                                 if (memberAge >= 60) {
                                     seniors += 1;
                                     if (zone) zoneSeniorDataTemp[zone].count += 1;
@@ -285,10 +302,11 @@ const Demographics = () => {
             setZoneGenderData(zoneGenderDataTemp);
             setCensusData(tempCensus);
 
-            setAgeData([
-                { ageGroup: "Below 18", count: age18Below },
-                { ageGroup: "18 and Above", count: age18Above },
-            ]);
+            setPopulationGrowthData(
+                Object.entries(yearCounts)
+                    .map(([year, count]) => ({ year: parseInt(year), count }))
+                    .sort((a, b) => a.year - b.year)
+            );
 
             setGenderData([
                 { category: "Residents", male, female, other },
@@ -366,14 +384,14 @@ const Demographics = () => {
                         ))}
                     </div>
 
-                    {/* Main Charts - Age & Gender */}
+                    {/* Main Charts - Population Growth & Gender */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                         <motion.div variants={chartVariants} initial="hidden" animate="visible" className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                            <h3 className="text-2xl font-bold text-gray-800 mb-6">Population by Age Group</h3>
+                            <h3 className="text-2xl font-bold text-gray-800 mb-6">Population Growth by Year</h3>
                             <ResponsiveContainer width="100%" height={400}>
-                                <BarChart data={ageData}>
+                                <BarChart data={populationGrowthData}>
                                     <CartesianGrid strokeDasharray="4 4" stroke="#f0f0f0" />
-                                    <XAxis dataKey="ageGroup" tick={{ fill: "#555" }} />
+                                    <XAxis dataKey="year" tick={{ fill: "#555" }} />
                                     <YAxis tick={{ fill: "#555" }} />
                                     <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }} />
                                     <Bar dataKey="count" fill="#f59e0b" radius={[12, 12, 0, 0]} />
