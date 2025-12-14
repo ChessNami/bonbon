@@ -93,7 +93,7 @@ const PlanningMainComponent = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                 >
-                    Geotagging
+                    Landmarks
                     {activeTab === "Geotagging" && (
                         <motion.div
                             className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
