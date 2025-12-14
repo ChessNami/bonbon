@@ -63,6 +63,26 @@ const PlanningMainComponent = () => {
                     )}
                 </motion.button>
                 <motion.button
+                    className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Zone Mapper"
+                        ? "text-blue-600"
+                        : "text-gray-500 hover:text-gray-700"
+                        }`}
+                    onClick={() => setActiveTab("Zone Mapper")}
+                    variants={tabVariants}
+                    animate={activeTab === "Zone Mapper" ? "active" : "inactive"}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    Zone Mapper
+                    {activeTab === "Zone Mapper" && (
+                        <motion.div
+                            className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
+                            layout
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                    )}
+                </motion.button>
+                <motion.button
                     className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Geotagging"
                         ? "text-blue-600"
                         : "text-gray-500 hover:text-gray-700"
@@ -95,26 +115,6 @@ const PlanningMainComponent = () => {
                 >
                     Strategic Road Map
                     {activeTab === "Strategic Road Map" && (
-                        <motion.div
-                            className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
-                            layout
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        />
-                    )}
-                </motion.button>
-                <motion.button
-                    className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Zone Mapper"
-                        ? "text-blue-600"
-                        : "text-gray-500 hover:text-gray-700"
-                        }`}
-                    onClick={() => setActiveTab("Zone Mapper")}
-                    variants={tabVariants}
-                    animate={activeTab === "Zone Mapper" ? "active" : "inactive"}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                >
-                    Zone Mapper
-                    {activeTab === "Zone Mapper" && (
                         <motion.div
                             className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
                             layout
