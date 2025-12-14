@@ -59,7 +59,7 @@ const PlanningMainComponent = () => {
                         />
                     )}
                 </motion.button>
-                <motion.button
+                {/* <motion.button
                     className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Strategic Road Map"
                         ? "text-blue-600"
                         : "text-gray-500 hover:text-gray-700"
@@ -78,7 +78,7 @@ const PlanningMainComponent = () => {
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         />
                     )}
-                </motion.button>
+                </motion.button> */}
                 <motion.button
                     className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Zone Mapper"
                         ? "text-blue-600"

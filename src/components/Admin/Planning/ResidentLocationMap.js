@@ -6,7 +6,7 @@ import {
     Marker,
     Popup,
     LayersControl,
-    Polygon,               // ← Added for zone polygons
+    Polygon,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
@@ -15,6 +15,7 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import L from "leaflet";
 import Swal from "sweetalert2";
 import { supabase } from "../../../supabaseClient";
+import placeholderImage from "../../../img/Placeholder/placeholder.png";
 
 // Fix default Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -27,10 +28,10 @@ L.Icon.Default.mergeOptions({
 const ResidentLocationMap = () => {
     const centerCoords = useMemo(() => [8.509057, 124.649134], []);
     const [residents, setResidents] = useState([]);
-    const [zones, setZones] = useState([]);              // ← New: barangay zones
+    const [zones, setZones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [satelliteView, setSatelliteView] = useState(true);
-    const [showZones, setShowZones] = useState(false);   // ← New: toggle for zones
+    const [showZones, setShowZones] = useState(false);
 
     // Function to get status badge
     const getStatusBadge = (status) => {
@@ -77,7 +78,7 @@ const ResidentLocationMap = () => {
               src="${profilePicUrl}" 
               alt="Resident Profile"
               class="w-12 h-12 rounded-full object-cover border-4 ${statusColor.border} shadow-xl"
-              onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIGZpbGw9IiM2MzhlZTYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIyMCIgZmlsbD0iI2ZmZiIgZHk9Ii4zZW0iIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5Zb3U8L3RleHQ+PC9zdmc+';"
+                onerror="this.onerror=null; this.src='${placeholderImage}';"
             />
             <div class="absolute -bottom-1 -right-1 ${statusColor.bg} border-2 border-white rounded-full w-5 h-5"></div>
           </div>
@@ -105,7 +106,7 @@ const ResidentLocationMap = () => {
         });
     };
 
-    // ← NEW: Fetch barangay zones
+    // Fetch barangay zones
     useEffect(() => {
         const fetchZones = async () => {
             try {
@@ -119,7 +120,7 @@ const ResidentLocationMap = () => {
         fetchZones();
     }, []);
 
-    // Existing resident data fetch
+    // Fetch residents
     useEffect(() => {
         const fetchResidentsWithFullData = async () => {
             try {
@@ -241,7 +242,7 @@ const ResidentLocationMap = () => {
         });
     };
 
-    // ← NEW: Zone color helper (consistent with ZoneMapper)
+    // Zone color helper
     const getZoneColors = (color) => {
         if (color.startsWith("#")) {
             return { fill: `${color}80`, border: color };
@@ -259,7 +260,7 @@ const ResidentLocationMap = () => {
         return predefined[color] || predefined.blue;
     };
 
-    // ← NEW: Simple centroid for zone name label
+    // Simple centroid for zone name label
     const getCentroid = (coords) => {
         if (!coords || coords.length < 3) return centerCoords;
         let latSum = 0,
@@ -274,33 +275,45 @@ const ResidentLocationMap = () => {
     return (
         <div className="p-6 max-w-full mx-auto bg-gray-50 min-h-screen">
             <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-                <div className="p-4 bg-gradient-to-r from-indigo-600 to-blue-700 text-white flex justify-between items-center">
+                <div className="p-6 bg-gradient-to-r from-indigo-600 to-blue-700 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                     <div>
-                        <h2 className="text-xl font-bold">Total Residents Mapped</h2>
-                        <p className="text-sm opacity-90">
+                        <h2 className="text-2xl font-bold">Total Residents Mapped</h2>
+                        <p className="text-lg opacity-90 mt-1">
                             {loading ? "Loading..." : `${residents.length} residents with verified locations`}
                         </p>
                     </div>
-                    <div className="flex gap-8">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={satelliteView}
-                                onChange={(e) => setSatelliteView(e.target.checked)}
-                                className="w-6 h-6"
-                            />
-                            <span className="font-semibold text-lg">Satellite View</span>
+
+                    <div className="flex flex-wrap gap-8">
+                        {/* Satellite View Toggle */}
+                        <label className="flex items-center gap-4 cursor-pointer group">
+                            <div className="relative">
+                                <input
+                                    type="checkbox"
+                                    checked={satelliteView}
+                                    onChange={(e) => setSatelliteView(e.target.checked)}
+                                    className="sr-only"
+                                />
+                                <div className={`w-14 h-8 rounded-full shadow-inner transition-colors ${satelliteView ? "bg-white/30" : "bg-white/20"}`}>
+                                    <div className={`absolute top-1 left-1 w-6 h-6 rounded-full shadow-md transform transition-transform ${satelliteView ? "translate-x-6 bg-indigo-500" : "bg-gray-300"}`}></div>
+                                </div>
+                            </div>
+                            <span className="font-semibold text-lg select-none">Satellite View</span>
                         </label>
 
-                        {/* ← NEW TOGGLE SWITCH */}
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={showZones}
-                                onChange={(e) => setShowZones(e.target.checked)}
-                                className="w-6 h-6"
-                            />
-                            <span className="font-semibold text-lg">Show Zones</span>
+                        {/* Show Zones Toggle */}
+                        <label className="flex items-center gap-4 cursor-pointer group">
+                            <div className="relative">
+                                <input
+                                    type="checkbox"
+                                    checked={showZones}
+                                    onChange={(e) => setShowZones(e.target.checked)}
+                                    className="sr-only"
+                                />
+                                <div className={`w-14 h-8 rounded-full shadow-inner transition-colors ${showZones ? "bg-white/30" : "bg-white/20"}`}>
+                                    <div className={`absolute top-1 left-1 w-6 h-6 rounded-full shadow-md transform transition-transform ${showZones ? "translate-x-6 bg-green-500" : "bg-gray-300"}`}></div>
+                                </div>
+                            </div>
+                            <span className="font-semibold text-lg select-none">Show Zones</span>
                         </label>
                     </div>
                 </div>
@@ -354,7 +367,6 @@ const ResidentLocationMap = () => {
                                         icon={createResidentIcon(resident.profilePic, resident.displayName, resident.status)}
                                     >
                                         <Popup maxWidth={500} minWidth={350} className="custom-resident-popup">
-                                            {/* Popup content remains exactly the same */}
                                             <div className="p-4 font-sans text-sm">
                                                 <div className="flex items-center gap-4 mb-4">
                                                     {resident.profilePic ? (
@@ -438,11 +450,11 @@ const ResidentLocationMap = () => {
                                 ))}
                             </MarkerClusterGroup>
 
-                            {/* ← NEW: Render zones when toggle is on */}
+                            {/* Render zones when toggle is on */}
                             {showZones &&
                                 zones.map((zone) => {
                                     const colors = getZoneColors(zone.color);
-                                    const centroid = getCentroid(zone.coords.slice(0, -1)); // remove closing point
+                                    const centroid = getCentroid(zone.coords.slice(0, -1));
 
                                     return (
                                         <React.Fragment key={zone.id}>

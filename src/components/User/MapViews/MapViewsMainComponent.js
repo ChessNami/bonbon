@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ProjectManagementView from "./ProjectManagement/ProjectManagementView";
 import StrategicRoadMapView from "./StrategicRoad/StrategicRoadMapView";
 import GeotaggingView from "./Geotagging/GeotaggingView";
+import ZoneViewer from "./ZoneViewer/ZoneViewer";
 
 const MapViewsMainComponent = () => {
     const [activeTab, setActiveTab] = useState("Project Management");
@@ -16,22 +17,7 @@ const MapViewsMainComponent = () => {
             case "Geotagging":
                 return <GeotaggingView />;
             case "Zone Map":
-                return (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.4 }}
-                        className="flex flex-col items-center justify-center min-h-[400px] text-center"
-                    >
-                        <div className="text-4xl mb-4">🚧</div>
-                        <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                            Work in Progress
-                        </h2>
-                        <p className="text-gray-600 max-w-md">
-                            The Zone Map feature is currently under development and will be available in a few days.
-                        </p>
-                    </motion.div>
-                );
+                return <ZoneViewer />
             default:
                 return <ProjectManagementView />;
         }
@@ -67,7 +53,7 @@ const MapViewsMainComponent = () => {
                     Project Management
                 </motion.button>
 
-                <motion.button
+                {/* <motion.button
                     className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-all duration-200 ${activeTab === "Strategic Road Map"
                             ? "bg-blue-600 text-white"
                             : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
@@ -79,7 +65,7 @@ const MapViewsMainComponent = () => {
                     whileTap={{ scale: 0.95 }}
                 >
                     Strategic Road Map
-                </motion.button>
+                </motion.button> */}
 
                 {/* Uncomment if you want to re-enable Geotagging */}
                 {/* 

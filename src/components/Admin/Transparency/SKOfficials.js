@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
-import { FaPlus, FaEdit, FaTrash, FaTimes, FaArrowLeft, FaArrowRight, FaEye } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaTimes, FaArrowLeft, FaArrowRight, FaEye, FaClock } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from '../../../supabaseClient';
 import Compressor from 'compressorjs';
@@ -474,7 +474,7 @@ const SKOfficials = () => {
                     onClick={() => setIsFormerModalOpen(true)}
                     className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition shadow-md"
                 >
-                    <FaPlus className="mr-2" /> Former SK Chairman
+                    <FaClock className="mr-2" /> Former SK Chairman
                 </button>
                 <div className="flex items-center space-x-2">
                     <label className="text-sm font-medium text-gray-700">Items per page:</label>
