@@ -33,6 +33,9 @@ const PendingModal = ({
         new Date(a.createdAt || '1970-01-01') - new Date(b.createdAt || '1970-01-01')
     );
 
+    // Filter to only include residents with createdAt
+    const filteredSortedResidents = sortedResidents.filter(resident => resident.createdAt);
+
     return (
         <AnimatePresence>
             <>
@@ -70,8 +73,8 @@ const PendingModal = ({
                             </motion.button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6">
-                            {sortedResidents.length > 0 ? (
-                                sortedResidents.map((resident) => (
+                            {filteredSortedResidents.length > 0 ? (
+                                filteredSortedResidents.map((resident) => (
                                     <div
                                         key={resident.id}
                                         className="bg-gray-50 p-5 rounded-xl mb-4 border border-gray-200 hover:shadow-md transition-shadow duration-200"

@@ -24,6 +24,7 @@
     "framer-motion": "^12.23.12",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
+    "leaflet.heat": "^0.2.0",
     "lucide-react": "^0.539.0",
     "nodemailer": "^7.0.5",
     "pdfjs-dist": "^5.4.54",

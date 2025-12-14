@@ -825,7 +825,7 @@ const ResidentProfiling = () => {
                         position: 'top-end',
                         icon: 'warning',
                         title: 'Form submitted',
-                        timer: 3000,
+                        timer: 7000,
                         scrollbarPadding: false,
                         showConfirmButton: false,
                     });

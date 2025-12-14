@@ -1,6 +1,13 @@
-// src/components/admin/Geotagging.js
+// src/components/admin/ResidentLocationMap.js
 import React, { useState, useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, LayersControl } from "react-leaflet";
+import {
+    MapContainer,
+    TileLayer,
+    Marker,
+    Popup,
+    LayersControl,
+    Polygon,               // ← Added for zone polygons
+} from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -17,37 +24,39 @@ L.Icon.Default.mergeOptions({
     shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const Geotagging = () => {
+const ResidentLocationMap = () => {
     const centerCoords = useMemo(() => [8.509057, 124.649134], []);
     const [residents, setResidents] = useState([]);
+    const [zones, setZones] = useState([]);              // ← New: barangay zones
     const [loading, setLoading] = useState(true);
     const [satelliteView, setSatelliteView] = useState(true);
+    const [showZones, setShowZones] = useState(false);   // ← New: toggle for zones
 
     // Function to get status badge
     const getStatusBadge = (status) => {
         const badges = {
-            1: { text: 'Approved', class: 'bg-green-100 text-green-800' },
-            2: { text: 'Rejected', class: 'bg-red-100 text-red-800' },
-            3: { text: 'Pending', class: 'bg-yellow-100 text-yellow-800' },
-            4: { text: 'Update Requested', class: 'bg-blue-100 text-blue-800' },
-            5: { text: 'Update Approved', class: 'bg-purple-100 text-purple-800' },
-            6: { text: 'To Update', class: 'bg-orange-100 text-orange-800' },
+            1: { text: "Approved", class: "bg-green-100 text-green-800" },
+            2: { text: "Rejected", class: "bg-red-100 text-red-800" },
+            3: { text: "Pending", class: "bg-yellow-100 text-yellow-800" },
+            4: { text: "Update Requested", class: "bg-blue-100 text-blue-800" },
+            5: { text: "Update Approved", class: "bg-purple-100 text-purple-800" },
+            6: { text: "To Update", class: "bg-orange-100 text-orange-800" },
         };
-        const { text, class: badgeClass } = badges[status] || { text: 'Unknown', class: 'bg-gray-100 text-gray-800' };
+        const { text, class: badgeClass } = badges[status] || { text: "Unknown", class: "bg-gray-100 text-gray-800" };
         return <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClass}`}>{text}</span>;
     };
 
-    // Status colors for borders and dots
+    // Status colors for resident markers
     const statusColors = {
-        1: { bg: 'bg-emerald-500', border: 'border-emerald-500' },
-        2: { bg: 'bg-red-500', border: 'border-red-500' },
-        3: { bg: 'bg-yellow-500', border: 'border-yellow-500' },
-        4: { bg: 'bg-blue-500', border: 'border-blue-500' },
-        5: { bg: 'bg-purple-500', border: 'border-purple-500' },
-        6: { bg: 'bg-orange-500', border: 'border-orange-500' },
+        1: { bg: "bg-emerald-500", border: "border-emerald-500" },
+        2: { bg: "bg-red-500", border: "border-red-500" },
+        3: { bg: "bg-yellow-500", border: "border-yellow-500" },
+        4: { bg: "bg-blue-500", border: "border-blue-500" },
+        5: { bg: "bg-purple-500", border: "border-purple-500" },
+        6: { bg: "bg-orange-500", border: "border-orange-500" },
     };
 
-    // Function to create dynamic marker with resident's profile picture
+    // Create custom marker with profile picture or initials
     const createResidentIcon = (profilePicUrl, displayName, status) => {
         const initials = displayName
             ? displayName
@@ -58,21 +67,21 @@ const Geotagging = () => {
                 .toUpperCase()
             : "👤";
 
-        const statusColor = statusColors[status] || { bg: 'bg-emerald-500', border: 'border-white' };
+        const statusColor = statusColors[status] || { bg: "bg-emerald-500", border: "border-white" };
 
         if (profilePicUrl) {
             return L.divIcon({
                 html: `
-                    <div class="relative">
-                        <img 
-                            src="${profilePicUrl}" 
-                            alt="Resident Profile"
-                            class="w-12 h-12 rounded-full object-cover border-4 ${statusColor.border} shadow-xl"
-                            onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIGZpbGw9IiM2MzhlZTYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIyMCIgZmlsbD0iI2ZmZiIgZHk9Ii4zZW0iIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5Zb3U8L3RleHQ+PC9zdmc+';"
-                        />
-                        <div class="absolute -bottom-1 -right-1 ${statusColor.bg} border-2 border-white rounded-full w-5 h-5"></div>
-                    </div>
-                `,
+          <div class="relative">
+            <img 
+              src="${profilePicUrl}" 
+              alt="Resident Profile"
+              class="w-12 h-12 rounded-full object-cover border-4 ${statusColor.border} shadow-xl"
+              onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIGZpbGw9IiM2MzhlZTYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIyMCIgZmlsbD0iI2ZmZiIgZHk9Ii4zZW0iIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5Zb3U8L3RleHQ+PC9zdmc+';"
+            />
+            <div class="absolute -bottom-1 -right-1 ${statusColor.bg} border-2 border-white rounded-full w-5 h-5"></div>
+          </div>
+        `,
                 className: "custom-profile-marker",
                 iconSize: [48, 48],
                 iconAnchor: [24, 48],
@@ -80,16 +89,15 @@ const Geotagging = () => {
             });
         }
 
-        // Fallback: Initials with gradient background
         return L.divIcon({
             html: `
-                <div class="relative">
-                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-xl border-4 ${statusColor.border} font-bold text-lg">
-                        ${initials}
-                    </div>
-                    <div class="absolute -bottom-1 -right-1 ${statusColor.bg} border-2 border-white rounded-full w-5 h-5"></div>
-                </div>
-            `,
+        <div class="relative">
+          <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-xl border-4 ${statusColor.border} font-bold text-lg">
+            ${initials}
+          </div>
+          <div class="absolute -bottom-1 -right-1 ${statusColor.bg} border-2 border-white rounded-full w-5 h-5"></div>
+        </div>
+      `,
             className: "custom-profile-marker-fallback",
             iconSize: [48, 48],
             iconAnchor: [24, 48],
@@ -97,6 +105,21 @@ const Geotagging = () => {
         });
     };
 
+    // ← NEW: Fetch barangay zones
+    useEffect(() => {
+        const fetchZones = async () => {
+            try {
+                const { data, error } = await supabase.from("barangay_zones").select("*");
+                if (error) throw error;
+                setZones(data || []);
+            } catch (err) {
+                console.error("Error fetching zones:", err);
+            }
+        };
+        fetchZones();
+    }, []);
+
+    // Existing resident data fetch
     useEffect(() => {
         const fetchResidentsWithFullData = async () => {
             try {
@@ -105,19 +128,19 @@ const Geotagging = () => {
                 const { data: residentsData, error: resError } = await supabase
                     .from("residents")
                     .select(`
-                        id,
-                        user_id,
-                        location_lat,
-                        location_lng,
-                        household,
-                        spouse,
-                        household_composition,
-                        census,
-                        image_url,
-                        valid_id_url,
-                        zone_cert_url,
-                        resident_profile_status ( status )
-                    `)
+            id,
+            user_id,
+            location_lat,
+            location_lng,
+            household,
+            spouse,
+            household_composition,
+            census,
+            image_url,
+            valid_id_url,
+            zone_cert_url,
+            resident_profile_status ( status )
+          `)
                     .not("location_lat", "is", null)
                     .not("location_lng", "is", null);
 
@@ -129,22 +152,22 @@ const Geotagging = () => {
 
                 const enhancedResidents = await Promise.all(
                     residentsData.map(async (resident) => {
-                        let household = typeof resident.household === 'string'
+                        let household = typeof resident.household === "string"
                             ? JSON.parse(resident.household)
                             : resident.household || {};
 
                         let spouse = resident.spouse
-                            ? (typeof resident.spouse === 'string' ? JSON.parse(resident.spouse) : resident.spouse)
+                            ? (typeof resident.spouse === "string" ? JSON.parse(resident.spouse) : resident.spouse)
                             : null;
 
                         let householdComposition = resident.household_composition
-                            ? (typeof resident.household_composition === 'string'
+                            ? (typeof resident.household_composition === "string"
                                 ? JSON.parse(resident.household_composition)
                                 : resident.household_composition)
                             : [];
 
                         let census = resident.census
-                            ? (typeof resident.census === 'string' ? JSON.parse(resident.census) : resident.census)
+                            ? (typeof resident.census === "string" ? JSON.parse(resident.census) : resident.census)
                             : {};
 
                         let signedProfilePic = null;
@@ -157,8 +180,8 @@ const Geotagging = () => {
                             }
                         }
 
-                        const fullName = `${household.firstName || 'Unknown'} ${household.lastName || 'Unknown'}`.trim();
-                        const fullAddress = household.address || 'No address provided';
+                        const fullName = `${household.firstName || "Unknown"} ${household.lastName || "Unknown"}`.trim();
+                        const fullAddress = household.address || "No address provided";
 
                         return {
                             ...resident,
@@ -167,9 +190,9 @@ const Geotagging = () => {
                             displayName: fullName,
                             profilePic: signedProfilePic,
                             fullAddress,
-                            civilStatus: household.civilStatus || 'N/A',
-                            birthdate: household.dob || 'N/A',
-                            contact: household.phoneNumber || 'None',
+                            civilStatus: household.civilStatus || "N/A",
+                            birthdate: household.dob || "N/A",
+                            contact: household.phoneNumber || "None",
                             spouse,
                             household_composition: householdComposition,
                             census,
@@ -211,11 +234,41 @@ const Geotagging = () => {
 
         return L.divIcon({
             html: `<div class="cluster-icon bg-blue-700 text-white rounded-full flex items-center justify-center font-bold shadow-2xl border-4 border-white">
-                ${count}
-            </div>`,
+        ${count}
+      </div>`,
             className: "custom-cluster",
             iconSize: L.point(size, size),
         });
+    };
+
+    // ← NEW: Zone color helper (consistent with ZoneMapper)
+    const getZoneColors = (color) => {
+        if (color.startsWith("#")) {
+            return { fill: `${color}80`, border: color };
+        }
+        const predefined = {
+            blue: { fill: "rgba(59, 130, 246, 0.5)", border: "#3b82f6" },
+            green: { fill: "rgba(34, 197, 94, 0.5)", border: "#22c55e" },
+            red: { fill: "rgba(239, 68, 68, 0.5)", border: "#ef4444" },
+            yellow: { fill: "rgba(250, 204, 21, 0.5)", border: "#ca8a04" },
+            purple: { fill: "rgba(168, 85, 247, 0.5)", border: "#a855f7" },
+            orange: { fill: "rgba(251, 146, 60, 0.5)", border: "#ea580c" },
+            teal: { fill: "rgba(20, 184, 166, 0.5)", border: "#0d9488" },
+            pink: { fill: "rgba(236, 72, 153, 0.5)", border: "#ec4899" },
+        };
+        return predefined[color] || predefined.blue;
+    };
+
+    // ← NEW: Simple centroid for zone name label
+    const getCentroid = (coords) => {
+        if (!coords || coords.length < 3) return centerCoords;
+        let latSum = 0,
+            lngSum = 0;
+        coords.forEach(([lat, lng]) => {
+            latSum += lat;
+            lngSum += lng;
+        });
+        return [latSum / coords.length, lngSum / coords.length];
     };
 
     return (
@@ -228,15 +281,28 @@ const Geotagging = () => {
                             {loading ? "Loading..." : `${residents.length} residents with verified locations`}
                         </p>
                     </div>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={satelliteView}
-                            onChange={(e) => setSatelliteView(e.target.checked)}
-                            className="w-6 h-6"
-                        />
-                        <span className="font-semibold text-lg">Satellite View</span>
-                    </label>
+                    <div className="flex gap-8">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={satelliteView}
+                                onChange={(e) => setSatelliteView(e.target.checked)}
+                                className="w-6 h-6"
+                            />
+                            <span className="font-semibold text-lg">Satellite View</span>
+                        </label>
+
+                        {/* ← NEW TOGGLE SWITCH */}
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={showZones}
+                                onChange={(e) => setShowZones(e.target.checked)}
+                                className="w-6 h-6"
+                            />
+                            <span className="font-semibold text-lg">Show Zones</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div className="h-screen" style={{ minHeight: "600px" }}>
@@ -273,6 +339,7 @@ const Geotagging = () => {
                                 </LayersControl.BaseLayer>
                             </LayersControl>
 
+                            {/* Resident markers */}
                             <MarkerClusterGroup
                                 chunkedLoading
                                 iconCreateFunction={createCustomClusterIcon}
@@ -286,11 +353,8 @@ const Geotagging = () => {
                                         position={resident.position}
                                         icon={createResidentIcon(resident.profilePic, resident.displayName, resident.status)}
                                     >
-                                        <Popup
-                                            maxWidth={500}
-                                            minWidth={350}
-                                            className="custom-resident-popup"
-                                        >
+                                        <Popup maxWidth={500} minWidth={350} className="custom-resident-popup">
+                                            {/* Popup content remains exactly the same */}
                                             <div className="p-4 font-sans text-sm">
                                                 <div className="flex items-center gap-4 mb-4">
                                                     {resident.profilePic ? (
@@ -373,6 +437,39 @@ const Geotagging = () => {
                                     </Marker>
                                 ))}
                             </MarkerClusterGroup>
+
+                            {/* ← NEW: Render zones when toggle is on */}
+                            {showZones &&
+                                zones.map((zone) => {
+                                    const colors = getZoneColors(zone.color);
+                                    const centroid = getCentroid(zone.coords.slice(0, -1)); // remove closing point
+
+                                    return (
+                                        <React.Fragment key={zone.id}>
+                                            <Polygon
+                                                positions={zone.coords}
+                                                pathOptions={{
+                                                    fillColor: colors.fill,
+                                                    color: colors.border,
+                                                    weight: 3,
+                                                    fillOpacity: 0.4,
+                                                }}
+                                            />
+                                            <Marker
+                                                position={centroid}
+                                                interactive={false}
+                                                icon={L.divIcon({
+                                                    className: "zone-label",
+                                                    html: `<div style="background:transparent; color:white; font-weight:bold; font-size:16px; text-shadow: 2px 2px 4px black; pointer-events:none;">
+                            ${zone.name}
+                          </div>`,
+                                                    iconSize: [200, 40],
+                                                    iconAnchor: [100, 20],
+                                                })}
+                                            />
+                                        </React.Fragment>
+                                    );
+                                })}
                         </MapContainer>
                     )}
                 </div>
@@ -385,4 +482,4 @@ const Geotagging = () => {
     );
 };
 
-export default Geotagging;
+export default ResidentLocationMap;

@@ -5,7 +5,7 @@ const FullNav = ({ handleNavClick, currentPage }) => {
         { name: "Home" },
         { name: "Transparency" },
         { name: "Demographics" },
-        { name: "Map Views" },
+        { name: "Geolocations & Projects" },
     ];
 
     return (

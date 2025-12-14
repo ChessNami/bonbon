@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaBars, FaHome, FaUsers, FaCog, FaComment, FaFileAlt, FaChartLine, FaCode } from "react-icons/fa";
+import { FaBars, FaHome, FaUsers, FaCog, FaComment, FaFileAlt, FaCode, FaMapMarkedAlt, FaChartBar } from "react-icons/fa"; // Added FaMapMarkedAlt for better icon
 import logo from "../../img/Logo/bonbon-logo.png";
 import { supabase } from "../../supabaseClient";
 
@@ -23,7 +23,7 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
                     .select("role_id")
                     .eq("user_id", session.user.id)
                     .single();
-                setUserRole(userRoleData.role_id);
+                setUserRole(userRoleData?.role_id);
             }
         };
         fetchUserRole();
@@ -33,8 +33,9 @@ const AdminSidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPag
 
     const navItems = [
         { label: "Home", icon: FaHome },
+        { label: "Demographics", icon: FaChartBar },
         { label: "Resident Management", icon: FaUsers },
-        { label: "Planning", icon: FaChartLine },
+        { label: "Geolocation & Projects", icon: FaMapMarkedAlt }, // Updated label and icon
         { label: "Transparency", icon: FaFileAlt },
         { label: "User Feedback", icon: FaComment },
         ...(userRole === 3 ? [{ label: "Role Management", icon: FaCode }] : []),

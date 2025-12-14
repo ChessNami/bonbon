@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { capitalizeWords } from './Utils';
 import { FaTimes, FaDownload } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -13,6 +13,17 @@ L.Icon.Default.mergeOptions({
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
+
+const MapResizer = () => {
+    const map = useMap();
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            map.invalidateSize();
+        }, 300); // Delay to match animation duration
+        return () => clearTimeout(timer);
+    }, [map]);
+    return null;
+};
 
 const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zIndex, validIdUrl, validIdPath, zoneCertUrl, zoneCertPath, spouseValidIdUrl, spouseValidIdPath }) => {
     const [activeProfileTab, setActiveProfileTab] = useState(0);
@@ -248,7 +259,7 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     );
                                                 })}
                                             </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
                                                 {renderFileDisplay('Valid ID', validIdUrl, validIdPath)}
                                                 {renderFileDisplay('Zone Certificate', zoneCertUrl, zoneCertPath)}
                                             </div>
@@ -259,92 +270,60 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                             {activeProfileTab === 1 && (
                                 <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                     <legend className="text-lg font-semibold text-gray-800 px-2">Spouse</legend>
-                                    {resident.spouseData ? (
-                                        <div className="space-y-6">
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {[
-                                                    'firstName',
-                                                    'middleName',
-                                                    'lastName',
-                                                    'address',
-                                                    'region',
-                                                    'province',
-                                                    'city',
-                                                    'barangay',
-                                                    'zone',
-                                                    'zipCode',
-                                                    'dob',
-                                                    'age',
-                                                    'gender',
-                                                    'civilStatus',
-                                                    'phoneNumber',
-                                                    'idType',
-                                                    'idNo',
-                                                    'education',
-                                                    'employmentType',
-                                                    'pwdStatus',
-                                                    ...(resident.spouseData?.pwdStatus?.toUpperCase() === 'YES' ? ['disabilityType'] : []),
-                                                ].map((key) => {
-                                                    let label = capitalizeWords(key);
-                                                    if (key === 'dob') label = 'Date of Birth';
-                                                    if (key === 'idType') label = 'ID Type';
-                                                    if (key === 'idNo') label = 'ID Number';
-                                                    if (key === 'zone') label = 'Purok/Zone';
-                                                    if (key === 'pwdStatus') label = 'PWD Status';
-                                                    if (key === 'disabilityType') label = 'Type of Disability';
+                                    {resident.spouseData && Object.keys(resident.spouseData).length > 0 ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {[
+                                                'firstName',
+                                                'middleName',
+                                                'lastName',
+                                                'dob',
+                                                'age',
+                                                'gender',
+                                                'customGender',
+                                                'education',
+                                                'occupation',
+                                                'pwdStatus',
+                                                ...(resident.spouseData.pwdStatus?.toUpperCase() === 'YES' ? ['disabilityType'] : []),
+                                            ].map((key) => {
+                                                let label = capitalizeWords(key);
+                                                if (key === 'dob') label = 'Date of Birth';
+                                                if (key === 'customGender') label = 'Custom Gender';
+                                                if (key === 'pwdStatus') label = 'PWD Status';
+                                                if (key === 'disabilityType') label = 'Type of Disability';
 
-                                                    // Get the display value
-                                                    let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
-                                                        ? addressMappings[key][resident.spouseData[key]] || 'N/A'
-                                                        : resident.spouseData[key] || 'N/A';
+                                                // Get the display value
+                                                let displayValue = resident.spouseData[key] || 'N/A';
 
-                                                    // Apply uppercase to all display values (except 'N/A')
-                                                    if (displayValue !== 'N/A' && typeof displayValue === 'string') {
-                                                        displayValue = displayValue.toUpperCase();
-                                                    }
+                                                // Apply uppercase to all display values (except 'N/A')
+                                                if (displayValue !== 'N/A' && typeof displayValue === 'string') {
+                                                    displayValue = displayValue.toUpperCase();
+                                                }
 
-                                                    return (
-                                                        <div key={key} className="space-y-1">
-                                                            <label className="text-sm font-medium text-gray-700">{label}</label>
-                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
-                                                                {displayValue}
-                                                            </div>
+                                                return (
+                                                    <div key={key} className="space-y-1">
+                                                        <label className="text-sm font-medium text-gray-700">{label}</label>
+                                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
+                                                            {displayValue}
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                                {renderFileDisplay('Spouse Valid ID', spouseValidIdUrl, spouseValidIdPath)}
-                                            </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     ) : (
                                         <p className="text-sm text-gray-500 italic">NO SPOUSE DATA AVAILABLE.</p>
                                     )}
+                                    {renderFileDisplay('Spouse Valid ID', spouseValidIdUrl, spouseValidIdPath)}
                                 </fieldset>
                             )}
                             {activeProfileTab === 2 && (
                                 <fieldset className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                     <legend className="text-lg font-semibold text-gray-800 px-2">Household Composition</legend>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-                                        <div className="space-y-1">
-                                            <label className="text-sm font-medium text-gray-700">Number of Children</label>
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
-                                                {(resident.childrenCount || 0).toString().toUpperCase()}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-sm font-medium text-gray-700">Number of Other Household Members</label>
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-800 text-sm">
-                                                {(resident.numberOfHouseholdMembers || 0).toString().toUpperCase()}
-                                            </div>
-                                        </div>
-                                    </div>
                                     {resident.childrenCount > 0 && (
-                                        <div className="border-t border-gray-200 pt-6">
+                                        <div className="mb-6">
                                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Children</h3>
                                             {resident.householdComposition
                                                 .filter((member) => member.relation === 'Son' || member.relation === 'Daughter')
-                                                .map((member, index) => (
+                                                .map((child, index) => (
                                                     <div key={`child-${index}`} className="bg-gray-50 p-5 rounded-xl shadow-sm mb-4 border border-gray-200">
                                                         <h4 className="text-md font-semibold text-gray-800 mb-3">Child {index + 1}</h4>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -360,25 +339,17 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                                 'dob',
                                                                 'education',
                                                                 'occupation',
-                                                                'isLivingWithParents',
                                                                 'pwdStatus',
-                                                                ...(member.pwdStatus?.toUpperCase() === 'YES' ? ['disabilityType'] : []),
-                                                                ...(member.isLivingWithParents === 'No'
-                                                                    ? ['address', 'region', 'province', 'city', 'barangay', 'zipCode', 'zone']
-                                                                    : []),
+                                                                ...(child.pwdStatus?.toUpperCase() === 'YES' ? ['disabilityType'] : []),
                                                             ].map((key) => {
                                                                 let label = capitalizeWords(key);
                                                                 if (key === 'dob') label = 'Date of Birth';
                                                                 if (key === 'customGender') label = 'Custom Gender';
-                                                                if (key === 'isLivingWithParents') label = 'Is Living with Parents';
-                                                                if (key === 'zone') label = 'Purok/Zone';
                                                                 if (key === 'pwdStatus') label = 'PWD Status';
                                                                 if (key === 'disabilityType') label = 'Type of Disability';
 
                                                                 // Get the display value
-                                                                let displayValue = ['region', 'province', 'city', 'barangay'].includes(key)
-                                                                    ? addressMappings[key][member[key]] || 'N/A'
-                                                                    : member[key] || 'N/A';
+                                                                let displayValue = child[key] || 'N/A';
 
                                                                 // Apply uppercase to all display values (except 'N/A')
                                                                 if (displayValue !== 'N/A' && typeof displayValue === 'string') {
@@ -512,17 +483,18 @@ const ResidentProfileModal = ({ isOpen, resident, addressMappings, onClose, zInd
                                                     Satellite View
                                                 </label>
                                             </div>
-                                            <div className="h-64 rounded-lg overflow-hidden border border-gray-200">
+                                            <div className="h-72 rounded-lg overflow-hidden border border-gray-200">
                                                 <MapContainer
                                                     center={[parseFloat(resident.locationLat), parseFloat(resident.locationLng)]}
                                                     zoom={18}
                                                     style={{ height: '100%', width: '100%' }}
-                                                    scrollWheelZoom={false}
-                                                    dragging={false}
-                                                    zoomControl={false}
-                                                    doubleClickZoom={false}
-                                                    touchZoom={false}
+                                                    scrollWheelZoom={true}
+                                                    dragging={true}
+                                                    zoomControl={true}
+                                                    doubleClickZoom={true}
+                                                    touchZoom={true}
                                                 >
+                                                    <MapResizer />
                                                     <TileLayer
                                                         url={
                                                             satelliteView

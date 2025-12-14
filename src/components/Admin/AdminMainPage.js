@@ -7,15 +7,18 @@ import UserFeedback from "./UserFeedback/UserFeedback";
 import TransparencyMainComponent from "./Transparency/TransparencyMainComponent";
 import PlanningMainComponent from "./Planning/PlanningMainComponent";
 import RoleManagement from "./RoleManagement";
+import Demographics from "./Demographics/Demographics";
 
 const AdminMainPage = ({ currentPage }) => {
     const renderPage = () => {
         switch (currentPage) {
             case "Home":
                 return <AdminHome />;
+            case "Demographics":
+                return <Demographics />;
             case "Resident Management":
                 return <ResidentManagement />;
-            case "Planning":
+            case "Geolocation & Projects":
                 return <PlanningMainComponent />;
             case "Transparency":
                 return <TransparencyMainComponent />;

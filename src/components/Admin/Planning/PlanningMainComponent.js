@@ -1,22 +1,25 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Geotagging from "./Geotagging";
+import ResidentLocationMap from "./ResidentLocationMap";
 import AdminStrategicRoadmap from "./AdminStrategicRoadmap";
 import AdminProMgmt from "./AdminProMgmt";
+import ZoneMapper from "./ZoneMapper";
 
 const PlanningMainComponent = () => {
-    const [activeTab, setActiveTab] = useState("Geotagging");
+    const [activeTab, setActiveTab] = useState("ResidentLocationMap");
 
     const renderContent = () => {
         switch (activeTab) {
-            case "Geotagging":
-                return <Geotagging />;
+            case "ResidentLocationMap":
+                return <ResidentLocationMap />;
             case "Strategic Road Map":
                 return <AdminStrategicRoadmap />;
             case "Project Management":
                 return <AdminProMgmt />;
+            case "Zone Mapper":
+                return <ZoneMapper />;
             default:
-                return <Geotagging />;
+                return <ResidentLocationMap />;
         }
     };
 
@@ -37,18 +40,18 @@ const PlanningMainComponent = () => {
         <div className="p-4">
             <div className="flex border-b border-gray-200 select-none">
                 <motion.button
-                    className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Geotagging"
-                            ? "text-blue-600"
-                            : "text-gray-500 hover:text-gray-700"
+                    className={`py-2 px-4 text-sm font-medium relative ${activeTab === "ResidentLocationMap"
+                        ? "text-blue-600"
+                        : "text-gray-500 hover:text-gray-700"
                         }`}
-                    onClick={() => setActiveTab("Geotagging")}
+                    onClick={() => setActiveTab("ResidentLocationMap")}
                     variants={tabVariants}
-                    animate={activeTab === "Geotagging" ? "active" : "inactive"}
+                    animate={activeTab === "ResidentLocationMap" ? "active" : "inactive"}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                 >
-                    Geotagging
-                    {activeTab === "Geotagging" && (
+                    Residents' Location
+                    {activeTab === "ResidentLocationMap" && (
                         <motion.div
                             className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
                             layout
@@ -58,8 +61,8 @@ const PlanningMainComponent = () => {
                 </motion.button>
                 <motion.button
                     className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Strategic Road Map"
-                            ? "text-blue-600"
-                            : "text-gray-500 hover:text-gray-700"
+                        ? "text-blue-600"
+                        : "text-gray-500 hover:text-gray-700"
                         }`}
                     onClick={() => setActiveTab("Strategic Road Map")}
                     variants={tabVariants}
@@ -77,9 +80,29 @@ const PlanningMainComponent = () => {
                     )}
                 </motion.button>
                 <motion.button
+                    className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Zone Mapper"
+                        ? "text-blue-600"
+                        : "text-gray-500 hover:text-gray-700"
+                        }`}
+                    onClick={() => setActiveTab("Zone Mapper")}
+                    variants={tabVariants}
+                    animate={activeTab === "Zone Mapper" ? "active" : "inactive"}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    Zone Mapper
+                    {activeTab === "Zone Mapper" && (
+                        <motion.div
+                            className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"
+                            layout
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                    )}
+                </motion.button>
+                <motion.button
                     className={`py-2 px-4 text-sm font-medium relative ${activeTab === "Project Management"
-                            ? "text-blue-600"
-                            : "text-gray-500 hover:text-gray-700"
+                        ? "text-blue-600"
+                        : "text-gray-500 hover:text-gray-700"
                         }`}
                     onClick={() => setActiveTab("Project Management")}
                     variants={tabVariants}

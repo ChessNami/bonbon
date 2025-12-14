@@ -22,7 +22,7 @@ const UserMainPage = ({ currentPage }) => {
                 return <Transparency />;
             case "Demographics":
                 return <Demographics />;
-            case "Map Views":
+            case "Geolocations & Projects":
                 return <MapViewsMainComponent />;
             case "Feedback":
                 return <Feedback />;

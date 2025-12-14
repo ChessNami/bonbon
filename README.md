@@ -69,6 +69,7 @@ Make sure you have the following installed on your machine:
    npm install react-tooltip
    npm install bcryptjs
    npm install react-leaflet-cluster
+   npm install leaflet.heat
    ```
 
 ### Usage

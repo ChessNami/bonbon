@@ -157,6 +157,8 @@ const ResidentManagement = () => {
                         };
                     }
 
+                    resident.createdAt = resident.resident_profile_status?.created_at;
+
                     let spouse = null;
                     try {
                         if (resident.spouse) {
@@ -285,7 +287,9 @@ const ResidentManagement = () => {
 
             setResidents(formattedResidents);
             setFilteredResidents(formattedResidents);
-            setPendingCount(formattedResidents.filter((r) => r.status === 3).length);
+            setPendingCount(
+                formattedResidents.filter((r) => r.status === 3 && r.createdAt).length
+            );
             setRejectedCount(formattedResidents.filter((r) => r.status === 2).length);
             setRequestsCount(formattedResidents.filter((r) => r.status === 4).length);
         } catch (error) {
@@ -1185,23 +1189,25 @@ const ResidentManagement = () => {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {currentItems.length > 0 ? (
-                            currentItems.map((resident) => (
-                                <ResidentCard
-                                    key={resident.id}
-                                    resident={resident}
-                                    onView={() => {
-                                        setSelectedResident(resident);
-                                        setViewModalOpen(true);
-                                    }}
-                                    onUpdate={() => {
-                                        setSelectedResident(resident);
-                                        setRejectionReason('');
-                                        setUpdateModalOpen(true);
-                                    }}
-                                    onDelete={() => handleDelete(resident.id)}
-                                    getStatusBadge={getStatusBadge}
-                                />
-                            ))
+                            currentItems
+                                .filter((resident) => resident.createdAt) // Only show residents that have a submission date (createdAt)
+                                .map((resident) => (
+                                    <ResidentCard
+                                        key={resident.id}
+                                        resident={resident}
+                                        onView={() => {
+                                            setSelectedResident(resident);
+                                            setViewModalOpen(true);
+                                        }}
+                                        onUpdate={() => {
+                                            setSelectedResident(resident);
+                                            setRejectionReason('');
+                                            setUpdateModalOpen(true);
+                                        }}
+                                        onDelete={() => handleDelete(resident.id)}
+                                        getStatusBadge={getStatusBadge}
+                                    />
+                                ))
                         ) : (
                             <div className="col-span-full text-center py-16">
                                 <div className="text-gray-600 text-xl font-semibold">
