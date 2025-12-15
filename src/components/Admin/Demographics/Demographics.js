@@ -38,9 +38,12 @@ const COLORS = {
     male: "#4f46e5",
     female: "#10b981",
     other: "#f59e0b",
+    children: "#f59e0b",
+    adults: "#3b82f6",
+    seniors: "#8b5cf6",
 };
 
-const ITEMS_PER_PAGE = 20; // Adjustable page size
+const ITEMS_PER_PAGE = 20;
 
 const Demographics = () => {
     const [totalResidents, setTotalResidents] = useState(0);
@@ -49,6 +52,7 @@ const Demographics = () => {
     const [femaleCount, setFemaleCount] = useState(0);
     const [seniorCitizens, setSeniorCitizens] = useState(0);
     const [ageData, setAgeData] = useState([]);
+    const [ageAdditionsByYear, setAgeAdditionsByYear] = useState([]);
     const [genderData, setGenderData] = useState([]);
     const [zoneSeniorData, setZoneSeniorData] = useState({});
     const [zonePopulationData, setZonePopulationData] = useState({});
@@ -65,6 +69,14 @@ const Demographics = () => {
         hasOwnWaterSupply: { Yes: 0, No: 0 },
         isRegisteredVoter: { Yes: 0, No: 0 },
     });
+    const [censusNames, setCensusNames] = useState({
+        isRenting: { Yes: [], No: [] },
+        ownsHouse: { Yes: [], No: [] },
+        hasOwnComfortRoom: { Yes: [], No: [] },
+        hasOwnElectricity: { Yes: [], No: [] },
+        hasOwnWaterSupply: { Yes: [], No: [] },
+        isRegisteredVoter: { Yes: [], No: [] },
+    });
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -73,11 +85,13 @@ const Demographics = () => {
     const [seniorModalOpen, setSeniorModalOpen] = useState(false);
     const [populationModalOpen, setPopulationModalOpen] = useState(false);
     const [genderModalOpen, setGenderModalOpen] = useState(false);
+    const [censusModalOpen, setCensusModalOpen] = useState(false);
     const [selectedPopulationZone, setSelectedPopulationZone] = useState(null);
     const [selectedGenderZone, setSelectedGenderZone] = useState(null);
     const [selectedSeniorZone, setSelectedSeniorZone] = useState(null);
+    const [selectedCensusField, setSelectedCensusField] = useState(null);
 
-    const calculateAge = useCallback((dob, providedAge) => {
+    const calculateAge = useCallback((dob, providedAge, referenceDate = new Date()) => {
         if (providedAge !== null && providedAge !== undefined) {
             if (typeof providedAge === "number") return providedAge;
             if (typeof providedAge === "string") {
@@ -87,7 +101,7 @@ const Demographics = () => {
         }
         if (dob) {
             const birthDate = new Date(dob);
-            const today = new Date();
+            const today = referenceDate;
             let age = today.getFullYear() - birthDate.getFullYear();
             const monthDiff = today.getMonth() - birthDate.getMonth();
             if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -124,6 +138,7 @@ const Demographics = () => {
             const { data, error } = await supabase
                 .from("residents")
                 .select(`
+                    created_at,
                     household,
                     spouse,
                     household_composition,
@@ -138,6 +153,7 @@ const Demographics = () => {
                 setTotalResidents(0);
                 setTotalHouseholds(0);
                 setAgeData([]);
+                setAgeAdditionsByYear([]);
                 setGenderData([]);
                 setMaleCount(0);
                 setFemaleCount(0);
@@ -157,11 +173,19 @@ const Demographics = () => {
                     hasOwnWaterSupply: { Yes: 0, No: 0 },
                     isRegisteredVoter: { Yes: 0, No: 0 },
                 });
+                setCensusNames({
+                    isRenting: { Yes: [], No: [] },
+                    ownsHouse: { Yes: [], No: [] },
+                    hasOwnComfortRoom: { Yes: [], No: [] },
+                    hasOwnElectricity: { Yes: [], No: [] },
+                    hasOwnWaterSupply: { Yes: [], No: [] },
+                    isRegisteredVoter: { Yes: [], No: [] },
+                });
                 return;
             }
 
             let male = 0, female = 0, other = 0;
-            let age18Below = 0, age18Above = 0, seniors = 0;
+            let children = 0, adults = 0, seniors = 0;
 
             const zoneSeniorDataTemp = {};
             const zonePopulationDataTemp = {};
@@ -178,6 +202,16 @@ const Demographics = () => {
                 hasOwnWaterSupply: { Yes: 0, No: 0 },
                 isRegisteredVoter: { Yes: 0, No: 0 },
             };
+            const censusNamesTemp = {
+                isRenting: { Yes: [], No: [] },
+                ownsHouse: { Yes: [], No: [] },
+                hasOwnComfortRoom: { Yes: [], No: [] },
+                hasOwnElectricity: { Yes: [], No: [] },
+                hasOwnWaterSupply: { Yes: [], No: [] },
+                isRegisteredVoter: { Yes: [], No: [] },
+            };
+
+            const ageAdditionsByYearTemp = {};
 
             for (let i = 1; i <= 9; i++) {
                 zoneSeniorDataTemp[i] = { count: 0 };
@@ -190,8 +224,15 @@ const Demographics = () => {
             }
 
             data.forEach((resident) => {
+                const createdAt = new Date(resident.created_at);
+                const createdYear = createdAt.getFullYear();
+                if (!ageAdditionsByYearTemp[createdYear]) {
+                    ageAdditionsByYearTemp[createdYear] = { children: 0, adults: 0, seniors: 0 };
+                }
+
                 const household = resident.household;
-                const headAge = calculateAge(household.dob, household.age);
+                const headCurrentAge = calculateAge(household.dob, household.age);
+                const headHistAge = calculateAge(household.dob, household.age, createdAt);
                 const headGender = household.customGender || household.gender;
                 const zoneStr = household.zone || null;
                 const zone = zoneStr ? parseInt(zoneStr.replace(/[^0-9]/g, '')) : null;
@@ -203,7 +244,7 @@ const Demographics = () => {
                     ? `${headLast}, ${headFirst} ${headMiddle}`.trim().replace(/\s+/g, " ")
                     : "Unnamed Resident";
 
-                // Population & Gender per zone
+                // Population & Gender per zone (current)
                 if (zone && zone in zonePopulationDataTemp) {
                     zonePopulationDataTemp[zone].count += 1;
                     zoneResNamesTemp[zone].push(headName);
@@ -220,20 +261,27 @@ const Demographics = () => {
                 else if (headGender === "Female") female += 1;
                 else other += 1;
 
-                if (headAge <= 18) age18Below += 1;
-                else age18Above += 1;
-                if (headAge >= 60) {
-                    seniors += 1;
+                // Current age groups
+                if (headCurrentAge < 18) children += 1;
+                else if (headCurrentAge < 60) adults += 1;
+                else seniors += 1;
+                if (headCurrentAge >= 60) {
                     if (zone) {
                         zoneSeniorDataTemp[zone].count += 1;
                         zoneSeniorNamesTemp[zone].push(headName);
                     }
                 }
 
+                // Historical age groups for additions by year
+                if (headHistAge < 18) ageAdditionsByYearTemp[createdYear].children += 1;
+                else if (headHistAge < 60) ageAdditionsByYearTemp[createdYear].adults += 1;
+                else ageAdditionsByYearTemp[createdYear].seniors += 1;
+
                 // Spouse
                 if (resident.spouse && Object.keys(resident.spouse).length > 0) {
                     const spouse = resident.spouse;
-                    const spouseAge = calculateAge(spouse.dob, spouse.age);
+                    const spouseCurrentAge = calculateAge(spouse.dob, spouse.age);
+                    const spouseHistAge = calculateAge(spouse.dob, spouse.age, createdAt);
                     const spouseGender = spouse.customGender || spouse.gender;
 
                     const spouseLast = (spouse.lastName || "").trim();
@@ -258,15 +306,21 @@ const Demographics = () => {
                     if (spouseGender === "Male") male += 1;
                     else if (spouseGender === "Female") female += 1;
 
-                    if (spouseAge <= 18) age18Below += 1;
-                    else age18Above += 1;
-                    if (spouseAge >= 60) {
-                        seniors += 1;
+                    // Current
+                    if (spouseCurrentAge < 18) children += 1;
+                    else if (spouseCurrentAge < 60) adults += 1;
+                    else seniors += 1;
+                    if (spouseCurrentAge >= 60) {
                         if (zone) {
                             zoneSeniorDataTemp[zone].count += 1;
                             zoneSeniorNamesTemp[zone].push(spouseName);
                         }
                     }
+
+                    // Historical
+                    if (spouseHistAge < 18) ageAdditionsByYearTemp[createdYear].children += 1;
+                    else if (spouseHistAge < 60) ageAdditionsByYearTemp[createdYear].adults += 1;
+                    else ageAdditionsByYearTemp[createdYear].seniors += 1;
                 }
 
                 // Household composition
@@ -276,7 +330,8 @@ const Demographics = () => {
                         if (typeof composition === "string") composition = JSON.parse(composition);
                         composition.forEach((member) => {
                             if (member.isLivingWithParents === "Yes" || !member.isLivingWithParents) {
-                                const memberAge = calculateAge(member.dob, member.age);
+                                const memberCurrentAge = calculateAge(member.dob, member.age);
+                                const memberHistAge = calculateAge(member.dob, member.age, createdAt);
                                 const memberGender = member.customGender || member.gender;
 
                                 const memberLast = (member.lastName || "").trim();
@@ -301,15 +356,21 @@ const Demographics = () => {
                                 if (memberGender === "Male") male += 1;
                                 else if (memberGender === "Female") female += 1;
 
-                                if (memberAge <= 18) age18Below += 1;
-                                else age18Above += 1;
-                                if (memberAge >= 60) {
-                                    seniors += 1;
+                                // Current
+                                if (memberCurrentAge < 18) children += 1;
+                                else if (memberCurrentAge < 60) adults += 1;
+                                else seniors += 1;
+                                if (memberCurrentAge >= 60) {
                                     if (zone) {
                                         zoneSeniorDataTemp[zone].count += 1;
                                         zoneSeniorNamesTemp[zone].push(memberName);
                                     }
                                 }
+
+                                // Historical
+                                if (memberHistAge < 18) ageAdditionsByYearTemp[createdYear].children += 1;
+                                else if (memberHistAge < 60) ageAdditionsByYearTemp[createdYear].adults += 1;
+                                else ageAdditionsByYearTemp[createdYear].seniors += 1;
                             }
                         });
                     } catch (e) {
@@ -317,7 +378,7 @@ const Demographics = () => {
                     }
                 }
 
-                // Census
+                // Census Data Processing
                 if (resident.census) {
                     let census;
                     try {
@@ -328,8 +389,11 @@ const Demographics = () => {
                     }
 
                     const countYesNo = (field) => {
-                        if (census[field] === "Yes") tempCensus[field].Yes++;
-                        else if (census[field] === "No") tempCensus[field].No++;
+                        const answer = census[field];
+                        if (answer === "Yes" || answer === "No") {
+                            tempCensus[field][answer]++;
+                            censusNamesTemp[field][answer].push(headName);
+                        }
                     };
 
                     countYesNo("isRenting");
@@ -341,25 +405,31 @@ const Demographics = () => {
                 }
             });
 
-            // Sort by last name
-            for (let i = 1; i <= 9; i++) {
-                const sortNames = (arr) => {
-                    arr.sort((a, b) => {
-                        if (a.startsWith("Unnamed")) return 1;
-                        if (b.startsWith("Unnamed")) return -1;
-                        const lastA = a.split(",")[0].trim();
-                        const lastB = b.split(",")[0].trim();
-                        if (lastA !== lastB) return lastA.localeCompare(lastB);
-                        return a.localeCompare(b);
-                    });
-                };
+            // Sort names
+            const sortNames = (arr) => {
+                arr.sort((a, b) => {
+                    if (a.startsWith("Unnamed")) return 1;
+                    if (b.startsWith("Unnamed")) return -1;
+                    const lastA = a.split(",")[0].trim();
+                    const lastB = b.split(",")[0].trim();
+                    if (lastA !== lastB) return lastA.localeCompare(lastB);
+                    return a.localeCompare(b);
+                });
+            };
 
+            for (let i = 1; i <= 9; i++) {
                 sortNames(zoneResNamesTemp[i]);
                 sortNames(zoneMaleNamesTemp[i]);
                 sortNames(zoneFemaleNamesTemp[i]);
                 sortNames(zoneSeniorNamesTemp[i]);
             }
 
+            Object.keys(censusNamesTemp).forEach(field => {
+                sortNames(censusNamesTemp[field].Yes);
+                sortNames(censusNamesTemp[field].No);
+            });
+
+            // Set all data
             setTotalResidents(calculateTotalResidents(data));
             setTotalHouseholds(data.length);
             setMaleCount(male);
@@ -373,11 +443,18 @@ const Demographics = () => {
             setZoneFemaleNames(zoneFemaleNamesTemp);
             setZoneSeniorNames(zoneSeniorNamesTemp);
             setCensusData(tempCensus);
+            setCensusNames(censusNamesTemp);
 
             setAgeData([
-                { ageGroup: "Below 18", count: age18Below },
-                { ageGroup: "18 and Above", count: age18Above },
+                { ageGroup: "Children (0-17)", count: children },
+                { ageGroup: "Adults (18-59)", count: adults },
+                { ageGroup: "Seniors (60+)", count: seniors },
             ]);
+
+            const sortedAgeAdditions = Object.entries(ageAdditionsByYearTemp)
+                .map(([year, d]) => ({ year: parseInt(year), children: d.children, adults: d.adults, seniors: d.seniors }))
+                .sort((a, b) => a.year - b.year);
+            setAgeAdditionsByYear(sortedAgeAdditions);
 
             setGenderData([
                 { category: "Residents", male, female, other },
@@ -398,10 +475,12 @@ const Demographics = () => {
     const closeSeniorModal = () => { setSeniorModalOpen(false); setSelectedSeniorZone(null); };
     const closePopulationModal = () => { setPopulationModalOpen(false); setSelectedPopulationZone(null); };
     const closeGenderModal = () => { setGenderModalOpen(false); setSelectedGenderZone(null); };
+    const closeCensusModal = () => { setCensusModalOpen(false); setSelectedCensusField(null); };
     const goBackToGenderZones = () => setSelectedGenderZone(null);
     const goBackToPopulationZones = () => setSelectedPopulationZone(null);
     const goBackToSeniorZones = () => setSelectedSeniorZone(null);
 
+    // Pie Chart Data Helper
     const getPieData = (yes, no) => [
         { name: "Yes", value: yes },
         { name: "No", value: no },
@@ -473,6 +552,15 @@ const Demographics = () => {
         );
     };
 
+    const censusItems = [
+        { title: "Registered Voters", field: "isRegisteredVoter" },
+        { title: "Owns House", field: "ownsHouse" },
+        { title: "Renting", field: "isRenting" },
+        { title: "Own Comfort Room", field: "hasOwnComfortRoom" },
+        { title: "Own Electricity", field: "hasOwnElectricity" },
+        { title: "Own Water Supply", field: "hasOwnWaterSupply" },
+    ];
+
     return (
         <div className="p-6 max-w-7xl mx-auto">
             {loading && (
@@ -481,6 +569,7 @@ const Demographics = () => {
                 </div>
             )}
 
+            {/* Global Note */}
             <div className="mb-10 p-5 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg flex items-start gap-3">
                 <FaInfoCircle className="text-blue-600 mt-1 flex-shrink-0" size={22} />
                 <p className="text-sm text-blue-900">
@@ -492,6 +581,7 @@ const Demographics = () => {
                 <div className="text-center text-red-600 text-xl">{error}</div>
             ) : (
                 <>
+                    {/* Summary Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-12">
                         {[
                             { title: "Total Population", value: totalResidents.toLocaleString(), color: "from-indigo-500 to-indigo-600", modal: "population" },
@@ -519,9 +609,10 @@ const Demographics = () => {
                         ))}
                     </div>
 
+                    {/* Main Charts - Age & Gender */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                         <motion.div variants={chartVariants} initial="hidden" animate="visible" className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                            <h3 className="text-2xl font-bold text-gray-800 mb-6">Population by Age Group</h3>
+                            <h3 className="text-2xl font-bold text-gray-800 mb-6">Current Population by Age Group</h3>
                             <ResponsiveContainer width="100%" height={400}>
                                 <BarChart data={ageData}>
                                     <CartesianGrid strokeDasharray="4 4" stroke="#f0f0f0" />
@@ -550,17 +641,50 @@ const Demographics = () => {
                         </motion.div>
                     </div>
 
+                    {/* New Chart - Residents Added by Age Group per Year */}
+                    <motion.div
+                        variants={chartVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 mb-12"
+                    >
+                        <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                            Residents by Age Group per Year
+                        </h3>
+
+                        {/* Info Note Bubble */}
+                        <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                            <FaInfoCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={20} />
+                            <div className="text-sm text-amber-900">
+                                <p className="font-medium">Based on the year the resident profile was approved</p>
+                                <p className="mt-1">
+                                    Each resident (head, spouse, and household members) is counted in the year their profile was marked as <strong>approved</strong>.
+                                    Their age group is calculated <em>as of the approval date</em>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <ResponsiveContainer width="100%" height={400}>
+                            <BarChart data={ageAdditionsByYear}>
+                                <CartesianGrid strokeDasharray="4 4" stroke="#f0f0f0" />
+                                <XAxis dataKey="year" tick={{ fill: "#555" }} />
+                                <YAxis tick={{ fill: "#555" }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}
+                                />
+                                <Legend />
+                                <Bar dataKey="children" stackId="a" fill={COLORS.children} name="Children (0-17)" />
+                                <Bar dataKey="adults" stackId="a" fill={COLORS.adults} name="Adults (18-59)" />
+                                <Bar dataKey="seniors" stackId="a" fill={COLORS.seniors} radius={[12, 12, 0, 0]} name="Seniors (60+)" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </motion.div>
+
+                    {/* Census Pie Charts */}
                     <div className="mb-12">
                         <h2 className="text-3xl font-bold text-gray-800 text-center mb-10">Census Survey Insights</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {[
-                                { title: "Registered Voters", field: "isRegisteredVoter" },
-                                { title: "Owns House", field: "ownsHouse" },
-                                { title: "Renting", field: "isRenting" },
-                                { title: "Own Comfort Room", field: "hasOwnComfortRoom" },
-                                { title: "Own Electricity", field: "hasOwnElectricity" },
-                                { title: "Own Water Supply", field: "hasOwnWaterSupply" },
-                            ].map((item, i) => {
+                            {censusItems.map((item, i) => {
                                 const data = getPieData(censusData[item.field].Yes, censusData[item.field].No);
                                 const total = data.reduce((sum, d) => sum + d.value, 0);
                                 if (total === 0) return null;
@@ -572,7 +696,10 @@ const Demographics = () => {
                                         variants={cardVariants}
                                         initial="hidden"
                                         animate="visible"
-                                        className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
+                                        whileHover="hover"
+                                        whileTap="tap"
+                                        className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 cursor-pointer"
+                                        onClick={() => { setSelectedCensusField(item.field); setCensusModalOpen(true); }}
                                     >
                                         <h4 className="text-xl font-semibold text-gray-800 text-center mb-6">{item.title}</h4>
                                         <ResponsiveContainer width="100%" height={280}>
@@ -795,6 +922,37 @@ const Demographics = () => {
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Census Details Modal */}
+            <AnimatePresence>
+                {censusModalOpen && selectedCensusField && (
+                    <>
+                        <motion.div className="fixed inset-0 bg-black" variants={backdropVariants} initial="hidden" animate="visible" exit="exit" onClick={closeCensusModal} />
+                        <motion.div className="fixed inset-0 flex items-center justify-center p-4 z-50" variants={modalVariants} initial="hidden" animate="visible" exit="exit" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl flex flex-col max-h-[85vh]">
+                                <div className="flex justify-between items-center p-6 bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-t-2xl">
+                                    <h2 className="text-2xl font-bold">
+                                        {censusItems.find(item => item.field === selectedCensusField)?.title} Details
+                                    </h2>
+                                    <button onClick={closeCensusModal} className="hover:bg-green-800 p-2 rounded-full transition-colors">
+                                        <FaTimes size={24} />
+                                    </button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-6">
+                                    <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                                        <FaInfoCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={18} />
+                                        <p className="text-sm text-amber-800">Data shown is based only on <strong>approved</strong> resident profiles.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <PaginatedNameList names={censusNames[selectedCensusField].Yes || []} title="Yes" />
+                                        <PaginatedNameList names={censusNames[selectedCensusField].No || []} title="No" />
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
